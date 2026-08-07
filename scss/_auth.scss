@@ -1,0 +1,655 @@
+.authPage {
+  position: relative;
+  min-height: calc(100vh - 80px);
+  padding: 74px 0 92px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 25%, rgba($primary, 0.12), transparent 31%),
+    $background;
+
+  &::after {
+    position: absolute;
+    z-index: 0;
+    right: -140px;
+    bottom: -170px;
+    width: 540px;
+    height: 540px;
+    border: 1px solid rgba($primary, 0.13);
+    border-radius: 50%;
+    box-shadow: 0 0 0 80px rgba($primary, 0.025), 0 0 0 160px rgba($primary, 0.018);
+    content: '';
+  }
+
+  &__grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(500px, 0.8fr);
+    gap: 72px;
+    align-items: center;
+  }
+
+  &__context {
+    @include flex-col(space-between, stretch, 48px);
+    min-height: 560px;
+    padding: 38px 0;
+
+    .technicalLabel {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      max-width: 660px;
+      margin-bottom: 24px;
+      font-size: clamp(54px, 6.3vw, 84px);
+    }
+  }
+
+  &__description {
+    max-width: 610px;
+    margin-bottom: 0;
+    font-size: 18px;
+  }
+
+  &__assurance {
+    @include flex-row(flex-start, center, 18px);
+    max-width: 560px;
+    padding: 22px;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: rgba($surface, 0.72);
+
+    &Icon {
+      display: grid;
+      flex: 0 0 46px;
+      height: 46px;
+      border: 1px solid rgba($primary, 0.32);
+      border-radius: $radius;
+      background: rgba($primary, 0.09);
+      color: $primary;
+      place-items: center;
+
+      svg {
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    span {
+      display: block;
+      margin-bottom: 2px;
+      color: $foreground;
+      font-weight: 700;
+    }
+
+    p {
+      margin: 0;
+      font-size: 13px;
+    }
+  }
+
+  &__panel {
+    padding: 38px;
+    border: 1px solid $border-strong;
+    border-radius: 12px;
+    background: rgba($surface, 0.96);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.3);
+  }
+
+  &__panelHeading {
+    @include flex-row(flex-start, center, 16px);
+    margin-bottom: 30px;
+
+    > span {
+      display: grid;
+      flex: 0 0 48px;
+      height: 48px;
+      border: 1px solid rgba($primary, 0.35);
+      border-radius: $radius;
+      background: rgba($primary, 0.1);
+      color: $primary;
+      place-items: center;
+
+      svg {
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    .technicalLabel {
+      margin-bottom: 5px;
+      font-size: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 28px;
+    }
+  }
+
+  &__points {
+    @include flex-col(flex-start, stretch, 9px);
+    margin: 28px 0 0;
+    padding: 22px 0 0;
+    border-top: 1px solid $border;
+    list-style: none;
+
+    li {
+      @include flex-row(flex-start, center, 9px);
+      color: $muted;
+      font-size: 12px;
+    }
+
+    svg {
+      flex: 0 0 auto;
+      width: 15px;
+      height: 15px;
+      color: $primary;
+    }
+  }
+}
+
+.authForm,
+.accountForm {
+  @include flex-col(flex-start, stretch, 19px);
+
+  &__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+.authForm {
+  &__submit {
+    width: 100%;
+    min-height: 50px;
+    margin-top: 3px;
+  }
+
+  &__alternate {
+    margin: -3px 0 0;
+    color: $muted;
+    font-size: 13px;
+    text-align: center;
+
+    a {
+      color: $primary;
+      font-weight: 700;
+    }
+  }
+
+  &__options {
+    @include flex-row(space-between, center, 14px);
+    margin-top: -4px;
+    color: $muted;
+    font-size: 11px;
+
+    > a {
+      color: #9fc5ff;
+      font-weight: 650;
+    }
+  }
+}
+
+.checkField {
+  @include flex-row(flex-start, center, 8px);
+  cursor: pointer;
+
+  input {
+    width: 15px;
+    height: 15px;
+    accent-color: $primary;
+  }
+}
+
+.authLoading,
+.authResult {
+  display: grid;
+  gap: 16px;
+  min-height: 170px;
+  place-items: center;
+  align-content: center;
+  color: $muted;
+  text-align: center;
+
+  > svg {
+    width: 30px;
+    height: 30px;
+    color: $primary;
+  }
+
+  > p {
+    margin: 0;
+    font-size: 13px;
+  }
+}
+
+.authNotice {
+  @include flex-row(center, center, 8px);
+  color: #75e3a6;
+  font-size: 11px;
+
+  svg { width: 16px; height: 16px; }
+}
+
+.invitationSummary {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1.3fr);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid $border;
+  border-radius: $radius;
+  background: rgba($primary, 0.045);
+
+  span,
+  strong {
+    padding: 10px 12px;
+    border-bottom: 1px solid $border;
+    font-size: 11px;
+  }
+
+  span { color: $muted; }
+  strong { color: $foreground; overflow-wrap: anywhere; }
+
+  :nth-last-child(-n + 2) { border-bottom: 0; }
+}
+
+.formField {
+  label {
+    display: block;
+    margin-bottom: 7px;
+    color: rgba($foreground, 0.9);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  &__control {
+    position: relative;
+
+    input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 1px solid $border-strong;
+      border-radius: $radius;
+      outline: none;
+      background: rgba($background, 0.72);
+      color: $foreground;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+
+      &::placeholder {
+        color: rgba($muted, 0.56);
+      }
+
+      &:hover {
+        border-color: rgba($foreground, 0.2);
+      }
+
+      &:focus {
+        border-color: rgba($primary, 0.72);
+        background: rgba($background, 0.95);
+        box-shadow: 0 0 0 3px rgba($primary, 0.12);
+      }
+    }
+
+    &.hasAction input {
+      padding-right: 48px;
+    }
+
+    button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: grid;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: $muted;
+      cursor: pointer;
+      place-items: center;
+
+      &:hover {
+        color: $foreground;
+      }
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  small {
+    display: block;
+    margin-top: 6px;
+    color: rgba($muted, 0.78);
+    font-size: 11px;
+  }
+}
+
+.formMessage {
+  @include flex-row(flex-start, flex-start, 9px);
+  padding: 11px 13px;
+  border: 1px solid;
+  border-radius: $radius;
+  font-size: 12px;
+  line-height: 1.45;
+
+  svg {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+  }
+
+  &--error {
+    border-color: rgba($danger, 0.4);
+    background: rgba($danger, 0.08);
+    color: #ffb7b9;
+  }
+
+  &--success {
+    border-color: rgba(39, 191, 121, 0.36);
+    background: rgba(39, 191, 121, 0.08);
+    color: #9ce4bf;
+  }
+}
+
+.authLoading {
+  @include flex-col(center, center, 14px);
+  min-height: 68vh;
+
+  svg {
+    width: 28px;
+    height: 28px;
+    color: $primary;
+    animation: vk-spin 800ms linear infinite;
+  }
+
+  p { margin: 0; }
+}
+
+.accountPage {
+  min-height: 75vh;
+}
+
+.accountHero {
+  padding: 52px 0 46px;
+  border-bottom: 1px solid $border;
+  background:
+    radial-gradient(circle at 82% 18%, rgba($primary, 0.12), transparent 28%),
+    $background;
+
+  .max {
+    @include flex-row(space-between, flex-end, 40px);
+  }
+
+  .technicalLabel { margin-bottom: 16px; }
+
+  h1 {
+    margin-bottom: 13px;
+    font-size: clamp(36px, 4vw, 46px);
+  }
+
+  p:last-child {
+    max-width: 640px;
+    margin-bottom: 0;
+    font-size: 15px;
+  }
+}
+
+.accountIdentity {
+  display: grid;
+  grid-template-columns: auto minmax(150px, auto) auto;
+  gap: 13px;
+  align-items: center;
+  min-width: 390px;
+  padding: 18px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: rgba($surface, 0.9);
+
+  &__initials {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    border: 1px solid rgba($primary, 0.42);
+    border-radius: 50%;
+    background: rgba($primary, 0.12);
+    font-size: 13px;
+    font-weight: 800;
+    place-items: center;
+  }
+
+  strong,
+  span { display: block; }
+
+  div > span {
+    color: $muted;
+    font-size: 12px;
+  }
+
+  &__role {
+    padding: 5px 8px;
+    border: 1px solid rgba($primary, 0.3);
+    border-radius: 999px;
+    color: $primary;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+
+.accountPage__content {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 30px;
+  align-items: start;
+  padding-top: 64px;
+  padding-bottom: 92px;
+}
+
+.accountOverview {
+  @include flex-col(flex-start, stretch, 0);
+  position: sticky;
+  top: 106px;
+  padding: 10px 22px 22px;
+  border: 1px solid $border;
+  border-radius: $radius;
+  background: rgba($surface, 0.72);
+
+  &__item {
+    @include flex-row(flex-start, center, 12px);
+    padding: 18px 0;
+    border-bottom: 1px solid $border;
+
+    svg {
+      width: 19px;
+      height: 19px;
+      color: $primary;
+    }
+
+    span,
+    strong { display: block; }
+
+    span {
+      color: $muted;
+      font-size: 11px;
+    }
+
+    strong { font-size: 13px; }
+  }
+
+  .vk-button {
+    width: 100%;
+    margin-top: 20px;
+  }
+}
+
+.accountPage__forms {
+  @include flex-col(flex-start, stretch, 20px);
+}
+
+.accountCard {
+  padding: 30px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: rgba($surface-raised, 0.76);
+
+  &__heading {
+    @include flex-row(flex-start, center, 14px);
+    margin-bottom: 26px;
+
+    > span {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba($primary, 0.34);
+      border-radius: $radius;
+      background: rgba($primary, 0.09);
+      color: $primary;
+      place-items: center;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .technicalLabel {
+      margin-bottom: 4px;
+      font-size: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+  }
+
+  &__intro {
+    margin: -12px 0 22px;
+    font-size: 13px;
+  }
+}
+
+.accountForm {
+  max-width: 650px;
+
+  .vk-button {
+    margin-top: 3px;
+  }
+}
+
+@media (max-width: $tablet) {
+  .authPage {
+    &__grid {
+      grid-template-columns: 1fr;
+      gap: 34px;
+    }
+
+    &__context {
+      min-height: 0;
+      padding: 12px 0 0;
+    }
+
+    &__assurance { display: none; }
+  }
+
+  .accountHero .max {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .accountIdentity {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .accountPage__content {
+    grid-template-columns: 1fr;
+  }
+
+  .accountOverview {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) auto;
+    gap: 20px;
+    align-items: center;
+    padding: 6px 20px;
+
+    &__item { border-bottom: 0; }
+
+    .vk-button {
+      width: auto;
+      margin-top: 0;
+    }
+  }
+}
+
+@media (max-width: $phone) {
+  .authForm__options {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .authPage {
+    min-height: calc(100vh - 72px);
+    padding: 48px 0 64px;
+
+    &__context h1 {
+      font-size: clamp(46px, 15vw, 64px);
+    }
+
+    &__description { font-size: 16px; }
+
+    &__panel { padding: 25px 20px; }
+
+    &__panelHeading h2 { font-size: 24px; }
+
+    &__points { display: none; }
+  }
+
+  .authForm__row,
+  .accountForm__row {
+    grid-template-columns: 1fr;
+  }
+
+  .accountHero {
+    padding: 42px 0 38px;
+
+    h1 { font-size: 36px; }
+  }
+
+  .accountIdentity {
+    grid-template-columns: auto minmax(0, 1fr);
+
+    &__role {
+      grid-column: 2;
+      width: fit-content;
+    }
+  }
+
+  .accountPage__content {
+    padding-top: 38px;
+    padding-bottom: 62px;
+  }
+
+  .accountOverview {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 5px 20px 20px;
+
+    &__item { border-bottom: 1px solid $border; }
+
+    .vk-button {
+      width: 100%;
+      margin-top: 18px;
+    }
+  }
+
+  .accountCard { padding: 24px 20px; }
+}

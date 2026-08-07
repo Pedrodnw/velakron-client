@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Next.js and test output
+.next/
+.next-browser/
+out/
+coverage/
+
+# Generated 3D viewer assets (copied by scripts/copyOcctAssets.js)
+public/vendor/occt-import-js/
+
+# Logs and local tooling
+*.log
+.DS_Store
+.cache/
+.idea/
+.vscode/
+

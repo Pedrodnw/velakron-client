@@ -1,0 +1,35 @@
+const accountItem = { href: '/account', label: 'Account', icon: 'account' }
+
+const itemsByOrganizationType = {
+  oem: [
+    { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/production', label: 'Production', icon: 'production', permission: 'production_record.read' },
+    { href: '/app/suppliers', label: 'Suppliers', icon: 'relationships', permission: 'relationship.read' },
+    { href: '/app/team', label: 'Team', icon: 'team', permission: 'membership.read' },
+  ],
+  supplier: [
+    { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/company', label: 'Onboarding & profile', icon: 'onboarding', permission: 'supplier_profile.read' },
+    { href: '/app/facilities', label: 'Facilities', icon: 'facilities', permission: 'supplier_profile.read' },
+    { href: '/app/production', label: 'Production', icon: 'production', permission: 'production_record.read' },
+    { href: '/app/machines', label: 'Machines', icon: 'machines', permission: 'machine.read' },
+    { href: '/app/certifications', label: 'Certifications', icon: 'certifications', permission: 'supplier_profile.read' },
+    { href: '/app/suppliers', label: 'Customers', icon: 'relationships', permission: 'relationship.read' },
+    { href: '/app/team', label: 'Team', icon: 'team', permission: 'membership.read' },
+  ],
+  velakron: [
+    { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/admin/organizations', label: 'Organizations', icon: 'organization', permission: 'platform.support' },
+    { href: '/admin/users', label: 'Users', icon: 'team', permission: 'platform.support' },
+    { href: '/admin/suppliers', label: 'Supplier reviews', icon: 'onboarding', permission: 'supplier_profile.review' },
+    { href: '/admin/relationships', label: 'Relationships', icon: 'relationships', permission: 'platform.support' },
+    { href: '/admin', label: 'Audit & support', icon: 'audit', permission: 'audit.read', exact: true },
+  ],
+}
+
+export const getNavigationItems = (organizationType, permissions = []) => [
+  ...(itemsByOrganizationType[organizationType] || []).filter(item => (
+    !item.permission || permissions.includes(item.permission)
+  )),
+  accountItem,
+]

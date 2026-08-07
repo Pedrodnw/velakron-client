@@ -1,0 +1,548 @@
+.homeHero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid $border;
+  @include technical-grid;
+
+  &::before {
+    position: absolute;
+    z-index: 0;
+    inset: 0 0 94px;
+    background:
+      linear-gradient(90deg, rgba($background, 0.98) 0%, rgba($background, 0.9) 31%, rgba($background, 0.35) 68%, rgba($background, 0.18) 100%),
+      linear-gradient(180deg, rgba($background, 0.03) 45%, $background 100%),
+      url('/images/hero-spindle.png') center 49% / cover no-repeat;
+    content: '';
+  }
+
+  &__content {
+    position: relative;
+    z-index: 1;
+    min-height: 780px;
+    padding-top: 160px;
+    padding-bottom: 88px;
+  }
+
+  &__logo {
+    width: 270px;
+    margin-bottom: 36px;
+  }
+
+  h1 {
+    max-width: 690px;
+    margin-bottom: 20px;
+    font-size: clamp(56px, 5.3vw, 74px);
+    font-weight: 790;
+  }
+
+  &__tagline {
+    margin-bottom: 28px;
+    color: rgba($foreground, 0.86);
+    font-size: clamp(22px, 2.1vw, 30px);
+    font-weight: 650;
+    letter-spacing: -0.025em;
+  }
+
+  &__summary {
+    max-width: 570px;
+    margin-bottom: 34px;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+
+  &__actions {
+    @include flex-row(flex-start, center, 12px);
+  }
+
+  &__accountability {
+    position: relative;
+    z-index: 1;
+    min-height: 94px;
+    border-top: 1px solid $border;
+    background: rgba($background, 0.94);
+
+    .max {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      align-items: center;
+      gap: 26px;
+      min-height: inherit;
+    }
+
+    strong {
+      font-size: 16px;
+    }
+
+    p {
+      max-width: 760px;
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+  }
+}
+
+.realitySection {
+  padding: 108px 0 116px;
+  border-bottom: 1px solid $border;
+
+  .sectionHeading h2 {
+    max-width: 690px;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+
+  &__copy {
+    h3 {
+      margin-bottom: 18px;
+      font-size: 23px;
+    }
+
+    > p:not(.technicalLabel) {
+      max-width: 560px;
+      margin-bottom: 34px;
+      font-size: 16px;
+    }
+
+    .technicalLabel {
+      margin-bottom: 18px;
+      color: rgba($muted, 0.75);
+    }
+
+    ul {
+      @include flex-col(flex-start, stretch, 11px);
+      margin: 0 0 30px;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      @include flex-row(flex-start, center, 12px);
+      color: $muted;
+      font-size: 14px;
+
+      span {
+        display: grid;
+        flex: 0 0 21px;
+        width: 21px;
+        height: 21px;
+        border: 1px solid rgba($primary, 0.45);
+        border-radius: 5px;
+        background: rgba($primary, 0.08);
+        color: $primary;
+        place-items: center;
+      }
+
+      svg {
+        width: 13px;
+        height: 13px;
+      }
+    }
+
+    strong {
+      font-size: 14px;
+    }
+  }
+
+  &__image {
+    aspect-ratio: 1.23;
+    border: 1px solid $border;
+    border-radius: $radius;
+    background: $surface;
+  }
+}
+
+.processSection {
+  padding-top: 108px;
+  border-bottom: 1px solid $border;
+  background:
+    radial-gradient(circle at 50% 10%, rgba($primary, 0.045), transparent 34%),
+    #070a0f;
+
+  .sectionHeading {
+    max-width: 750px;
+  }
+
+  &__steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 42px;
+  }
+
+  &__closing {
+    max-width: 760px;
+    margin-bottom: 25px;
+  }
+
+  > .max > .vk-button {
+    margin-bottom: 96px;
+  }
+}
+
+.processCard {
+  min-height: 220px;
+  padding: 28px 24px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: rgba($surface-raised, 0.74);
+
+  > span {
+    display: block;
+    margin-bottom: 26px;
+    color: $primary;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  h3 {
+    margin-bottom: 14px;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.statisticsStrip {
+  border-top: 1px solid $border;
+  background-color: #0c1016;
+
+  .max {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statistic {
+  @include flex-col(center, flex-start, 12px);
+  min-height: 260px;
+  padding: 42px 30px;
+  border-right: 1px solid $border;
+
+  &:first-child {
+    border-left: 1px solid $border;
+  }
+
+  strong {
+    max-width: 260px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(38px, 4vw, 54px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.055em;
+  }
+
+  span {
+    max-width: 230px;
+    color: rgba($muted, 0.76);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    line-height: 1.5;
+    text-transform: uppercase;
+  }
+}
+
+.capabilitiesSection {
+  padding: 108px 0 116px;
+  border-bottom: 1px solid $border;
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 72px;
+  }
+
+  &__label {
+    margin-bottom: 28px;
+    color: rgba($muted, 0.74);
+    text-align: center;
+  }
+}
+
+.capabilityCard {
+  min-height: 258px;
+  padding: 25px 22px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: rgba($surface-raised, 0.78);
+  transition: border-color 180ms ease, transform 180ms ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba($primary, 0.38);
+  }
+
+  > span {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 26px;
+    border: 1px solid $border;
+    border-radius: 6px;
+    background: rgba($background, 0.65);
+    color: $primary;
+    place-items: center;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  h3 {
+    min-height: 43px;
+    margin-bottom: 10px;
+    font-size: 17px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.industriesGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+.industryCard {
+  @include flex-col(center, center, 14px);
+  min-height: 108px;
+  padding: 18px 10px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: rgba($surface-raised, 0.78);
+  color: $muted;
+  text-align: center;
+
+  svg {
+    width: 25px;
+    height: 25px;
+    color: $primary;
+  }
+
+  span {
+    font-size: 12px;
+  }
+}
+
+.closingSection {
+  position: relative;
+  overflow: hidden;
+  min-height: 610px;
+
+  &::before {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, $background 0%, rgba($background, 0.92) 44%, rgba($background, 0.45) 72%, rgba($background, 0.3) 100%),
+      linear-gradient(180deg, rgba($background, 0.05), rgba($background, 0.45)),
+      url('/images/precision-part.png') 80% 54% / min(60vw, 900px) auto no-repeat;
+    content: '';
+  }
+
+  .max {
+    position: relative;
+    z-index: 1;
+  }
+
+  &__copy {
+    max-width: 690px;
+    padding: 112px 0 102px;
+
+    .technicalLabel {
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-bottom: 25px;
+      font-size: clamp(40px, 4.2vw, 58px);
+    }
+
+    h3 {
+      margin-bottom: 24px;
+      color: rgba($foreground, 0.88);
+      font-size: 24px;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+    }
+
+    > p:not(.technicalLabel) {
+      max-width: 650px;
+      margin-bottom: 34px;
+    }
+  }
+}
+
+@media (max-width: $tablet) {
+  .homeHero {
+    &::before {
+      background:
+        linear-gradient(90deg, rgba($background, 0.98) 0%, rgba($background, 0.82) 55%, rgba($background, 0.35) 100%),
+        linear-gradient(180deg, rgba($background, 0.12), $background 100%),
+        url('/images/hero-spindle.png') 62% center / cover no-repeat;
+    }
+
+    &__content {
+      padding-top: 130px;
+    }
+  }
+
+  .processSection__steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .capabilitiesSection__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .industriesGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: $phone) {
+  .homeHero {
+    &::before {
+      background:
+        linear-gradient(90deg, rgba($background, 0.96), rgba($background, 0.61)),
+        linear-gradient(180deg, rgba($background, 0.1) 35%, $background 89%),
+        url('/images/hero-spindle.png') 63% center / cover no-repeat;
+    }
+
+    &__content {
+      min-height: 720px;
+      padding-top: 100px;
+      padding-bottom: 68px;
+    }
+
+    &__logo {
+      width: 230px;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      font-size: clamp(46px, 14vw, 62px);
+    }
+
+    &__tagline {
+      font-size: 21px;
+    }
+
+    &__summary {
+      font-size: 15px;
+    }
+
+    &__actions {
+      align-items: stretch;
+      flex-direction: column;
+
+      .vk-button {
+        width: 100%;
+      }
+    }
+
+    &__accountability {
+      padding-block: 27px;
+
+      .max {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+    }
+  }
+
+  .realitySection,
+  .capabilitiesSection {
+    padding-block: 78px;
+  }
+
+  .realitySection__grid {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+
+  .realitySection__image {
+    order: -1;
+  }
+
+  .processSection {
+    padding-top: 78px;
+
+    &__steps {
+      grid-template-columns: 1fr;
+    }
+
+    > .max > .vk-button {
+      margin-bottom: 72px;
+    }
+  }
+
+  .statisticsStrip .max {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .statistic {
+    min-width: 0;
+    min-height: 190px;
+    padding: 28px 10px;
+    border-bottom: 1px solid $border;
+
+    strong {
+      max-width: 100%;
+      font-size: clamp(24px, 6.5vw, 32px);
+    }
+
+    span { max-width: 100%; }
+  }
+
+  .capabilitiesSection__grid,
+  .industriesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .capabilityCard {
+    min-height: 0;
+  }
+
+  .industryCard {
+    min-height: 86px;
+  }
+
+  .closingSection {
+    min-height: 680px;
+
+    &::before {
+      background:
+        linear-gradient(180deg, rgba($background, 0.92) 0%, rgba($background, 0.84) 61%, rgba($background, 0.65) 100%),
+        url('/images/precision-part.png') center bottom / 150% auto no-repeat;
+    }
+
+    &__copy {
+      padding-block: 78px;
+
+      h2 {
+        font-size: clamp(36px, 11vw, 48px);
+      }
+
+      h3 {
+        font-size: 21px;
+      }
+    }
+  }
+}

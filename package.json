@@ -1,0 +1,30 @@
+{
+  "name": "velakron-client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "predev": "node scripts/copyOcctAssets.js",
+    "dev": "next dev -p 5000",
+    "prebuild": "node scripts/copyOcctAssets.js",
+    "build": "next build --webpack",
+    "start": "next start -p 5000",
+    "postinstall": "node scripts/copyOcctAssets.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "2.12.0",
+    "axios": "1.19.0",
+    "lucide-react": "1.29.0",
+    "next": "16.3.0",
+    "next-redux-wrapper": "8.1.0",
+    "occt-import-js": "0.0.23",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-redux": "9.3.0",
+    "sass": "1.102.0",
+    "three": "0.184.0"
+  },
+  "devDependencies": {
+    "vitest": "3.2.7"
+  }
+}

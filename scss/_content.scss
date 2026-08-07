@@ -1,0 +1,147 @@
+.contentPage {
+  min-height: 70vh;
+
+  &__hero {
+    padding: 112px 0 96px;
+    border-bottom: 1px solid $border;
+    background:
+      radial-gradient(circle at 85% 30%, rgba($primary, 0.09), transparent 28%),
+      rgba($background, 0.3);
+
+    .max {
+      max-width: $max-width;
+    }
+
+    .technicalLabel {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      max-width: 850px;
+      margin-bottom: 24px;
+      font-size: clamp(48px, 6vw, 76px);
+    }
+
+    p:last-child {
+      max-width: 760px;
+      margin-bottom: 0;
+      font-size: 18px;
+    }
+  }
+
+  &__sections {
+    padding: 92px 0;
+
+    .max {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+  }
+
+  &__cta {
+    padding: 82px 0;
+    border-top: 1px solid $border;
+    background: #070a0f;
+
+    h2 {
+      margin-bottom: 16px;
+      font-size: clamp(34px, 4vw, 50px);
+    }
+
+    p {
+      max-width: 620px;
+      margin-bottom: 28px;
+    }
+  }
+}
+
+.contentCard {
+  min-height: 220px;
+  padding: 32px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: rgba($surface-raised, 0.88);
+
+  h2 {
+    margin-bottom: 16px;
+    font-size: 23px;
+  }
+
+  p {
+    margin-bottom: 0;
+  }
+
+  &__subtitle {
+    margin-top: -7px;
+    margin-bottom: 16px !important;
+    color: $primary !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  ul {
+    @include flex-col(flex-start, stretch, 9px);
+    margin: 0;
+    padding-left: 20px;
+    color: $muted;
+  }
+
+  li::marker {
+    color: $primary;
+  }
+
+  &__link {
+    @include flex-row(flex-start, center, 9px);
+    margin-top: 24px;
+    color: $primary;
+    font-weight: 700;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+.notFound {
+  min-height: 70vh;
+  padding: 130px 0;
+
+  h1 {
+    max-width: 760px;
+    margin-bottom: 22px;
+    font-size: clamp(48px, 6vw, 76px);
+  }
+
+  p:not(.technicalLabel) {
+    margin-bottom: 30px;
+  }
+}
+
+@media (max-width: $phone) {
+  .contentPage {
+    &__hero {
+      padding: 82px 0 70px;
+
+      h1 {
+        font-size: clamp(42px, 13vw, 60px);
+      }
+    }
+
+    &__sections {
+      padding: 62px 0;
+
+      .max {
+        grid-template-columns: 1fr;
+      }
+    }
+  }
+
+  .contentCard {
+    min-height: 0;
+    padding: 26px;
+  }
+}

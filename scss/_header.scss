@@ -1,0 +1,230 @@
+.siteHeader {
+  position: sticky;
+  z-index: 100;
+  top: 0;
+  height: 80px;
+  border-bottom: 1px solid $border;
+  background: rgba($background, 0.88);
+  backdrop-filter: blur(18px);
+
+  &__inner {
+    @include flex-row(space-between, center, 24px);
+    height: 100%;
+  }
+
+  &__brand {
+    flex: 0 0 190px;
+
+    img {
+      width: 160px;
+    }
+  }
+
+  &__desktopNav {
+    @include flex-row(center, center, 30px);
+    flex: 1;
+
+    a {
+      position: relative;
+      padding: 28px 0 26px;
+      color: rgba($muted, 0.9);
+      font-size: 14px;
+      line-height: 1;
+      transition: color 160ms ease;
+
+      &::after {
+        position: absolute;
+        right: 0;
+        bottom: 19px;
+        left: 0;
+        height: 1px;
+        transform: scaleX(0);
+        background: $primary;
+        content: '';
+        transition: transform 160ms ease;
+      }
+
+      &:hover,
+      &.active {
+        color: $foreground;
+
+        &::after {
+          transform: scaleX(1);
+        }
+      }
+    }
+  }
+
+  &__quote {
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 9px 18px;
+  }
+
+  &__actions {
+    @include flex-row(flex-end, center, 12px);
+    flex: 0 0 auto;
+  }
+
+  &__authLink {
+    @include flex-row(center, center, 8px);
+    min-height: 38px;
+    padding: 5px 8px;
+    border-radius: $radius;
+    color: $muted;
+    font-size: 13px;
+    transition: color 160ms ease, background-color 160ms ease;
+
+    > span {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba($primary, 0.4);
+      border-radius: 50%;
+      background: rgba($primary, 0.12);
+      color: $foreground;
+      font-size: 11px;
+      font-style: normal;
+      font-weight: 800;
+      place-items: center;
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
+      color: $primary;
+    }
+
+    em {
+      font-style: normal;
+      font-weight: 650;
+    }
+
+    &:hover,
+    &.active {
+      background: rgba($surface-raised, 0.9);
+      color: $foreground;
+    }
+  }
+
+  &__menuButton {
+    display: none;
+    width: 44px;
+    height: 44px;
+    border: 1px solid $border-strong;
+    border-radius: $radius;
+    background: $surface;
+    color: $foreground;
+    place-items: center;
+    cursor: pointer;
+
+    svg {
+      width: 21px;
+      height: 21px;
+    }
+  }
+
+  &__mobileNav {
+    @include flex-col(flex-start, stretch, 0);
+    display: none;
+    position: fixed;
+    z-index: 110;
+    top: 80px;
+    right: 0;
+    width: min(88vw, 370px);
+    height: calc(100vh - 80px);
+    padding: 22px 24px 32px;
+    transform: translateX(105%);
+    border-left: 1px solid $border;
+    background: $background;
+    transition: transform 200ms ease;
+
+    > a:not(.vk-button) {
+      padding: 15px 2px;
+      border-bottom: 1px solid $border;
+      color: $muted;
+      font-size: 16px;
+    }
+
+    .vk-button {
+      width: 100%;
+      margin-top: 24px;
+    }
+
+    &.isOpen {
+      display: flex;
+      transform: translateX(0);
+    }
+  }
+
+  &__mobileAccount {
+    @include flex-col(flex-start, stretch, 0);
+    margin-top: 14px;
+    padding: 10px 0;
+    border-top: 1px solid $border-strong;
+    border-bottom: 1px solid $border-strong;
+
+    a,
+    button {
+      @include flex-row(flex-start, center, 10px);
+      min-height: 46px;
+      padding: 8px 2px;
+      border: 0;
+      background: transparent;
+      color: $foreground;
+      cursor: pointer;
+      font-weight: 650;
+      text-align: left;
+
+      svg {
+        width: 18px;
+        height: 18px;
+        color: $primary;
+      }
+    }
+  }
+}
+
+@media (max-width: 1160px) {
+  .siteHeader {
+    &__brand {
+      flex-basis: 150px;
+    }
+
+    &__desktopNav {
+      gap: 20px;
+    }
+
+    &__authLink em {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: $tablet) {
+  .siteHeader {
+    &__desktopNav,
+    &__actions {
+      display: none;
+    }
+
+    &__menuButton {
+      display: grid;
+    }
+  }
+}
+
+@media (max-width: $phone) {
+  .siteHeader {
+    height: 72px;
+
+    &__brand img {
+      width: 148px;
+    }
+
+    &__mobileNav {
+      top: 72px;
+      height: calc(100vh - 72px);
+    }
+  }
+}
