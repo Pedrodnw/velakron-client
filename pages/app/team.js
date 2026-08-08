@@ -28,6 +28,7 @@ import {
   revokeInvitation,
 } from '../../store/slices/entities/invitations'
 import { loadMemberships, membershipSelectors, updateMembership } from '../../store/slices/entities/memberships'
+import UserTableIdentity from '../../components/app/UserTableIdentity'
 
 const memberName = membership => {
   const user = membership.user || {}
@@ -128,7 +129,7 @@ const Team = () => {
   }
 
   const memberColumns = [
-    { key: 'member', label: 'Member', render: item => <div className='tablePrimary'><strong>{memberName(item)}</strong><span>{item.user?.email}</span></div> },
+    { key: 'member', label: 'Member', render: item => <UserTableIdentity user={item.user} name={memberName(item)} /> },
     { key: 'role', label: 'Role', render: item => formatRole(item.role) },
     { key: 'status', label: 'Access', render: item => <StatusBadge tone={statusTone(item.status)}>{formatLabel(item.status)}</StatusBadge> },
     { key: 'joined_at', label: 'Joined', render: item => formatDate(item.joined_at) },

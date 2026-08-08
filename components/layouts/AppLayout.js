@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { getAuthUser } from '../../store/slices/auth'
 import { getActiveMembership } from '../../store/slices/appContext'
+import UserAvatar from '../UserAvatar'
 
 const roleLabels = {
   velakron_admin: 'Velakron administrator',
@@ -48,7 +49,7 @@ const AppLayout = ({ children }) => {
         </button>
         <div className='appTopbar__actions'>
           <LinkWrap className='appIdentity' href='/account'>
-            <span>{user?.initials || <UserRound aria-hidden='true' />}</span>
+            <UserAvatar user={user} fallback={<UserRound aria-hidden='true' />} size={36} />
             <span><strong>{user?.full_name || user?.email || 'Account'}</strong><small>{roleLabels[membership?.role] || 'Account holder'}</small></span>
           </LinkWrap>
         </div>

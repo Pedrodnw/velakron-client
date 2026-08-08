@@ -14,6 +14,7 @@ import { Button } from '../../components/design-system'
 import { getAuthUser } from '../../store/slices/auth'
 import { getHasPermission } from '../../store/slices/appContext'
 import { loadPlatformUsers, platformSelectors, updatePlatformUserStatus } from '../../store/slices/entities/platformAdministration'
+import UserTableIdentity from '../../components/app/UserTableIdentity'
 
 const Users = () => {
   const dispatch = useDispatch()
@@ -50,7 +51,7 @@ const Users = () => {
   if (!allowed) return <PermissionDenied description='Only Velakron platform administrators can view this area.' />
 
   const columns = [
-    { key: 'user', label: 'User', render: item => <div className='tablePrimary'><strong>{[item.user?.first_name, item.user?.last_name].filter(Boolean).join(' ') || 'User'}</strong><span>{item.user?.email}</span></div> },
+    { key: 'user', label: 'User', render: item => <UserTableIdentity user={item.user} /> },
     { key: 'organization', label: 'Organization', render: item => <div className='tablePrimary'><strong>{item.organization?.name}</strong><span>{formatLabel(item.organization?.type)}</span></div> },
     { key: 'role', label: 'Role', render: item => formatRole(item.role) },
     { key: 'status', label: 'Membership', render: item => <StatusBadge tone={statusTone(item.status)}>{formatLabel(item.status)}</StatusBadge> },

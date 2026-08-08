@@ -21,7 +21,7 @@ const views = {
 }
 const stages = ['assigned', 'accepted', 'material_ordered', 'material_received', 'programming', 'in_production', 'inspection', 'ready_to_ship', 'shipped', 'delivered']
 const healthValues = ['on_schedule', 'at_risk', 'delayed', 'needs_attention', 'unassessed']
-const initialFilters = type => ({ view: type === 'supplier' ? 'action_required' : 'active', search: '', stage: '', health: '', supplier_organization_id: '', required_from: '', required_to: '', first_article: '', page: 1 })
+const initialFilters = type => ({ view: type === 'supplier' ? 'action_required' : 'active', search: '', stage: '', health: '', attention: '', supplier_organization_id: '', required_from: '', required_to: '', first_article: '', page: 1 })
 const cleanQuery = filters => Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== '' && value !== undefined && value !== 1))
 
 const Production = () => {
@@ -51,6 +51,7 @@ const Production = () => {
       search: String(router.query.search || '').slice(0, 160),
       stage: stages.includes(router.query.stage) ? router.query.stage : '',
       health: healthValues.includes(router.query.health) ? router.query.health : '',
+      attention: router.query.attention === 'unresolved' ? 'unresolved' : '',
       supplier_organization_id: type === 'oem' ? String(router.query.supplier_organization_id || '') : '',
       required_from: String(router.query.required_from || ''),
       required_to: String(router.query.required_to || ''),
@@ -93,7 +94,7 @@ const Production = () => {
     router.replace({ pathname: '/app/production', query: cleanQuery(next) }, undefined, { shallow: true })
   }
   if (!allowed) return <PermissionDenied />
-  const filterCount = ['search', 'stage', 'health', 'supplier_organization_id', 'required_from', 'required_to', 'first_article']
+  const filterCount = ['search', 'stage', 'health', 'attention', 'supplier_organization_id', 'required_from', 'required_to', 'first_article']
     .filter(key => Boolean(filters[key])).length
   const recordHref = item => ({ pathname: '/app/production/[id]', query: { id: item.id, return_to: router.asPath } })
   const company = item => type === 'supplier' ? item.oem_organization?.name : item.supplier_organization?.name || 'Unassigned'
@@ -118,6 +119,7 @@ const Production = () => {
       {type === 'oem' && <label><span>Supplier</span><select value={filters.supplier_organization_id} onChange={event => updateFilters({ supplier_organization_id: event.target.value, page: 1 })}><option value=''>All suppliers</option>{relationships.filter(item => item.status === 'active').map(item => <option key={item.id} value={item.supplier_organization?.id}>{item.supplier_organization?.name}</option>)}</select></label>}
       <label><span>Stage</span><select value={filters.stage} onChange={event => updateFilters({ stage: event.target.value, page: 1 })}><option value=''>All stages</option>{stages.map(stage => <option key={stage} value={stage}>{stage.replaceAll('_', ' ')}</option>)}</select></label>
       <label><span>Schedule</span><select value={filters.health} onChange={event => updateFilters({ health: event.target.value, page: 1 })}><option value=''>All health states</option>{healthValues.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select></label>
+      <label><span>Attention</span><select value={filters.attention} onChange={event => updateFilters({ attention: event.target.value, page: 1 })}><option value=''>Any attention state</option><option value='unresolved'>Unresolved only</option></select></label>
       <label><span>Required from</span><input type='date' value={filters.required_from} onChange={event => updateFilters({ required_from: event.target.value, page: 1 })} /></label>
       <label><span>Required to</span><input type='date' value={filters.required_to} onChange={event => updateFilters({ required_to: event.target.value, page: 1 })} /></label>
       <label><span>First article</span><select value={filters.first_article} onChange={event => updateFilters({ first_article: event.target.value, page: 1 })}><option value=''>Any</option><option value='true'>Required</option><option value='false'>Not required</option></select></label>

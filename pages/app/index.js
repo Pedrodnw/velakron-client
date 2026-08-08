@@ -122,7 +122,7 @@ const OperationalDashboard = ({ organization }) => {
   return <>
     {error && <ErrorState title='Production overview could not refresh' description='Showing the last successful snapshot. Refresh before making a schedule decision.' onRetry={refresh} />}
     <section className='metricGrid metricGrid--priority' aria-label='Production priorities'>
-      <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail={supplier ? 'Tasks or shared issues requiring your response' : 'Records with unresolved attention reasons'} icon={AlertTriangle} tone='warning' href={supplier ? '/app/production?view=action_required' : '/app/production?view=active&health=needs_attention'} />
+      <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail={supplier ? 'Tasks or shared issues requiring your response' : 'Records with unresolved attention reasons'} icon={AlertTriangle} tone='warning' href={supplier ? '/app/production?view=action_required' : '/app/production?view=active&attention=unresolved'} />
       <MetricCard label='Awaiting acceptance' value={metric(summary.counts?.awaiting_acceptance)} detail='Assignments awaiting supplier confirmation' icon={Clock3} href={supplier ? '/app/production?view=action_required&stage=assigned' : '/app/production?view=active&stage=assigned'} />
       <MetricCard label='At risk' value={metric(summary.counts?.at_risk)} detail='Active records with schedule risk' icon={AlertTriangle} tone='warning' href='/app/production?view=active&health=at_risk' />
       <MetricCard label='Delayed' value={metric(summary.counts?.delayed)} detail='Active records past a required date' icon={PackageCheck} tone='danger' href='/app/production?view=active&health=delayed' />

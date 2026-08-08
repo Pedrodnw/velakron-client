@@ -15,6 +15,7 @@ import {
   mobileNavigationClosed,
   mobileNavigationToggled,
 } from '../store/slices/ui'
+import UserAvatar from './UserAvatar'
 
 const SiteHeader = () => {
   const router = useRouter()
@@ -54,7 +55,7 @@ const SiteHeader = () => {
       <div className='siteHeader__actions'>
         {authInitialized && (user
           ? <LinkWrap className={currentPath === '/account' ? 'siteHeader__authLink active' : 'siteHeader__authLink'} href='/account'>
-            <span>{user.initials}</span>
+            <UserAvatar user={user} size={30} />
             <em>{user.first_name}</em>
           </LinkWrap>
           : <LinkWrap className='siteHeader__authLink' href='/login'>

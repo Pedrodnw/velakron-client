@@ -115,6 +115,16 @@ p {
   }
 }
 
+.userAvatar {
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
 .velakronLogo {
   width: auto;
   height: auto;

@@ -13,6 +13,7 @@ import { resultError } from '../../../components/auth/utils'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
 import Seo from '../../../components/Seo'
 import { getHasPermission } from '../../../store/slices/appContext'
+import UserTableIdentity from '../../../components/app/UserTableIdentity'
 import {
   invitePlatformOrganizationAdmin,
   loadPlatformOrganization,
@@ -85,7 +86,7 @@ const OrganizationDetail = () => {
   if (!allowed) return <PermissionDenied description='Only Velakron platform administrators can use organization support tools.' />
   const organization = detail?.organization
   const membershipColumns = [
-    { key: 'user', label: 'Member', render: item => <div className='tablePrimary'><strong>{[item.user?.first_name, item.user?.last_name].filter(Boolean).join(' ') || 'User'}</strong><span>{item.user?.email}</span></div> },
+    { key: 'user', label: 'Member', render: item => <UserTableIdentity user={item.user} /> },
     { key: 'role', label: 'Role', render: item => formatRole(item.role) },
     { key: 'status', label: 'Status', render: item => <StatusBadge tone={statusTone(item.status)}>{formatLabel(item.status)}</StatusBadge> },
     { key: 'last_active', label: 'Last active', render: item => formatDateTime(item.last_active_at) },

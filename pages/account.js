@@ -35,6 +35,7 @@ import {
   revokeSession,
 } from '../store/slices/identity'
 import { formatDate, formatLabel, formatRole } from '../components/app/formatters'
+import UserAvatar from '../components/UserAvatar'
 
 const roleLabels = {
   velakron_admin: 'Velakron administrator',
@@ -184,7 +185,7 @@ const AccountContent = () => {
           <p>Manage your identity and secure access to the Velakron ecosystem.</p>
         </div>
         <div className='accountIdentity'>
-          <span className='accountIdentity__initials'>{user.initials}</span>
+          <UserAvatar user={user} className='accountIdentity__initials' size={46} />
           <div>
             <strong>{user.full_name}</strong>
             <span>{user.email}</span>
