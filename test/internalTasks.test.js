@@ -58,4 +58,24 @@ describe('founder task state and priority matrix', () => {
     expect(internalTaskSelectors.getTasks(state)).toEqual([])
     expect(internalTaskSelectors.getAssignees(state)).toEqual([])
   })
+
+  it('stores task discussion and files with the selected task detail', () => {
+    let state = reducer(undefined, { type: '@@init' })
+    state = reducer(state, {
+      type: 'internalTasks/detailReceived',
+      payload: {
+        data: {
+          task: { id: 'task-a', title: 'Founder follow-up', message_count: 1, attachment_count: 1 },
+          messages: [{ id: 'message-a', body: 'Ready for review.' }],
+          attachments: [{ id: 'file-a', display_filename: 'review.pdf' }],
+        },
+      },
+    })
+    expect(internalTaskSelectors.getDetail(state)).toEqual({
+      task: { id: 'task-a', title: 'Founder follow-up', message_count: 1, attachment_count: 1 },
+      messages: [{ id: 'message-a', body: 'Ready for review.' }],
+      attachments: [{ id: 'file-a', display_filename: 'review.pdf' }],
+    })
+    expect(internalTaskSelectors.getTaskById('task-a')(state).title).toBe('Founder follow-up')
+  })
 })

@@ -1,5 +1,14 @@
+.founderTasksPage {
+  width: 100%;
+}
+
 .founderTaskMetrics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  .metricCard { padding: 14px 16px; }
+  .metricCard__top { margin-bottom: 8px; }
+  .metricCard > strong { margin-bottom: 2px; font-size: 24px; }
+  .metricCard > p { font-size: 10px; }
 }
 
 .founderTasksToolbar {
@@ -45,11 +54,18 @@
   &--overdue { border-color: rgba($danger, 0.38); }
 
   &--compact {
-    padding: 12px;
-    gap: 10px;
+    padding: 6px 7px;
+    gap: 3px;
 
-    h3 { font-size: 12px; }
-    .statusBadge { min-height: 23px; padding: 3px 7px; font-size: 9px; }
+    h3 { font-size: 10px; line-height: 1.2; }
+    > header > div:first-child > span { display: none; }
+    .statusBadge { display: none; }
+    .founderTaskCard__meta { gap: 6px; }
+    .founderTaskCard__meta > span:not(.statusBadge) { font-size: 8px; }
+    .founderTaskCard__meta svg { width: 9px; height: 9px; }
+    > footer { min-height: 18px; padding-top: 0; border-top: 0; }
+    .founderTaskCard__assignees .userAvatar { width: 18px; height: 18px; font-size: 6px; }
+    .founderTaskCard__assignees > span:last-child { display: none; }
   }
 
   > header {
@@ -78,6 +94,19 @@
       color: $foreground;
       font-size: 14px;
       line-height: 1.35;
+
+      button {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover { color: #9ec8ff; }
+        &:focus-visible { border-radius: 3px; outline: 2px solid rgba($primary, 0.35); outline-offset: 2px; }
+      }
     }
   }
 
@@ -102,7 +131,14 @@
     gap: 8px;
   }
 
-  &__edit {
+  &__actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  &__edit,
+  &__complete {
     display: inline-flex;
     width: 30px;
     height: 30px;
@@ -117,6 +153,15 @@
     &:hover { border-color: rgba($primary, 0.5); color: #9ec8ff; }
     &:focus-visible { outline: 3px solid rgba($primary, 0.24); outline-offset: 2px; }
     svg { width: 13px; height: 13px; }
+  }
+
+  &__complete {
+    border-color: rgba(#35c779, 0.3);
+    background: rgba(#35c779, 0.07);
+    color: #6edb9e;
+
+    &:hover:not(:disabled) { border-color: rgba(#35c779, 0.62); background: rgba(#35c779, 0.13); }
+    &:disabled { opacity: 0.45; cursor: wait; }
   }
 
   &__meta {
@@ -135,6 +180,8 @@
     > span.is-overdue { color: #ff8b8e; }
     svg { width: 12px; height: 12px; }
   }
+
+  &__collaboration { gap: 3px !important; }
 
   &__assignees {
     display: flex;
@@ -184,6 +231,14 @@
     button:disabled { opacity: 0.25; cursor: not-allowed; }
     svg { width: 12px; height: 12px; }
   }
+
+  &--compact &__edit,
+  &--compact &__complete { width: 20px; height: 20px; }
+  &--compact &__edit svg,
+  &--compact &__complete svg { width: 10px; height: 10px; }
+  &--compact &__move { grid-template-columns: repeat(4, 17px); gap: 2px; }
+  &--compact &__move button { width: 17px; height: 17px; }
+  &--compact &__move svg { width: 9px; height: 9px; }
 }
 
 .priorityMatrix {
@@ -194,7 +249,7 @@
 
   &__intro {
     display: flex;
-    padding: 18px 20px;
+    padding: 12px 16px;
     border-bottom: 1px solid $border;
     align-items: center;
     gap: 12px;
@@ -217,7 +272,7 @@
 
   &__grid {
     display: grid;
-    grid-template-columns: 150px repeat(3, minmax(190px, 1fr));
+    grid-template-columns: 112px repeat(3, minmax(220px, 1fr));
   }
 
   &__corner,
@@ -229,8 +284,8 @@
   &__column,
   &__row {
     display: flex;
-    min-height: 70px;
-    padding: 12px;
+    min-height: 58px;
+    padding: 9px;
     flex-direction: column;
     justify-content: center;
   }
@@ -261,11 +316,11 @@
     position: relative;
     display: flex;
     min-width: 0;
-    min-height: 190px;
-    padding: 12px;
+    min-height: clamp(450px, 52vh, 500px);
+    padding: 8px;
     background: rgba(255, 255, 255, 0.008);
     flex-direction: column;
-    gap: 9px;
+    gap: 6px;
 
     &:nth-child(4n) { border-right: 0; }
     &:nth-last-child(-n + 4) { border-bottom: 0; }
@@ -287,8 +342,97 @@
     text-align: center;
   }
 
-  &__cell > .founderTaskCard:first-of-type { margin-top: 18px; }
+  &__cell > .founderTaskCard:first-of-type { margin-top: 14px; }
 }
+
+.taskDetailDrawer {
+  display: grid;
+  gap: 16px;
+
+  &__summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+
+    > div { display: flex; align-items: center; gap: 8px; }
+    > div:first-child > span:not(.statusBadge) { display: inline-flex; align-items: center; gap: 5px; color: $muted; font-size: 11px; }
+    > div:first-child > span.is-overdue { color: #ff8b8e; }
+    svg { width: 14px; height: 14px; }
+    .vk-button { min-height: 36px; padding: 7px 11px; }
+  }
+
+  &__body { min-height: 360px; }
+  &__loading { display: flex; min-height: 260px; align-items: center; justify-content: center; gap: 8px; color: $muted; font-size: 12px; }
+}
+
+.taskDetailOverview {
+  display: grid;
+  gap: 15px;
+
+  > section,
+  > dl {
+    margin: 0;
+    padding: 16px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  > section > span { display: block; margin-bottom: 9px; color: $muted; font-size: 9px; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; }
+  > section > p { margin: 0; color: #d8e0e9; font-size: 12px; line-height: 1.65; white-space: pre-wrap; }
+  > dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+  dt { margin-bottom: 5px; color: $muted; font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  dd { margin: 0; color: $foreground; font-size: 12px; }
+}
+
+.taskDetailAssignees {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+
+  > div { display: flex; align-items: center; gap: 9px; padding: 9px; border: 1px solid $border; border-radius: 7px; }
+  strong,
+  small { display: block; }
+  strong { color: $foreground; font-size: 11px; }
+  small { margin-top: 2px; color: $muted; font-size: 9px; }
+}
+
+.taskDiscussion { display: grid; gap: 14px; }
+.taskMessages { display: grid; max-height: 420px; overflow-y: auto; gap: 8px; padding-right: 4px; }
+.taskMessage {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid $border;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.014);
+
+  header { display: flex; justify-content: space-between; gap: 10px; }
+  header strong { color: $foreground; font-size: 11px; }
+  header span { color: $muted; font-size: 9px; }
+  p { margin: 7px 0 0; color: #d8e0e9; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+}
+
+.taskMessageComposer {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba($primary, 0.2);
+  border-radius: 9px;
+  background: rgba($primary, 0.035);
+
+  textarea { min-height: 96px; }
+  > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  > div > small { color: $muted; font-size: 10px; }
+}
+
+.taskFiles { display: grid; gap: 16px; }
+.taskFileUploader { margin-top: 0; }
+.taskFileUploader__actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.taskFileUploader__actions > small { max-width: 380px; color: $muted; font-size: 10px; line-height: 1.45; }
+.taskFileList .emptyState { min-height: 180px; }
 
 .founderTaskForm {
   &__row {
@@ -347,4 +491,14 @@
   .founderTaskForm__actions .vk-button { width: 100%; }
   .priorityMatrix__intro { min-width: 660px; }
   .priorityMatrix__grid { grid-template-columns: 130px repeat(3, 175px); min-width: 655px; }
+  .taskDetailDrawer__summary,
+  .taskDetailDrawer__summary > div,
+  .taskMessageComposer > div,
+  .taskFileUploader__actions { align-items: stretch; flex-direction: column; }
+  .taskDetailDrawer__summary .vk-button,
+  .taskMessageComposer .vk-button,
+  .taskFileUploader__actions .vk-button { width: 100%; }
+  .taskDetailOverview > dl,
+  .taskDetailAssignees { grid-template-columns: 1fr; }
+  .taskMessage header { flex-direction: column; gap: 2px; }
 }

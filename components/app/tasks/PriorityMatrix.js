@@ -3,7 +3,7 @@ import EmptyState from '../EmptyState'
 import FounderTaskCard from './FounderTaskCard'
 import { IMPORTANCE_ROWS, tasksForCell, URGENCY_COLUMNS } from './taskMatrix'
 
-const PriorityMatrix = ({ tasks, onEdit, onMove, canUpdate, mutating }) => {
+const PriorityMatrix = ({ tasks, onOpen, onEdit, onMove, onComplete, canUpdate, mutating }) => {
   if (!tasks.length) return <section className='appPanel'><EmptyState icon={Inbox} title='No active tasks match these filters' description='Create a task or adjust the filters to populate the priority matrix.' /></section>
   return <section className='priorityMatrix' aria-label='Founder priority matrix'>
     <header className='priorityMatrix__intro'>
@@ -19,7 +19,7 @@ const PriorityMatrix = ({ tasks, onEdit, onMove, canUpdate, mutating }) => {
           const cellTasks = tasksForCell(tasks, row.key, column.key)
           return <div className={`priorityMatrix__cell priorityMatrix__cell--${row.key}-${column.key}`} key={`${row.key}-${column.key}`}>
             <span className='priorityMatrix__cellCount'>{cellTasks.length}</span>
-            {cellTasks.map(task => <FounderTaskCard key={task.id} task={task} onEdit={onEdit} onMove={onMove} canUpdate={canUpdate} mutating={mutating} compact />)}
+            {cellTasks.map(task => <FounderTaskCard key={task.id} task={task} onOpen={onOpen} onEdit={onEdit} onMove={onMove} onComplete={onComplete} canUpdate={canUpdate} mutating={mutating} compact />)}
           </div>
         }),
       ])}

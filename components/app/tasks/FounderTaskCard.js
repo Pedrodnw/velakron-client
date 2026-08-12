@@ -4,8 +4,11 @@ import {
   ArrowRight,
   ArrowUp,
   CalendarClock,
+  Check,
   CircleDot,
   FolderKanban,
+  MessageSquare,
+  Paperclip,
   Pencil,
 } from 'lucide-react'
 import UserAvatar from '../../UserAvatar'
@@ -27,18 +30,22 @@ const MoveControls = ({ task, onMove, disabled }) => <div className='founderTask
   <button type='button' onClick={() => onMove(task, 'importance', 'low')} disabled={disabled || task.importance === 'low'} aria-label='Decrease importance'><ArrowDown aria-hidden='true' /></button>
 </div>
 
-const FounderTaskCard = ({ task, onEdit, onMove, canUpdate = false, mutating = false, compact = false }) => <article className={`founderTaskCard${task.overdue ? ' founderTaskCard--overdue' : ''}${compact ? ' founderTaskCard--compact' : ''}`}>
+const FounderTaskCard = ({ task, onOpen, onEdit, onMove, onComplete, canUpdate = false, mutating = false, compact = false }) => <article className={`founderTaskCard${task.overdue ? ' founderTaskCard--overdue' : ''}${compact ? ' founderTaskCard--compact' : ''}`}>
   <header>
     <div>
       {task.project_name && <span><FolderKanban aria-hidden='true' /> {task.project_name}</span>}
-      <h3>{task.title}</h3>
+      <h3>{onOpen ? <button type='button' onClick={() => onOpen(task)}>{task.title}</button> : task.title}</h3>
     </div>
-    {canUpdate && <button className='founderTaskCard__edit' type='button' onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}><Pencil aria-hidden='true' /></button>}
+    <div className='founderTaskCard__actions'>
+      {onComplete && canUpdate && <button className='founderTaskCard__complete' type='button' onClick={() => onComplete(task)} disabled={mutating} aria-label={`Complete ${task.title}`} title='Mark complete'><Check aria-hidden='true' /></button>}
+      {canUpdate && <button className='founderTaskCard__edit' type='button' onClick={() => onEdit(task)} aria-label={`Edit ${task.title}`}><Pencil aria-hidden='true' /></button>}
+    </div>
   </header>
   {task.description && !compact && <p>{task.description}</p>}
   <div className='founderTaskCard__meta'>
     <StatusBadge tone={statusTone(task.status)}><CircleDot aria-hidden='true' /> {formatLabel(task.status)}</StatusBadge>
     <span className={task.overdue ? 'is-overdue' : ''}><CalendarClock aria-hidden='true' /> {task.overdue ? 'Overdue · ' : ''}{formatDate(task.due_at)}</span>
+    {(task.message_count > 0 || task.attachment_count > 0) && <span className='founderTaskCard__collaboration'>{task.message_count > 0 && <><MessageSquare aria-hidden='true' /> {task.message_count}</>}{task.attachment_count > 0 && <><Paperclip aria-hidden='true' /> {task.attachment_count}</>}</span>}
   </div>
   <footer>
     <Assignees assignees={task.assignees} />

@@ -20,7 +20,7 @@ const roleLabels = {
   supplier_user: 'Supplier member',
 }
 
-const AppLayout = ({ children }) => {
+const AppLayout = ({ children, wide = false }) => {
   const [navigationOpen, setNavigationOpen] = useState(false)
   const user = useSelector(getAuthUser)
   const membership = useSelector(getActiveMembership)
@@ -55,7 +55,7 @@ const AppLayout = ({ children }) => {
           </LinkWrap>
         </div>
       </header>
-      <main id='app-main-content' className='appMain'><AppAccessBoundary><AppBreadcrumbs />{children}</AppAccessBoundary></main>
+      <main id='app-main-content' className={`appMain${wide ? ' appMain--wide' : ''}`}><AppAccessBoundary><AppBreadcrumbs />{children}</AppAccessBoundary></main>
     </div>
   </div>
 }

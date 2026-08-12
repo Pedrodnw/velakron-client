@@ -325,6 +325,13 @@
   min-height: calc(100vh - 72px);
   margin: 0 auto;
   padding: 42px 36px 70px;
+
+  &--wide {
+    width: 100%;
+    max-width: none;
+    padding-right: 24px;
+    padding-left: 24px;
+  }
 }
 
 .appAccessState {

@@ -6,7 +6,7 @@ import {
   Plus,
   Search,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -24,19 +24,25 @@ import FormMessage from '../../components/auth/FormMessage'
 import { resultError } from '../../components/auth/utils'
 import { Button } from '../../components/design-system'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
+import FounderTaskDetailDrawer from '../../components/app/tasks/FounderTaskDetailDrawer'
 import FounderTaskDrawer from '../../components/app/tasks/FounderTaskDrawer'
 import PriorityMatrix from '../../components/app/tasks/PriorityMatrix'
 import { dateInputToIso, dueDateForUrgency } from '../../components/app/tasks/taskMatrix'
-import PortalPageLayout from '../../components/app/PortalPageLayout'
+import { WidePortalPageLayout } from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { getHasPermission } from '../../store/slices/appContext'
 import {
   archiveInternalTask,
+  clearInternalTaskDetail,
+  createInternalTaskMessage,
   createInternalTask,
   internalTaskSelectors,
   loadInternalTaskAssignees,
+  loadInternalTaskDetail,
   loadInternalTasks,
+  requestInternalTaskAttachmentDownload,
   updateInternalTask,
+  uploadInternalTaskAttachment,
 } from '../../store/slices/entities/internalTasks'
 
 const activeStatuses = ['open', 'in_progress', 'blocked']
@@ -56,10 +62,17 @@ const FounderTasks = () => {
   const mutating = useSelector(internalTaskSelectors.getMutating)
   const error = useSelector(internalTaskSelectors.getError)
   const mutationError = useSelector(internalTaskSelectors.getMutationError)
+  const detail = useSelector(internalTaskSelectors.getDetail)
+  const detailLoading = useSelector(internalTaskSelectors.getDetailLoading)
+  const collaborationMutating = useSelector(internalTaskSelectors.getCollaborationMutating)
+  const upload = useSelector(internalTaskSelectors.getUpload)
   const [tab, setTab] = useState('matrix')
   const [drawerTask, setDrawerTask] = useState(undefined)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [detailTask, setDetailTask] = useState(null)
+  const [detailOpen, setDetailOpen] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState(null)
+  const handledTaskQuery = useRef('')
   const [feedback, setFeedback] = useState(null)
   const [filters, setFilters] = useState({ search: '', assignee: '', project: '', status: '' })
 
@@ -74,6 +87,19 @@ const FounderTasks = () => {
     if (!router.isReady || !['matrix', 'list', 'closed'].includes(router.query.view)) return
     setTab(router.query.view)
   }, [router.isReady, router.query.view])
+  useEffect(() => {
+    const requestedId = String(router.query.task || '')
+    if (!router.isReady) return
+    if (!requestedId) { handledTaskQuery.current = ''; return }
+    if (handledTaskQuery.current === requestedId || detailOpen || !tasks.length) return
+    const requestedTask = tasks.find(task => task.id === requestedId)
+    if (!requestedTask) return
+    handledTaskQuery.current = requestedId
+    setDetailTask(requestedTask)
+    setDetailOpen(true)
+    setFeedback(null)
+    dispatch(loadInternalTaskDetail(requestedId))
+  }, [detailOpen, dispatch, router.isReady, router.query.task, tasks])
 
   const projects = useMemo(() => [...new Set(tasks.map(task => task.project_name).filter(Boolean))].sort(), [tasks])
   const visibleTasks = useMemo(() => tasks.filter(task => {
@@ -93,8 +119,42 @@ const FounderTasks = () => {
   if (loading && !tasks.length) return <section className='appPanel'><AppSkeleton lines={10} /></section>
 
   const openCreate = () => { setDrawerTask(null); setFeedback(null); setDrawerOpen(true) }
-  const openEdit = task => { setDrawerTask(task); setFeedback(null); setDrawerOpen(true) }
+  const openEdit = task => {
+    setDetailOpen(false)
+    setDetailTask(null)
+    dispatch(clearInternalTaskDetail())
+    if (router.isReady && router.query.task) {
+      const query = { ...router.query }
+      delete query.task
+      router.replace({ pathname: router.pathname, query }, undefined, { shallow: true })
+    }
+    setDrawerTask(task)
+    setFeedback(null)
+    setDrawerOpen(true)
+  }
   const closeDrawer = () => { if (!mutating) { setDrawerOpen(false); setDrawerTask(undefined); setFeedback(null) } }
+  const openTask = task => {
+    handledTaskQuery.current = task.id
+    setDetailTask(task)
+    setDetailOpen(true)
+    setFeedback(null)
+    dispatch(loadInternalTaskDetail(task.id))
+    if (router.isReady && router.query.task !== task.id) {
+      router.replace({ pathname: router.pathname, query: { ...router.query, task: task.id } }, undefined, { shallow: true })
+    }
+  }
+  const closeDetail = () => {
+    if (collaborationMutating) return
+    setDetailOpen(false)
+    setDetailTask(null)
+    setFeedback(null)
+    dispatch(clearInternalTaskDetail())
+    if (router.isReady && router.query.task) {
+      const query = { ...router.query }
+      delete query.task
+      router.replace({ pathname: router.pathname, query }, undefined, { shallow: true })
+    }
+  }
 
   const submitTask = async form => {
     const dueAt = dateInputToIso(form.due_date)
@@ -140,6 +200,50 @@ const FounderTasks = () => {
     else dispatch(loadInternalTasks({ page_size: 100 }))
   }
 
+  const completeTask = async task => {
+    setFeedback(null)
+    const result = await dispatch(updateInternalTask(task.id, { status: 'completed', version: task.version }))
+    if (!result?.ok) {
+      setFeedback({ type: 'error', message: resultError(result, 'The task could not be completed.') })
+      return false
+    }
+    setFeedback({ type: 'success', message: `“${task.title}” completed.` })
+    dispatch(loadInternalTasks({ page_size: 100 }))
+    if (detailOpen && detailTask?.id === task.id) {
+      setDetailTask(result.payload.data.task)
+      dispatch(loadInternalTaskDetail(task.id))
+    }
+    return true
+  }
+
+  const sendMessage = async body => {
+    const result = await dispatch(createInternalTaskMessage(detailTask.id, body))
+    if (!result?.ok) {
+      setFeedback({ type: 'error', message: resultError(result, 'The message could not be sent.') })
+      return false
+    }
+    setFeedback({ type: 'success', message: 'Message sent.' })
+    return true
+  }
+
+  const uploadFile = async file => {
+    const result = await dispatch(uploadInternalTaskAttachment(detailTask.id, {
+      file,
+      regulated_data_acknowledged: true,
+    }))
+    if (!result?.ok) {
+      setFeedback({ type: 'error', message: resultError(result, 'The file could not be uploaded.') })
+      return false
+    }
+    setFeedback({ type: 'success', message: 'File uploaded and verified.' })
+    return true
+  }
+
+  const downloadFile = async file => {
+    const result = await dispatch(requestInternalTaskAttachmentDownload(detailTask.id, file.id))
+    if (!result?.ok) setFeedback({ type: 'error', message: resultError(result, 'The file could not be downloaded.') })
+  }
+
   const requestArchive = task => {
     setDrawerOpen(false)
     setDrawerTask(undefined)
@@ -162,6 +266,7 @@ const FounderTasks = () => {
 
   return <>
     <Seo title='Tasks & priorities' description='Velakron founder task workspace and priority matrix.' path='/app/tasks' noIndex />
+    <div className='founderTasksPage'>
     <AppPageHeader
       eyebrow='Founder workspace'
       title='Tasks & priorities'
@@ -191,14 +296,31 @@ const FounderTasks = () => {
       {tab === 'list' && <label><span>Status</span><select value={filters.status} onChange={event => setFilters(current => ({ ...current, status: event.target.value }))}><option value=''>All statuses</option><option value='open'>Open</option><option value='in_progress'>In progress</option><option value='blocked'>Blocked</option><option value='completed'>Completed</option><option value='cancelled'>Cancelled</option></select></label>}
     </FilterBar>
 
-    {tab === 'matrix' && <PriorityMatrix tasks={activeTasks} onEdit={openEdit} onMove={moveTask} canUpdate={canUpdate} mutating={mutating} />}
-    {tab === 'list' && <section className='founderTaskList' aria-label='All founder tasks'>{visibleTasks.length ? visibleTasks.map(task => <FounderTaskCard key={task.id} task={task} onEdit={openEdit} canUpdate={canUpdate} mutating={mutating} />) : <EmptyState title='No tasks match these filters' description='Clear a filter or create a new task.' />}</section>}
-    {tab === 'closed' && <section className='founderTaskList' aria-label='Completed and cancelled founder tasks'>{closedTasks.length ? closedTasks.map(task => <FounderTaskCard key={task.id} task={task} onEdit={openEdit} canUpdate={canUpdate} mutating={mutating} />) : <EmptyState icon={CheckCircle2} title='No completed tasks yet' description='Finished and cancelled work will appear here.' />}</section>}
+    {tab === 'matrix' && <PriorityMatrix tasks={activeTasks} onOpen={openTask} onEdit={openEdit} onMove={moveTask} onComplete={completeTask} canUpdate={canUpdate} mutating={mutating} />}
+    {tab === 'list' && <section className='founderTaskList' aria-label='All founder tasks'>{visibleTasks.length ? visibleTasks.map(task => <FounderTaskCard key={task.id} task={task} onOpen={openTask} onEdit={openEdit} onComplete={!['completed', 'cancelled'].includes(task.status) ? completeTask : undefined} canUpdate={canUpdate} mutating={mutating} />) : <EmptyState title='No tasks match these filters' description='Clear a filter or create a new task.' />}</section>}
+    {tab === 'closed' && <section className='founderTaskList' aria-label='Completed and cancelled founder tasks'>{closedTasks.length ? closedTasks.map(task => <FounderTaskCard key={task.id} task={task} onOpen={openTask} onEdit={openEdit} canUpdate={canUpdate} mutating={mutating} />) : <EmptyState icon={CheckCircle2} title='No completed tasks yet' description='Finished and cancelled work will appear here.' />}</section>}
 
+    <FounderTaskDetailDrawer
+      open={detailOpen}
+      detail={detail}
+      fallbackTask={detailTask}
+      loading={detailLoading}
+      pending={collaborationMutating || mutating}
+      upload={upload}
+      feedback={feedback}
+      onClose={closeDetail}
+      onEdit={openEdit}
+      onComplete={completeTask}
+      onMessage={sendMessage}
+      onUpload={uploadFile}
+      onDownload={downloadFile}
+      canUpdate={canUpdate}
+    />
     <FounderTaskDrawer open={drawerOpen} task={drawerTask} assignees={assignees} pending={mutating} feedback={feedback} onClose={closeDrawer} onSubmit={submitTask} onArchive={requestArchive} canArchive={canArchive} />
     <ConfirmationDialog open={Boolean(archiveTarget)} title='Archive this task?' description='It will leave the active founder workspace but remain in the company audit history.' confirmLabel='Archive task' onConfirm={confirmArchive} onClose={() => setArchiveTarget(null)} danger confirmDisabled={mutating} />
+    </div>
   </>
 }
 
-FounderTasks.getLayout = PortalPageLayout
+FounderTasks.getLayout = WidePortalPageLayout
 export default FounderTasks
