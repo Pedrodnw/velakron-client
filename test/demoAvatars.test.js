@@ -5,6 +5,8 @@ describe('synthetic demo avatars', () => {
   it('maps every presentation fixture identity to a local portrait', () => {
     const expected = {
       'velakron-admin@fixture.velakron.test': 'maya-chen.png',
+      'founder-sofia@fixture.velakron.test': 'elena-park.png',
+      'founder-julian@fixture.velakron.test': 'theo-brooks.png',
       'oem-alpha-admin@fixture.velakron.test': 'elena-park.png',
       'oem-alpha-user@fixture.velakron.test': 'marcus-reid.png',
       'oem-beta-admin@fixture.velakron.test': 'theo-brooks.png',

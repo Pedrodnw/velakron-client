@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { formatLabel, formatStorageStatus } from '../components/app/formatters'
+import { formatLabel, formatRole, formatStorageStatus } from '../components/app/formatters'
 
 describe('portal presentation formatters', () => {
   it('preserves business acronyms instead of title-casing raw enums', () => {
     expect(formatLabel('oem')).toBe('OEM')
     expect(formatLabel('oem_admin')).toBe('OEM administrator')
     expect(formatLabel('s3')).toBe('S3')
+    expect(formatRole('founder')).toBe('Founder')
   })
 
   it('turns structured storage health into a stable user-facing status', () => {

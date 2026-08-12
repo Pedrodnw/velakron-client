@@ -39,6 +39,7 @@ import UserAvatar from '../components/UserAvatar'
 
 const roleLabels = {
   velakron_admin: 'Velakron administrator',
+  founder: 'Founder',
   oem_admin: 'OEM administrator',
   oem_user: 'OEM member',
   supplier_admin: 'Supplier administrator',

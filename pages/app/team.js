@@ -36,7 +36,7 @@ const memberName = membership => {
 }
 
 const rolesForOrganization = type => ({
-  velakron: ['velakron_admin'],
+  velakron: ['velakron_admin', 'founder'],
   oem: ['oem_admin', 'oem_user'],
   supplier: ['supplier_admin', 'supplier_user'],
 }[type] || [])

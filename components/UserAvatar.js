@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { getDemoAvatar } from '../content/demoAvatars'
 
-const UserAvatar = ({ user, className = '', fallback = null, size = 48 }) => {
+const UserAvatar = ({ user, className = '', fallback = null, size = 48, priority = false }) => {
   const source = getDemoAvatar(user)
   const classes = ['userAvatar', source ? 'userAvatar--image' : '', className]
     .filter(Boolean)
@@ -9,7 +9,7 @@ const UserAvatar = ({ user, className = '', fallback = null, size = 48 }) => {
 
   return <span className={classes} aria-hidden='true'>
     {source
-      ? <Image src={source} alt='' width={size} height={size} sizes={`${size}px`} />
+      ? <Image src={source} alt='' width={size} height={size} sizes={`${size}px`} priority={priority} />
       : (user?.initials || fallback)}
   </span>
 }

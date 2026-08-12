@@ -19,6 +19,8 @@ const itemsByOrganizationType = {
   ],
   velakron: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/tasks', label: 'Tasks & priorities', icon: 'tasks', permission: 'internal_task.read' },
+    { href: '/app/team', label: 'Internal team', icon: 'team', permission: 'membership.read' },
     { href: '/admin/organizations', label: 'Organizations', icon: 'organization', permission: 'platform.support' },
     { href: '/admin/users', label: 'Users', icon: 'team', permission: 'platform.support' },
     { href: '/admin/suppliers', label: 'Supplier reviews', icon: 'onboarding', permission: 'supplier_profile.review' },

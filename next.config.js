@@ -6,6 +6,7 @@ if (requestedDistDir && !/^\.next-[a-z0-9-]+$/.test(requestedDistDir)) {
 
 const nextConfig = {
   ...(requestedDistDir ? { distDir: requestedDistDir } : {}),
+  allowedDevOrigins: ['127.0.0.1'],
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: false,

@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Building2, CircleCheck, Clock3, Factory, Handshake, PackageCheck, ShieldCheck, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, ShieldCheck, UsersRound } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -20,6 +20,8 @@ import Seo from '../../components/Seo'
 import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
 import { loadProductionSummary, productionCollaborationSelectors } from '../../store/slices/entities/productionCollaboration'
 import { loadPlatformSummary, platformSelectors, trackProductEvent } from '../../store/slices/entities/platformAdministration'
+import { internalTaskSelectors, loadInternalTasks } from '../../store/slices/entities/internalTasks'
+import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 
 const metric = value => String(value ?? '—')
 const recordCompany = (record, organizationType) => organizationType === 'supplier'
@@ -95,6 +97,30 @@ const PlatformDashboard = ({ organization }) => {
   </>
 }
 
+const FounderDashboard = () => {
+  const dispatch = useDispatch()
+  const tasks = useSelector(internalTaskSelectors.getTasks)
+  const loading = useSelector(internalTaskSelectors.getLoading)
+  const error = useSelector(internalTaskSelectors.getError)
+  useEffect(() => { dispatch(loadInternalTasks({ page_size: 100 })) }, [dispatch])
+  if (loading && !tasks.length) return <section className='appPanel'><AppSkeleton lines={7} /></section>
+  if (error && !tasks.length) return <ErrorState title='Founder priorities are temporarily unavailable' description={error.message} onRetry={() => dispatch(loadInternalTasks({ page_size: 100 }))} />
+  const active = tasks.filter(task => ['open', 'in_progress', 'blocked'].includes(task.status))
+  const dueNow = active.filter(task => task.urgency === 'high').sort((left, right) => new Date(left.due_at) - new Date(right.due_at))
+  return <>
+    <section className='metricGrid metricGrid--priority' aria-label='Founder task priorities'>
+      <MetricCard label='Active tasks' value={active.length} detail='Shared across the founder workspace' icon={ListChecks} href='/app/tasks?view=list' />
+      <MetricCard label='Do now' value={dueNow.length} detail='Overdue or due within two days' icon={Clock3} tone={dueNow.length ? 'warning' : 'default'} href='/app/tasks' />
+      <MetricCard label='Blocked' value={active.filter(task => task.status === 'blocked').length} detail='Waiting on a decision or dependency' icon={AlertTriangle} tone='warning' href='/app/tasks?view=list' />
+      <MetricCard label='Completed' value={tasks.filter(task => task.status === 'completed').length} detail='Finished work in the current view' icon={CircleCheck} tone='success' href='/app/tasks?view=closed' />
+    </section>
+    <section className='appPanel'>
+      <header className='appPanel__header'><div><p className='technicalLabel'>Founder priorities</p><h2>What needs attention now</h2></div><Button href='/app/tasks'>Open priority matrix</Button></header>
+      {dueNow.length ? <div className='founderTaskList founderTaskList--dashboard'>{dueNow.slice(0, 4).map(task => <FounderTaskCard key={task.id} task={task} />)}</div> : <EmptyState compact title='Nothing is due immediately' description='The founder matrix has no overdue tasks or deadlines in the next two days.' action={<Button href='/app/tasks' variant='secondary'>Review all priorities</Button>} />}
+    </section>
+  </>
+}
+
 const OperationalDashboard = ({ organization }) => {
   const dispatch = useDispatch()
   const summary = useSelector(productionCollaborationSelectors.getSummary)
@@ -158,18 +184,22 @@ const PortalOverview = () => {
   const membership = useSelector(getActiveMembership)
   useEffect(() => {
     if (!organization?.id) return
-    const surface = organization.type === 'oem' ? 'oem_dashboard' : organization.type === 'supplier' ? 'supplier_dashboard' : 'platform_admin'
+    const surface = organization.type === 'oem'
+      ? 'oem_dashboard'
+      : organization.type === 'supplier'
+        ? 'supplier_dashboard'
+        : membership?.role === 'founder' ? 'founder_workspace' : 'platform_admin'
     dispatch(trackProductEvent('dashboard.viewed', surface))
-  }, [dispatch, organization?.id, organization?.type])
+  }, [dispatch, membership?.role, organization?.id, organization?.type])
   return <>
     <Seo title='Workspace' description='Velakron operations workspace.' path='/app' noIndex />
     <AppPageHeader
       eyebrow={`${formatLabel(organization.type)} workspace`}
       title={organization.name}
-      description={organization.type === 'velakron' ? 'Operate the platform through narrow, audited controls. Customer production access remains reason-gated and read-only.' : organization.type === 'supplier' ? 'Your most urgent production tasks are shown first.' : 'Portfolio health, supplier progress, and attention reasons in one view.'}
+      description={organization.type === 'velakron' ? (membership?.role === 'founder' ? 'Align company priorities, owners, and deadlines without opening customer or platform administration data.' : 'Operate the platform through narrow, audited controls. Customer production access remains reason-gated and read-only.') : organization.type === 'supplier' ? 'Your most urgent production tasks are shown first.' : 'Portfolio health, supplier progress, and attention reasons in one view.'}
       actions={<StatusBadge tone={statusTone(organization.status)}>{formatLabel(membership.role)} · {formatLabel(organization.status)}</StatusBadge>}
     />
-    {organization.type === 'velakron' ? <PlatformDashboard organization={organization} /> : <OperationalDashboard organization={organization} />}
+    {organization.type === 'velakron' ? (membership?.role === 'founder' ? <FounderDashboard /> : <PlatformDashboard organization={organization} />) : <OperationalDashboard organization={organization} />}
   </>
 }
 

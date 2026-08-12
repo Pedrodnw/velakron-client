@@ -24,6 +24,7 @@ export const formatStorageStatus = status => {
 
 export const formatRole = role => ({
   velakron_admin: 'Velakron administrator',
+  founder: 'Founder',
   oem_admin: 'OEM administrator',
   oem_user: 'OEM member',
   supplier_admin: 'Supplier administrator',
@@ -78,6 +79,9 @@ export const statusTone = status => ({
   shipped: 'success',
   delivered: 'success',
   completed: 'success',
+  open: 'neutral',
+  in_progress: 'info',
+  blocked: 'danger',
   archived: 'neutral',
   cancelled: 'danger',
 }[status] || 'neutral')

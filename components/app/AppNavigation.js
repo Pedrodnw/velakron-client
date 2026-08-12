@@ -6,6 +6,7 @@ import {
   Factory,
   Handshake,
   LayoutDashboard,
+  ListTodo,
   MapPin,
   ScrollText,
   UserRound,
@@ -29,6 +30,7 @@ const icons = {
   production: Factory,
   relationships: Handshake,
   team: UsersRound,
+  tasks: ListTodo,
 }
 
 const AppNavigation = ({ onNavigate }) => {

@@ -13,6 +13,7 @@ import UserAvatar from '../UserAvatar'
 
 const roleLabels = {
   velakron_admin: 'Velakron administrator',
+  founder: 'Founder',
   oem_admin: 'Company administrator',
   oem_user: 'Company member',
   supplier_admin: 'Supplier administrator',
@@ -49,7 +50,7 @@ const AppLayout = ({ children }) => {
         </button>
         <div className='appTopbar__actions'>
           <LinkWrap className='appIdentity' href='/account'>
-            <UserAvatar user={user} fallback={<UserRound aria-hidden='true' />} size={36} />
+            <UserAvatar user={user} fallback={<UserRound aria-hidden='true' />} size={36} priority />
             <span><strong>{user?.full_name || user?.email || 'Account'}</strong><small>{roleLabels[membership?.role] || 'Account holder'}</small></span>
           </LinkWrap>
         </div>

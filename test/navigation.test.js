@@ -30,11 +30,16 @@ describe('role-aware application navigation', () => {
   })
 
   it('shows audited platform areas only in a permitted Velakron context', () => {
-    expect(labels('velakron', ['platform.support', 'audit.read']))
-      .toEqual(['Overview', 'Organizations', 'Users', 'Relationships', 'Audit & support', 'Account'])
-    expect(labels('velakron', ['platform.support', 'supplier_profile.review', 'audit.read']))
-      .toEqual(['Overview', 'Organizations', 'Users', 'Supplier reviews', 'Relationships', 'Audit & support', 'Account'])
+    expect(labels('velakron', ['platform.support', 'audit.read', 'membership.read']))
+      .toEqual(['Overview', 'Internal team', 'Organizations', 'Users', 'Relationships', 'Audit & support', 'Account'])
+    expect(labels('velakron', ['platform.support', 'supplier_profile.review', 'audit.read', 'membership.read']))
+      .toEqual(['Overview', 'Internal team', 'Organizations', 'Users', 'Supplier reviews', 'Relationships', 'Audit & support', 'Account'])
     expect(labels('velakron', [])).toEqual(['Overview', 'Account'])
+  })
+
+  it('gives founders the internal task workspace without platform administration links', () => {
+    expect(labels('velakron', ['organization.read', 'internal_task.read']))
+      .toEqual(['Overview', 'Tasks & priorities', 'Account'])
   })
 
   it('leaves account management available without an organization context', () => {
