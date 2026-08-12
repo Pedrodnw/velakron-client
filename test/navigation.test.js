@@ -38,8 +38,8 @@ describe('role-aware application navigation', () => {
   })
 
   it('gives founders the internal task workspace without platform administration links', () => {
-    expect(labels('velakron', ['organization.read', 'internal_task.read', 'trade_show_lead.read']))
-      .toEqual(['Overview', 'Tasks & priorities', 'IMTS leads', 'Account'])
+    expect(labels('velakron', ['organization.read', 'internal_task.read', 'trade_show_lead.read', 'dynamic_endpoint.manage']))
+      .toEqual(['Overview', 'Tasks & priorities', 'IMTS leads', 'Dynamic Endpoint', 'Account'])
   })
 
   it('removes account management from temporary IMTS workspaces', () => {

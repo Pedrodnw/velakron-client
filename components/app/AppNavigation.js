@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListTodo,
   ContactRound,
+  QrCode,
   MapPin,
   ScrollText,
   UserRound,
@@ -33,6 +34,7 @@ const icons = {
   team: UsersRound,
   tasks: ListTodo,
   leads: ContactRound,
+  dynamic: QrCode,
 }
 
 const AppNavigation = ({ onNavigate }) => {
