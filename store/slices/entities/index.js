@@ -17,6 +17,7 @@ import productionCollaboration from './productionCollaboration'
 import platformAdministration from './platformAdministration'
 import confidentiality from './confidentiality'
 import internalTasks from './internalTasks'
+import tradeShowLeads from './tradeShowLeads'
 
 export default combineReducers({
   auditEvents,
@@ -37,4 +38,5 @@ export default combineReducers({
   platformAdministration,
   confidentiality,
   internalTasks,
+  tradeShowLeads,
 })

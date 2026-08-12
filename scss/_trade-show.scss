@@ -1,0 +1,242 @@
+.tradeShowPage {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(45, 127, 249, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 127, 249, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 12% 18%, rgba(45, 127, 249, 0.15), transparent 30%),
+    #080b10;
+  background-size: 48px 48px, 48px 48px, auto, auto;
+
+  &__brand {
+    position: relative;
+    z-index: 2;
+    width: min(calc(100% - 64px), 1280px);
+    margin-inline: auto;
+    padding-top: 34px;
+
+    .velakronLogo { width: 156px; }
+  }
+
+  &__glow {
+    position: absolute;
+    width: 440px;
+    height: 440px;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.13;
+    pointer-events: none;
+
+    &--one { top: -220px; right: -80px; background: #2d7ff9; }
+    &--two { bottom: -280px; left: 20%; background: #1b67d6; }
+  }
+}
+
+.tradeShowExperience {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(440px, 0.75fr);
+  gap: clamp(54px, 8vw, 124px);
+  align-items: center;
+  width: min(calc(100% - 64px), 1180px);
+  min-height: calc(100vh - 112px);
+  margin-inline: auto;
+  padding: 44px 0 76px;
+
+  &__story {
+    max-width: 600px;
+
+    > .technicalLabel { margin-bottom: 22px; }
+
+    h1 {
+      max-width: 580px;
+      margin-bottom: 26px;
+      font-size: clamp(48px, 6vw, 82px);
+      letter-spacing: -0.055em;
+    }
+
+    > p:not(.technicalLabel) {
+      max-width: 560px;
+      margin-bottom: 38px;
+      color: #b5bfcc;
+      font-size: clamp(16px, 1.5vw, 20px);
+      line-height: 1.65;
+    }
+  }
+
+}
+
+.tradeShowCard {
+  padding: clamp(26px, 3.5vw, 42px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 18px;
+  background: rgba(16, 21, 28, 0.93);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.42), inset 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+
+  &__heading {
+    margin-bottom: 28px;
+
+    .technicalLabel { margin-bottom: 10px; font-size: 10px; }
+    h2 { margin-bottom: 8px; font-size: clamp(26px, 3vw, 34px); }
+    > p:last-child { margin-bottom: 0; font-size: 13px; }
+  }
+}
+
+.tradeShowForm {
+  display: grid;
+  gap: 18px;
+
+  .formField { gap: 7px; }
+  .formField > label { font-size: 12px; }
+  .formField input { min-height: 48px; }
+
+  &__submit {
+    width: 100%;
+    min-height: 52px;
+    margin-top: 2px;
+  }
+
+  &__notice {
+    margin: -4px 4px 0;
+    color: #7e8997;
+    font-size: 10px;
+    line-height: 1.55;
+    text-align: center;
+  }
+}
+
+.tradeShowRoleChoice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    grid-column: 1 / -1;
+    margin-bottom: 7px;
+    color: #e7ebf0;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  label {
+    position: relative;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    min-width: 0;
+    min-height: 104px;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+
+    &:hover { transform: translateY(-1px); border-color: rgba(45, 127, 249, 0.5); }
+    &:focus-within { outline: 2px solid #6aa6ff; outline-offset: 2px; }
+    &.is-selected { border-color: #2d7ff9; background: rgba(45, 127, 249, 0.11); box-shadow: 0 0 0 1px rgba(45, 127, 249, 0.18); }
+
+    input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    > svg { width: 28px; height: 28px; padding: 5px; border-radius: 7px; background: rgba(45, 127, 249, 0.12); color: #6aa6ff; }
+    > span { display: grid; gap: 4px; min-width: 0; }
+    strong { font-size: 13px; }
+    small { color: #8f9aa8; font-size: 10px; line-height: 1.45; }
+  }
+}
+
+.tradeShowHoneypot {
+  position: absolute !important;
+  left: -10000px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+
+.tradeShowQrPage {
+  display: grid;
+  justify-items: center;
+  gap: 26px;
+  min-height: 100vh;
+  padding: 44px 24px;
+  background: #080b10;
+}
+
+.tradeShowQrPoster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 680px);
+  padding: clamp(36px, 7vw, 72px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top, rgba(45, 127, 249, 0.17), transparent 40%),
+    #10151c;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.42);
+  text-align: center;
+
+  .velakronLogo { width: 184px; margin-bottom: 52px; }
+  .technicalLabel { margin-bottom: 14px; }
+  h1 { max-width: 560px; margin-bottom: 18px; font-size: clamp(40px, 6vw, 62px); }
+  > p:not(.technicalLabel) { max-width: 470px; margin-bottom: 34px; font-size: 17px; }
+  > small { margin-top: 16px; color: #8f9aa8; font-family: 'JetBrains Mono', monospace; }
+
+  &__code {
+    width: min(100%, 360px);
+    padding: 14px;
+    border-radius: 14px;
+    background: #fff;
+
+    svg { width: 100%; height: auto; }
+  }
+
+  &__scan { display: flex; gap: 8px; align-items: center; margin-top: 22px; color: #dfe8f5; font-weight: 700; }
+  &__scan svg { width: 20px; color: #6aa6ff; }
+}
+
+.tradeShowQrActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+
+  > a:not(.vk-button) { color: #9fc4ff; font-size: 13px; }
+}
+
+@media (max-width: 980px) {
+  .tradeShowExperience { grid-template-columns: 1fr; gap: 38px; max-width: 680px; padding-top: 54px; }
+  .tradeShowExperience__story { max-width: none; text-align: center; }
+  .tradeShowExperience__story > p:not(.technicalLabel) { margin-inline: auto; }
+}
+
+@media (max-width: 620px) {
+  .tradeShowPage__brand { width: min(calc(100% - 36px), 1280px); padding-top: 22px; }
+  .tradeShowPage__brand .velakronLogo { width: 132px; }
+  .tradeShowExperience { width: min(calc(100% - 28px), 680px); padding: 42px 0 34px; }
+  .tradeShowExperience__story h1 { font-size: clamp(42px, 14vw, 58px); }
+  .tradeShowCard { padding: 24px 18px; border-radius: 14px; }
+  .tradeShowRoleChoice { grid-template-columns: 1fr; }
+  .tradeShowRoleChoice label { min-height: 86px; }
+  .tradeShowQrPage { padding: 20px 12px; }
+  .tradeShowQrPoster { padding: 36px 20px; }
+  .tradeShowQrPoster .velakronLogo { margin-bottom: 36px; }
+  .tradeShowQrActions { width: 100%; }
+  .tradeShowQrActions .vk-button { width: 100%; }
+}
+
+@media print {
+  @page { size: portrait; margin: 0; }
+  body { background: #10151c !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .tradeShowQrPage { min-height: 100vh; padding: 0; }
+  .tradeShowQrPoster { width: 100%; min-height: 100vh; justify-content: center; border: 0; border-radius: 0; box-shadow: none; }
+  .tradeShowQrActions { display: none; }
+}

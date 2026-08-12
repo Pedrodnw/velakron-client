@@ -20,6 +20,7 @@ const itemsByOrganizationType = {
   velakron: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
     { href: '/app/tasks', label: 'Tasks & priorities', icon: 'tasks', permission: 'internal_task.read' },
+    { href: '/app/leads', label: 'IMTS leads', icon: 'leads', permission: 'trade_show_lead.read' },
     { href: '/app/team', label: 'Internal team', icon: 'team', permission: 'membership.read' },
     { href: '/admin/organizations', label: 'Organizations', icon: 'organization', permission: 'platform.support' },
     { href: '/admin/users', label: 'Users', icon: 'team', permission: 'platform.support' },
@@ -29,9 +30,9 @@ const itemsByOrganizationType = {
   ],
 }
 
-export const getNavigationItems = (organizationType, permissions = []) => [
+export const getNavigationItems = (organizationType, permissions = [], options = {}) => [
   ...(itemsByOrganizationType[organizationType] || []).filter(item => (
     !item.permission || permissions.includes(item.permission)
   )),
-  accountItem,
+  ...(options.demoWorkspace ? [] : [accountItem]),
 ]

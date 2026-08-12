@@ -1,4 +1,4 @@
-import { Menu, UserRound, X } from 'lucide-react'
+import { Clock3, Menu, UserRound, X } from 'lucide-react'
 import LinkWrap from '../LinkWrap'
 import { VelakronLogo } from '../design-system'
 import AppNavigation from '../app/AppNavigation'
@@ -8,7 +8,7 @@ import AppAccessBoundary from '../app/AppAccessBoundary'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { getAuthUser } from '../../store/slices/auth'
-import { getActiveMembership } from '../../store/slices/appContext'
+import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
 import UserAvatar from '../UserAvatar'
 
 const roleLabels = {
@@ -24,6 +24,7 @@ const AppLayout = ({ children, wide = false }) => {
   const [navigationOpen, setNavigationOpen] = useState(false)
   const user = useSelector(getAuthUser)
   const membership = useSelector(getActiveMembership)
+  const organization = useSelector(getActiveOrganization)
   const closeNavigation = () => setNavigationOpen(false)
 
   return <div className='appLayout'>
@@ -37,7 +38,7 @@ const AppLayout = ({ children, wide = false }) => {
       <AppNavigation onNavigate={closeNavigation} />
       <div className='appSidebar__footer'>
         <span>Velakron workspace</span>
-        <small>Organization access is enforced</small>
+        <small>{organization?.demo_workspace ? 'Private IMTS workspace' : 'Organization access is enforced'}</small>
       </div>
     </aside>
 
@@ -49,13 +50,16 @@ const AppLayout = ({ children, wide = false }) => {
           <Menu aria-hidden='true' />
         </button>
         <div className='appTopbar__actions'>
-          <LinkWrap className='appIdentity' href='/account'>
+          <LinkWrap className='appIdentity' href={organization?.demo_workspace ? '/app' : '/account'}>
             <UserAvatar user={user} fallback={<UserRound aria-hidden='true' />} size={36} priority />
             <span><strong>{user?.full_name || user?.email || 'Account'}</strong><small>{roleLabels[membership?.role] || 'Account holder'}</small></span>
           </LinkWrap>
         </div>
       </header>
-      <main id='app-main-content' className={`appMain${wide ? ' appMain--wide' : ''}`}><AppAccessBoundary><AppBreadcrumbs />{children}</AppAccessBoundary></main>
+      <main id='app-main-content' className={`appMain${wide ? ' appMain--wide' : ''}`}><AppAccessBoundary>
+        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>Private IMTS demo</strong><span>This workspace is isolated from every other guest and expires automatically.</span></div></div>}
+        <AppBreadcrumbs />{children}
+      </AppAccessBoundary></main>
     </div>
   </div>
 }

@@ -7,6 +7,7 @@ import {
   Handshake,
   LayoutDashboard,
   ListTodo,
+  ContactRound,
   MapPin,
   ScrollText,
   UserRound,
@@ -31,13 +32,16 @@ const icons = {
   relationships: Handshake,
   team: UsersRound,
   tasks: ListTodo,
+  leads: ContactRound,
 }
 
 const AppNavigation = ({ onNavigate }) => {
   const router = useRouter()
   const organization = useSelector(getActiveOrganization)
   const permissions = useSelector(getEffectivePermissions)
-  const visibleItems = getNavigationItems(organization?.type, permissions)
+  const visibleItems = getNavigationItems(organization?.type, permissions, {
+    demoWorkspace: organization?.demo_workspace,
+  })
 
   return <nav className='appNavigation' aria-label='Portal navigation'>
     <p>Workspace</p>

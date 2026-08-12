@@ -81,6 +81,7 @@ export const loadSession = () => apiCallBegan({
 
 export const registerAccount = data => authenticatedRequest('/register', 'post', data)
 export const loginAccount = data => authenticatedRequest('/auth/login', 'post', data)
+export const startTradeShowDemo = data => authenticatedRequest('/trade-show/leads', 'post', data)
 export const updateProfile = data => authenticatedRequest('/user/profile', 'patch', data)
 export const updateEmail = data => authenticatedRequest('/user/email', 'patch', data)
 export const updatePassword = data => authenticatedRequest('/user/password', 'patch', data)
