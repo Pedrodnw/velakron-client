@@ -227,10 +227,7 @@ const FounderTasks = () => {
   }
 
   const uploadFile = async file => {
-    const result = await dispatch(uploadInternalTaskAttachment(detailTask.id, {
-      file,
-      regulated_data_acknowledged: true,
-    }))
+    const result = await dispatch(uploadInternalTaskAttachment(detailTask.id, { file }))
     if (!result?.ok) {
       setFeedback({ type: 'error', message: resultError(result, 'The file could not be uploaded.') })
       return false

@@ -178,7 +178,7 @@ export const createInternalTaskMessage = (id, body) => async dispatch => {
   return result
 }
 
-export const uploadInternalTaskAttachment = (id, { file, regulated_data_acknowledged: regulatedDataAcknowledged }) => async dispatch => {
+export const uploadInternalTaskAttachment = (id, { file }) => async dispatch => {
   dispatch(actions.collaborationRequested())
   dispatch(actions.uploadChanged({ filename: file.name, progress: 0, state: 'preparing' }))
   const intent = await dispatch(collaborationCall({
@@ -188,7 +188,6 @@ export const uploadInternalTaskAttachment = (id, { file, regulated_data_acknowle
       filename: file.name,
       mime_type: uploadMimeForFile(file),
       byte_size: file.size,
-      regulated_data_acknowledged: regulatedDataAcknowledged === true,
     },
   }))
   if (!intent?.ok) {

@@ -53,22 +53,19 @@ const TaskDiscussion = ({ messages, pending, feedback, onSend }) => {
 
 const TaskFiles = ({ files, pending, upload, feedback, onUpload, onDownload }) => {
   const [file, setFile] = useState(null)
-  const [acknowledged, setAcknowledged] = useState(false)
   return <div className='taskFiles'>
     <form className='fileUploader taskFileUploader' onSubmit={async event => {
       event.preventDefault()
       const form = event.currentTarget
-      if (file && acknowledged && await onUpload(file)) {
+      if (file && await onUpload(file)) {
         setFile(null)
-        setAcknowledged(false)
         form.reset()
       }
     }}>
       <label className='fileUploader__drop' htmlFor='founder-task-file'><Upload aria-hidden='true' /><span><strong>Add a picture or file</strong><small>PDF, JPEG, PNG, WebP, text, STEP, or STL up to 25 MB</small></span><input id='founder-task-file' type='file' accept='application/pdf,image/jpeg,image/png,image/webp,text/plain,.stp,.step,.stl,model/step,model/stl' onChange={event => setFile(event.target.files?.[0] || null)} /></label>
       {file && <p className='fileUploader__selection'>{file.name} · {byteLabel(file.size)}</p>}
       {upload && <div className='uploadProgress'><span style={{ width: `${upload.progress || 0}%` }} /><small>{formatLabel(upload.state)} {upload.progress || 0}%</small></div>}
-      <label className='productionCheck complianceAcknowledgement'><input type='checkbox' checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} /><span><strong>I confirm this file is permitted in the prototype</strong><small>It does not contain ITAR, EAR-controlled, CUI, classified, or other regulated technical data.</small></span></label>
-      <div className='taskFileUploader__actions'><small>Files are private to the Velakron workspace and verified before download.</small><Button type='submit' disabled={!file || !acknowledged || pending}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Upload aria-hidden='true' />} Upload file</Button></div>
+      <div className='taskFileUploader__actions'><small>Files are private to the Velakron workspace and verified before download.</small><Button type='submit' disabled={!file || pending}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Upload aria-hidden='true' />} Upload file</Button></div>
       {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     </form>
     <div className='productionFiles taskFileList'>
