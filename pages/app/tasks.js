@@ -23,6 +23,7 @@ import {
 import FormMessage from '../../components/auth/FormMessage'
 import { resultError } from '../../components/auth/utils'
 import { Button } from '../../components/design-system'
+import { getAuthUser } from '../../store/slices/auth'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import FounderTaskDetailDrawer from '../../components/app/tasks/FounderTaskDetailDrawer'
 import FounderTaskDrawer from '../../components/app/tasks/FounderTaskDrawer'
@@ -41,6 +42,7 @@ import {
   loadInternalTaskDetail,
   loadInternalTasks,
   requestInternalTaskAttachmentDownload,
+  removeInternalTaskAttachment,
   updateInternalTask,
   uploadInternalTaskAttachment,
 } from '../../store/slices/entities/internalTasks'
@@ -56,6 +58,7 @@ const FounderTasks = () => {
   const canCreate = useSelector(getHasPermission('internal_task.create'))
   const canUpdate = useSelector(getHasPermission('internal_task.update'))
   const canArchive = useSelector(getHasPermission('internal_task.archive'))
+  const user = useSelector(getAuthUser)
   const tasks = useSelector(internalTaskSelectors.getTasks)
   const assignees = useSelector(internalTaskSelectors.getAssignees)
   const loading = useSelector(internalTaskSelectors.getLoading)
@@ -70,9 +73,12 @@ const FounderTasks = () => {
   const [drawerTask, setDrawerTask] = useState(undefined)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [detailTask, setDetailTask] = useState(null)
+  const [detailTab, setDetailTab] = useState('details')
   const [detailOpen, setDetailOpen] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState(null)
+  const [fileRemoveTarget, setFileRemoveTarget] = useState(null)
   const handledTaskQuery = useRef('')
+  const taskHistoryPushed = useRef(false)
   const [feedback, setFeedback] = useState(null)
   const [filters, setFilters] = useState({ search: '', assignee: '', project: '', status: '' })
 
@@ -90,7 +96,18 @@ const FounderTasks = () => {
   useEffect(() => {
     const requestedId = String(router.query.task || '')
     if (!router.isReady) return
-    if (!requestedId) { handledTaskQuery.current = ''; return }
+    if (!requestedId) {
+      handledTaskQuery.current = ''
+      taskHistoryPushed.current = false
+      if (detailOpen) {
+        setDetailOpen(false)
+        setDetailTask(null)
+        setDetailTab('details')
+        setFeedback(null)
+        dispatch(clearInternalTaskDetail())
+      }
+      return
+    }
     if (handledTaskQuery.current === requestedId || detailOpen || !tasks.length) return
     const requestedTask = tasks.find(task => task.id === requestedId)
     if (!requestedTask) return
@@ -128,28 +145,37 @@ const FounderTasks = () => {
       delete query.task
       router.replace({ pathname: router.pathname, query }, undefined, { shallow: true })
     }
+    taskHistoryPushed.current = false
     setDrawerTask(task)
     setFeedback(null)
     setDrawerOpen(true)
   }
   const closeDrawer = () => { if (!mutating) { setDrawerOpen(false); setDrawerTask(undefined); setFeedback(null) } }
-  const openTask = task => {
+  const openTask = (task, initialTab = 'details') => {
     handledTaskQuery.current = task.id
     setDetailTask(task)
+    setDetailTab(initialTab)
     setDetailOpen(true)
     setFeedback(null)
     dispatch(loadInternalTaskDetail(task.id))
     if (router.isReady && router.query.task !== task.id) {
-      router.replace({ pathname: router.pathname, query: { ...router.query, task: task.id } }, undefined, { shallow: true })
+      taskHistoryPushed.current = true
+      router.push({ pathname: router.pathname, query: { ...router.query, task: task.id } }, undefined, { shallow: true })
     }
   }
   const closeDetail = () => {
     if (collaborationMutating) return
     setDetailOpen(false)
     setDetailTask(null)
+    setDetailTab('details')
     setFeedback(null)
     dispatch(clearInternalTaskDetail())
     if (router.isReady && router.query.task) {
+      if (taskHistoryPushed.current) {
+        taskHistoryPushed.current = false
+        router.back()
+        return
+      }
       const query = { ...router.query }
       delete query.task
       router.replace({ pathname: router.pathname, query }, undefined, { shallow: true })
@@ -241,6 +267,17 @@ const FounderTasks = () => {
     if (!result?.ok) setFeedback({ type: 'error', message: resultError(result, 'The file could not be downloaded.') })
   }
 
+  const removeFile = async () => {
+    if (!fileRemoveTarget || !detailTask) return
+    const result = await dispatch(removeInternalTaskAttachment(detailTask.id, fileRemoveTarget.id))
+    if (!result?.ok) setFeedback({ type: 'error', message: resultError(result, 'The file could not be removed.') })
+    else {
+      setFeedback({ type: 'success', message: 'File removed from the task.' })
+      dispatch(loadInternalTasks({ page_size: 100 }))
+    }
+    setFileRemoveTarget(null)
+  }
+
   const requestArchive = task => {
     setDrawerOpen(false)
     setDrawerTask(undefined)
@@ -299,6 +336,7 @@ const FounderTasks = () => {
 
     <FounderTaskDetailDrawer
       open={detailOpen}
+      initialTab={detailTab}
       detail={detail}
       fallbackTask={detailTask}
       loading={detailLoading}
@@ -311,10 +349,13 @@ const FounderTasks = () => {
       onMessage={sendMessage}
       onUpload={uploadFile}
       onDownload={downloadFile}
+      onRemove={setFileRemoveTarget}
+      userId={user?.id || user?._id}
       canUpdate={canUpdate}
     />
     <FounderTaskDrawer open={drawerOpen} task={drawerTask} assignees={assignees} pending={mutating} feedback={feedback} onClose={closeDrawer} onSubmit={submitTask} onArchive={requestArchive} canArchive={canArchive} />
     <ConfirmationDialog open={Boolean(archiveTarget)} title='Archive this task?' description='It will leave the active founder workspace but remain in the company audit history.' confirmLabel='Archive task' onConfirm={confirmArchive} onClose={() => setArchiveTarget(null)} danger confirmDisabled={mutating} />
+    <ConfirmationDialog open={Boolean(fileRemoveTarget)} title='Remove this task file?' description='It will no longer be available from the task. Its upload and removal remain in the audit history.' confirmLabel='Remove file' onConfirm={removeFile} onClose={() => setFileRemoveTarget(null)} danger confirmDisabled={collaborationMutating} />
     </div>
   </>
 }

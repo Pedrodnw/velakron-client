@@ -58,5 +58,12 @@ export const downloadCertificationDocument = (id, attachmentId) => async dispatc
   if (result?.ok) openDownloadTarget(result.payload.data.download.target)
   return result
 }
+export const removeCertificationDocument = id => apiCallBegan({
+  url: `/certifications/${id}/attachment`,
+  method: 'delete',
+  data: { reason: 'Removed from the certification by an authorized user.' },
+  requestKey: `certification-document-remove-${id}`,
+  organizationScoped: true,
+})
 export const certificationSelectors = createEntitySelectors('certifications')
 export default slice.reducer

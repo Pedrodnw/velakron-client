@@ -1,7 +1,7 @@
 import StatusBadge from './StatusBadge'
-import { formatLabel, statusTone } from './formatters'
+import { formatLabel } from './formatters'
 
-const StageBadge = ({ value }) => <StatusBadge tone={statusTone(value || 'not_started')}>
+const StageBadge = ({ value }) => <StatusBadge tone='neutral'>
   {formatLabel(value || 'not_started')}
 </StatusBadge>
 

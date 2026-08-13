@@ -30,7 +30,32 @@ const MoveControls = ({ task, onMove, disabled }) => <div className='founderTask
   <button type='button' onClick={() => onMove(task, 'importance', 'low')} disabled={disabled || task.importance === 'low'} aria-label='Decrease importance'><ArrowDown aria-hidden='true' /></button>
 </div>
 
-const FounderTaskCard = ({ task, onOpen, onEdit, onMove, onComplete, canUpdate = false, mutating = false, compact = false }) => <article className={`founderTaskCard${task.overdue ? ' founderTaskCard--overdue' : ''}${compact ? ' founderTaskCard--compact' : ''}`}>
+const CollaborationSignals = ({ task, onOpen }) => {
+  const unread = Number(task.unread_message_count) || 0
+  const messages = Number(task.message_count) || 0
+  const files = Number(task.attachment_count) || 0
+  if (!messages && !files) return null
+  return <div className='founderTaskCard__signals' aria-label='Task activity'>
+    {messages > 0 && <button
+      type='button'
+      className={unread ? 'is-unread' : ''}
+      onClick={() => onOpen?.(task, 'discussion')}
+      aria-label={unread ? `${unread} unread ${unread === 1 ? 'message' : 'messages'} in ${task.title}` : `${messages} ${messages === 1 ? 'message' : 'messages'} in ${task.title}`}
+    >
+      <MessageSquare aria-hidden='true' />
+      {unread > 0 ? <><strong>{unread}</strong><span className='founderTaskCard__signalLong'>{unread === 1 ? 'unread message' : 'unread messages'}</span><span className='founderTaskCard__signalShort'>new</span></> : <><strong>{messages}</strong><span>{messages === 1 ? 'message' : 'messages'}</span></>}
+    </button>}
+    {files > 0 && <button
+      type='button'
+      onClick={() => onOpen?.(task, 'files')}
+      aria-label={`${files} ${files === 1 ? 'file' : 'files'} attached to ${task.title}`}
+    ><Paperclip aria-hidden='true' /><strong>{files}</strong><span>{files === 1 ? 'file' : 'files'}</span></button>}
+  </div>
+}
+
+const FounderTaskCard = ({ task, onOpen, onEdit, onMove, onComplete, canUpdate = false, mutating = false, compact = false }) => {
+  const hasUnread = Number(task.unread_message_count) > 0
+  return <article className={`founderTaskCard${task.overdue ? ' founderTaskCard--overdue' : ''}${hasUnread ? ' founderTaskCard--unread' : ''}${compact ? ' founderTaskCard--compact' : ''}`}>
   <header>
     <div>
       {task.project_name && <span><FolderKanban aria-hidden='true' /> {task.project_name}</span>}
@@ -45,12 +70,13 @@ const FounderTaskCard = ({ task, onOpen, onEdit, onMove, onComplete, canUpdate =
   <div className='founderTaskCard__meta'>
     <StatusBadge tone={statusTone(task.status)}><CircleDot aria-hidden='true' /> {formatLabel(task.status)}</StatusBadge>
     <span className={task.overdue ? 'is-overdue' : ''}><CalendarClock aria-hidden='true' /> {task.overdue ? 'Overdue · ' : ''}{formatDate(task.due_at)}</span>
-    {(task.message_count > 0 || task.attachment_count > 0) && <span className='founderTaskCard__collaboration'>{task.message_count > 0 && <><MessageSquare aria-hidden='true' /> {task.message_count}</>}{task.attachment_count > 0 && <><Paperclip aria-hidden='true' /> {task.attachment_count}</>}</span>}
   </div>
+  <CollaborationSignals task={task} onOpen={onOpen} />
   <footer>
     <Assignees assignees={task.assignees} />
     {onMove && canUpdate && <MoveControls task={task} onMove={onMove} disabled={mutating} />}
   </footer>
 </article>
+}
 
 export default FounderTaskCard

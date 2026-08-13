@@ -9,6 +9,7 @@ import {
   Paperclip,
   Pencil,
   Send,
+  Trash2,
   Upload,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -51,7 +52,7 @@ const TaskDiscussion = ({ messages, pending, feedback, onSend }) => {
   </div>
 }
 
-const TaskFiles = ({ files, pending, upload, feedback, onUpload, onDownload }) => {
+const TaskFiles = ({ files, userId, pending, upload, feedback, onUpload, onDownload, onRemove }) => {
   const [file, setFile] = useState(null)
   return <div className='taskFiles'>
     <form className='fileUploader taskFileUploader' onSubmit={async event => {
@@ -74,6 +75,7 @@ const TaskFiles = ({ files, pending, upload, feedback, onUpload, onDownload }) =
         <div><strong>{fileItem.display_filename || fileItem.original_filename}</strong><small>{byteLabel(fileItem.byte_size)} · {fileItem.state === 'available' && fileItem.scan_status === 'unavailable' ? 'Format verified' : formatLabel(fileItem.state)}</small></div>
         <StatusBadge tone={fileItem.state === 'available' ? 'success' : 'warning'}>{formatLabel(fileItem.state)}</StatusBadge>
         {fileItem.state === 'available' && <button type='button' onClick={() => onDownload(fileItem)}><Download aria-hidden='true' /><span>Download</span></button>}
+        {String(fileItem.created_by?.id || fileItem.created_by || '') === String(userId || '') && <button type='button' disabled={pending} onClick={() => onRemove(fileItem)}><Trash2 aria-hidden='true' /><span>Remove</span></button>}
       </article>) : <EmptyState compact icon={Paperclip} title='No files yet' description='Pictures and supporting documents will appear here.' />}
     </div>
   </div>
@@ -81,6 +83,7 @@ const TaskFiles = ({ files, pending, upload, feedback, onUpload, onDownload }) =
 
 const FounderTaskDetailDrawer = ({
   open,
+  initialTab = 'details',
   detail,
   fallbackTask,
   loading,
@@ -93,11 +96,13 @@ const FounderTaskDetailDrawer = ({
   onMessage,
   onUpload,
   onDownload,
+  onRemove,
+  userId,
   canUpdate,
 }) => {
   const [tab, setTab] = useState('details')
   const task = detail?.task || fallbackTask
-  useEffect(() => { if (open) setTab('details') }, [open, task?.id])
+  useEffect(() => { if (open) setTab(initialTab) }, [initialTab, open, task?.id])
   if (!task) return null
   const messages = detail?.messages || []
   const files = detail?.attachments || []
@@ -120,7 +125,7 @@ const FounderTaskDetailDrawer = ({
           <section><span>Assignees</span><div className='taskDetailAssignees'>{(task.assignees || []).length ? task.assignees.map(assignee => <div key={assignee.id}><UserAvatar user={assignee.user} size={34} /><span><strong>{assignee.user?.full_name}</strong><small>{formatLabel(assignee.role)}</small></span></div>) : <p>Unassigned</p>}</div></section>
         </div>}
         {tab === 'discussion' && <TaskDiscussion messages={messages} pending={pending} feedback={feedback} onSend={onMessage} />}
-        {tab === 'files' && <TaskFiles files={files} pending={pending} upload={upload} feedback={feedback} onUpload={onUpload} onDownload={onDownload} />}
+        {tab === 'files' && <TaskFiles files={files} userId={userId} pending={pending} upload={upload} feedback={feedback} onUpload={onUpload} onDownload={onDownload} onRemove={onRemove} />}
       </div>}
     </div>
   </ResponsiveDrawer>

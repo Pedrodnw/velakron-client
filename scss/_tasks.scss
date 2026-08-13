@@ -53,6 +53,14 @@
 
   &--overdue { border-color: rgba($danger, 0.38); }
 
+  &--unread {
+    border-color: rgba($primary, 0.62);
+    background: linear-gradient(135deg, rgba($primary, 0.09), #11161d 48%);
+    box-shadow: inset 3px 0 0 $primary, 0 0 0 1px rgba($primary, 0.06), 0 10px 28px rgba($primary, 0.08);
+
+    &:hover { border-color: rgba($primary, 0.8); background: linear-gradient(135deg, rgba($primary, 0.13), #131922 52%); }
+  }
+
   &--compact {
     padding: 6px 7px;
     gap: 3px;
@@ -181,7 +189,55 @@
     svg { width: 12px; height: 12px; }
   }
 
-  &__collaboration { gap: 3px !important; }
+  &__signals {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+
+    button {
+      display: inline-flex;
+      min-height: 24px;
+      padding: 3px 8px;
+      border: 1px solid rgba($primary, 0.22);
+      border-radius: 999px;
+      background: rgba($primary, 0.05);
+      color: #9eb5d2;
+      cursor: pointer;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+
+      svg { width: 11px; height: 11px; }
+      strong { color: #cfe1f9; font-size: 10px; }
+      &:hover { border-color: rgba($primary, 0.55); background: rgba($primary, 0.12); color: #d5e6fc; }
+      &:focus-visible { outline: 2px solid rgba($primary, 0.4); outline-offset: 2px; }
+      &.is-unread {
+        position: relative;
+        border-color: rgba($primary, 0.72);
+        background: $primary;
+        color: #fff;
+        box-shadow: 0 5px 16px rgba($primary, 0.28);
+        font-weight: 750;
+
+        &::before {
+          position: absolute;
+          top: -3px;
+          left: -3px;
+          width: 7px;
+          height: 7px;
+          border: 2px solid #11161d;
+          border-radius: 50%;
+          background: #9cc7ff;
+          content: '';
+        }
+        strong { color: #fff; }
+        &:hover { background: $primary-hover; }
+      }
+    }
+  }
+
+  &__signalShort { display: none; }
 
   &__assignees {
     display: flex;
@@ -239,6 +295,12 @@
   &--compact &__move { grid-template-columns: repeat(4, 17px); gap: 2px; }
   &--compact &__move button { width: 17px; height: 17px; }
   &--compact &__move svg { width: 9px; height: 9px; }
+  &--compact &__signals { gap: 3px; }
+  &--compact &__signals button { min-height: 18px; padding: 1px 5px; gap: 3px; font-size: 7px; }
+  &--compact &__signals button svg { width: 8px; height: 8px; }
+  &--compact &__signals button strong { font-size: 8px; }
+  &--compact &__signalLong { display: none; }
+  &--compact &__signalShort { display: inline; }
 }
 
 .priorityMatrix {

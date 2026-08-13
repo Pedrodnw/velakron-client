@@ -1739,6 +1739,9 @@
   span { font-size: 11px; }
 }
 
+.attachmentPlaceholderActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.tableAction--danger { color: #ff9a9d !important; }
+
 .capabilityGroups {
   display: grid;
   gap: 15px;
@@ -2249,18 +2252,36 @@
     small { display: block; margin-top: 2px; color: #8f99a6; font-size: 10px; text-transform: uppercase; }
 
     &.is-complete {
-      color: #75e3a6;
-      &::after { background: rgba(#35c779, 0.4); }
-      > span { border-color: rgba(#35c779, 0.4); background: rgba(#35c779, 0.1); }
+      color: #b8c0ca;
+      &::after { background: #4b535e; }
+      > span { border-color: #59626e; background: #171c23; }
     }
 
     &.is-current {
-      color: #cfe1ff;
-      > span { border-color: rgba($primary, 0.6); background: rgba($primary, 0.18); color: $primary-hover; }
+      color: #f0f2f5;
+      > span { border-color: #8c96a3; background: #20262e; color: #f0f2f5; box-shadow: 0 0 0 2px rgba(#8c96a3, 0.12); }
     }
 
-    &.is-cancelled { color: #ff8b8e; }
+    &.is-cancelled { color: #b8c0ca; }
   }
+}
+
+.productionRestrictionBanner {
+  display: flex;
+  max-width: 100%;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid $border-strong;
+  border-radius: $radius;
+  background: #11161d;
+  color: $muted;
+  align-items: center;
+  gap: 10px;
+
+  > svg { width: 16px; height: 16px; flex: 0 0 auto; color: #aab3bf; }
+  div { display: flex; min-width: 0; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  strong { color: $foreground; font-size: 11px; }
+  span { font-size: 10px; }
 }
 
 .productionStageEmpty {

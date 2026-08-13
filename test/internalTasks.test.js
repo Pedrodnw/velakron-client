@@ -65,17 +65,39 @@ describe('founder task state and priority matrix', () => {
       type: 'internalTasks/detailReceived',
       payload: {
         data: {
-          task: { id: 'task-a', title: 'Founder follow-up', message_count: 1, attachment_count: 1 },
+          task: { id: 'task-a', title: 'Founder follow-up', message_count: 1, unread_message_count: 0, attachment_count: 1 },
           messages: [{ id: 'message-a', body: 'Ready for review.' }],
           attachments: [{ id: 'file-a', display_filename: 'review.pdf' }],
         },
       },
     })
     expect(internalTaskSelectors.getDetail(state)).toEqual({
-      task: { id: 'task-a', title: 'Founder follow-up', message_count: 1, attachment_count: 1 },
+      task: { id: 'task-a', title: 'Founder follow-up', message_count: 1, unread_message_count: 0, attachment_count: 1 },
       messages: [{ id: 'message-a', body: 'Ready for review.' }],
       attachments: [{ id: 'file-a', display_filename: 'review.pdf' }],
     })
     expect(internalTaskSelectors.getTaskById('task-a')(state).title).toBe('Founder follow-up')
+  })
+
+  it('clears a task unread count when its loaded discussion is acknowledged', () => {
+    let state = reducer(undefined, {
+      type: 'internalTasks/listReceived',
+      payload: {
+        data: {
+          tasks: [{ id: 'task-a', title: 'Unread task', message_count: 3, unread_message_count: 2 }],
+        },
+      },
+    })
+    expect(internalTaskSelectors.getTaskById('task-a')(state).unread_message_count).toBe(2)
+    state = reducer(state, {
+      type: 'internalTasks/detailReceived',
+      payload: {
+        data: {
+          task: { id: 'task-a', title: 'Unread task', message_count: 3, unread_message_count: 0 },
+          messages: [{ id: 'message-a', body: 'Latest message' }],
+        },
+      },
+    })
+    expect(internalTaskSelectors.getTaskById('task-a')(state).unread_message_count).toBe(0)
   })
 })

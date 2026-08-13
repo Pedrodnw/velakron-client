@@ -1,4 +1,4 @@
-import { Archive, Box, Download, FileText, Image, LoaderCircle, MessageSquarePlus, Pencil, Upload } from 'lucide-react'
+import { Archive, Box, Download, FileText, Image, LoaderCircle, MessageSquarePlus, Pencil, Trash2, Upload } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
 import { Button } from '../design-system'
@@ -82,16 +82,19 @@ const FileUploader = ({ kind, organizationType, pending, upload, feedback, onUpl
   </form>
 }
 
-const FileList = ({ files, canArchive, pending, onDownload, onArchive, onView }) => {
+const FileList = ({ files, canArchive, userId, pending, onDownload, onArchive, onView }) => {
   if (!files.length) return <EmptyState compact title='No files yet' description='Finalized, authorized files will appear here.' />
-  return <div className='productionFiles'>{files.map(file => <article className='productionFile' key={file.id}>
+  return <div className='productionFiles'>{files.map(file => {
+    const ownFile = String(file.created_by?.id || file.created_by || '') === String(userId || '')
+    return <article className='productionFile' key={file.id}>
     <span>{file.category === 'photo' ? <Image aria-hidden='true' /> : isViewableModel(file) ? <Box aria-hidden='true' /> : <FileText aria-hidden='true' />}</span>
     <div><strong>{file.display_filename || file.original_filename}</strong><small>{formatLabel(file.category)} · {visibilityLabel(file.visibility)} · {(file.byte_size / 1024).toFixed(1)} KB</small></div>
     <StatusBadge tone={file.state === 'available' ? 'success' : 'warning'}>{file.state === 'available' && file.scan_status === 'unavailable' ? 'Format verified' : formatLabel(file.state)}</StatusBadge>
     {file.state === 'available' && isViewableModel(file) && <button type='button' onClick={() => onView(file)}><Box aria-hidden='true' /><span>View 3D</span></button>}
     {file.state === 'available' && <button type='button' onClick={() => onDownload(file)}><Download aria-hidden='true' /><span>Download</span></button>}
-    {canArchive && file.state === 'available' && <button type='button' disabled={pending} onClick={() => onArchive(file)}><Archive aria-hidden='true' /><span>Archive</span></button>}
-  </article>)}</div>
+    {(canArchive || ownFile) && file.state === 'available' && <button type='button' disabled={pending} onClick={() => onArchive(file)}><Trash2 aria-hidden='true' /><span>Remove</span></button>}
+  </article>
+  })}</div>
 }
 
 const ProductionCollaborationPanel = ({
@@ -132,8 +135,8 @@ const ProductionCollaborationPanel = ({
     <div className='productionTabBody'>
       {tab === 'timeline' && (timeline.length ? <ProductionTimeline events={timeline} /> : <EmptyState compact title='No timeline events' description='Production activity will appear here.' />)}
       {tab === 'notes' && <><NoteComposer organizationType={organization.type} pending={collaboration.mutating} feedback={feedback} onSubmit={onCreateNote} /><NoteList notes={collaboration.notes} userId={userId} canArchive={permissions.canArchiveNote} pending={collaboration.mutating} onRevise={onReviseNote} onArchive={onArchiveNote} /></>}
-      {tab === 'documents' && <><FileUploader kind='document' organizationType={organization.type} pending={collaboration.mutating} upload={collaboration.upload} feedback={feedback} onUpload={onUpload} /><FileList files={documents} canArchive={permissions.canArchiveAttachment} pending={collaboration.mutating} onDownload={onDownload} onArchive={onArchiveAttachment} onView={setViewingModel} /></>}
-      {tab === 'photos' && <><FileUploader kind='photo' organizationType={organization.type} pending={collaboration.mutating} upload={collaboration.upload} feedback={feedback} onUpload={onUpload} /><FileList files={photos} canArchive={permissions.canArchiveAttachment} pending={collaboration.mutating} onDownload={onDownload} onArchive={onArchiveAttachment} onView={setViewingModel} /></>}
+      {tab === 'documents' && <><FileUploader kind='document' organizationType={organization.type} pending={collaboration.mutating} upload={collaboration.upload} feedback={feedback} onUpload={onUpload} /><FileList files={documents} canArchive={permissions.canArchiveAttachment} userId={userId} pending={collaboration.mutating} onDownload={onDownload} onArchive={onArchiveAttachment} onView={setViewingModel} /></>}
+      {tab === 'photos' && <><FileUploader kind='photo' organizationType={organization.type} pending={collaboration.mutating} upload={collaboration.upload} feedback={feedback} onUpload={onUpload} /><FileList files={photos} canArchive={permissions.canArchiveAttachment} userId={userId} pending={collaboration.mutating} onDownload={onDownload} onArchive={onArchiveAttachment} onView={setViewingModel} /></>}
       {tab === 'machine' && (record.current_machine ? <dl className='appDetailList'><div><dt>Shop ID</dt><dd>{record.current_machine.shop_identifier}</dd></div><div><dt>Machine</dt><dd>{record.current_machine.manufacturer} {record.current_machine.model}</dd></div><div><dt>Facility</dt><dd>{record.current_machine.facility?.name || 'Not provided'}</dd></div></dl> : <EmptyState compact title='No primary machine' description='The supplier can assign a machine after accepting the work.' />)}
       {tab === 'assignments' && <div className='assignmentHistory'>{(detail?.assignments || []).map(item => <article key={item.id}><div><strong>Assignment {item.sequence}</strong><StatusBadge tone={item.current ? 'success' : 'neutral'}>{formatLabel(item.state)}</StatusBadge></div><p>{item.assigned_by?.organization_name || 'Authorized organization'} · {formatDateTime(item.assigned_at)}</p>{item.change_reason && <small>{item.change_reason}</small>}</article>)}</div>}
     </div>

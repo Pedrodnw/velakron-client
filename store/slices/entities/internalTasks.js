@@ -236,6 +236,21 @@ export const requestInternalTaskAttachmentDownload = (id, attachmentId) => async
   return result
 }
 
+export const removeInternalTaskAttachment = (id, attachmentId) => async dispatch => {
+  dispatch(actions.collaborationRequested())
+  const result = await dispatch(collaborationCall({
+    url: `/tasks/${id}/attachments/${attachmentId}`,
+    method: 'delete',
+    data: {},
+  }))
+  if (!result?.ok) {
+    dispatch(actions.mutationFailed(result?.error || { message: 'The file could not be removed.' }))
+    return result
+  }
+  await dispatch(loadInternalTaskDetail(id))
+  return result
+}
+
 const root = state => state.entities.internalTasks
 export const internalTaskSelectors = {
   getState: root,

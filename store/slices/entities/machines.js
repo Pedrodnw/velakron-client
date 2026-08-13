@@ -61,5 +61,16 @@ export const downloadMachinePhoto = (id, attachmentId) => async dispatch => {
   if (result?.ok) openDownloadTarget(result.payload.data.download.target)
   return result
 }
+export const removeMachinePhoto = (id, attachmentId) => async dispatch => {
+  const result = await dispatch(apiCallBegan({
+    url: `/machines/${id}/photos/${attachmentId}`,
+    method: 'delete',
+    data: { reason: 'Removed from the machine gallery by an authorized user.' },
+    requestKey: `machine-photo-remove-${attachmentId}`,
+    organizationScoped: true,
+  }))
+  if (result?.ok) await dispatch(loadMachine(id))
+  return result
+}
 export const machineSelectors = createEntitySelectors('machines')
 export default slice.reducer

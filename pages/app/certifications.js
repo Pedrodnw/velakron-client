@@ -1,7 +1,7 @@
-import { Archive, BadgeCheck, Download, FileUp, LoaderCircle, Pencil, Plus } from 'lucide-react'
+import { Archive, BadgeCheck, Download, FileUp, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppPageHeader, AppSkeleton, DataTable, ErrorState, PermissionDenied, ResponsiveDrawer, StatusBadge } from '../../components/app'
+import { AppPageHeader, AppSkeleton, ConfirmationDialog, DataTable, ErrorState, PermissionDenied, ResponsiveDrawer, StatusBadge } from '../../components/app'
 import { formatDate, formatLabel, statusTone } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
@@ -9,15 +9,16 @@ import FormField from '../../components/auth/FormField'
 import FormMessage from '../../components/auth/FormMessage'
 import { resultError } from '../../components/auth/utils'
 import { Button } from '../../components/design-system'
+import { getAuthUser } from '../../store/slices/auth'
 import { getActiveOrganization, getHasPermission } from '../../store/slices/appContext'
-import { archiveCertification, certificationSelectors, createCertification, downloadCertificationDocument, loadCertifications, updateCertification, uploadCertificationDocument } from '../../store/slices/entities/certifications'
+import { archiveCertification, certificationSelectors, createCertification, downloadCertificationDocument, loadCertifications, removeCertificationDocument, updateCertification, uploadCertificationDocument } from '../../store/slices/entities/certifications'
 import { facilitySelectors, loadFacilities } from '../../store/slices/entities/facilities'
 import { loadSupplierVocabularies, supplierProfileSelectors } from '../../store/slices/entities/supplierProfiles'
 
 const blank = { facility_id: '', type_key: '', name: '', issuing_authority: '', reference_number: '', issued_on: '', expires_on: '' }
 const dateInput = value => value ? String(value).slice(0, 10) : ''
 
-const CertificationForm = ({ initial, facilities, types, pending, feedback, onSubmit, onFile, onDownload }) => {
+const CertificationForm = ({ initial, facilities, types, pending, feedback, onSubmit, onFile, onDownload, onRemove, canRemoveDocument }) => {
   const [form, setForm] = useState(initial || blank)
   useEffect(() => setForm(initial || blank), [initial])
   const change = (key, value) => setForm(current => ({ ...current, [key]: value }))
@@ -33,6 +34,7 @@ const CertificationForm = ({ initial, facilities, types, pending, feedback, onSu
     {initial?.id && !initial.attachment && <label className='vk-button vk-button--secondary photoPicker'><FileUp aria-hidden='true' /> Upload document<input type='file' accept='application/pdf,image/jpeg,image/png,image/webp' onChange={onFile} disabled={pending} /></label>}
     {initial?.attachment && <p className='formHint'>Document: {initial.attachment.display_filename || initial.attachment.original_filename} · {formatLabel(initial.attachment.state)}</p>}
     {initial?.attachment?.state === 'available' && <Button type='button' variant='secondary' onClick={() => onDownload(initial.attachment)}><Download aria-hidden='true' /> Download document</Button>}
+    {initial?.attachment && canRemoveDocument && <Button type='button' variant='secondary' className='drawerDanger' onClick={() => onRemove(initial.attachment)}><Trash2 aria-hidden='true' /> Remove document</Button>}
     {initial?.id && <p className='formHint'>Prototype documents are checked for their real file format before download. Malware scanning is not enabled in this prototype; do not upload regulated data.</p>}
   </form>
 }
@@ -40,6 +42,7 @@ const CertificationForm = ({ initial, facilities, types, pending, feedback, onSu
 const Certifications = () => {
   const dispatch = useDispatch()
   const organization = useSelector(getActiveOrganization)
+  const user = useSelector(getAuthUser)
   const allowed = useSelector(getHasPermission('supplier_profile.read'))
   const canManage = useSelector(getHasPermission('supplier_profile.manage'))
   const certifications = useSelector(certificationSelectors.getEntities)
@@ -51,6 +54,7 @@ const Certifications = () => {
   const [status, setStatus] = useState('current')
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const [removeTarget, setRemoveTarget] = useState(null)
 
   useEffect(() => {
     if (!allowed || organization?.type !== 'supplier') return
@@ -92,6 +96,22 @@ const Certifications = () => {
     const result = await dispatch(downloadCertificationDocument(selected.id, attachment.id))
     if (!result?.ok) setFeedback({ type: 'error', message: resultError(result, 'We could not download this document.') })
   }
+  const removeFile = async () => {
+    if (!selected?.id || !removeTarget) return
+    setPending(true); setFeedback(null)
+    const result = await dispatch(removeCertificationDocument(selected.id))
+    setPending(false)
+    if (!result?.ok) {
+      setFeedback({ type: 'error', message: resultError(result, 'We could not remove this document.') })
+    } else {
+      setFeedback({ type: 'success', message: 'Certification document removed.' })
+      setSelected(null)
+      dispatch(loadCertifications({ status, limit: 100 }))
+    }
+    setRemoveTarget(null)
+  }
+  const selectedAttachmentOwner = String(selected?.attachment?.created_by?.id || selected?.attachment?.created_by || '')
+    === String(user?.id || user?._id || '')
 
   const columns = [
     { key: 'name', label: 'Certification', render: item => <div className='tablePrimary'><strong>{item.name}</strong><span>{formatLabel(item.type_key)}</span></div> },
@@ -108,9 +128,10 @@ const Certifications = () => {
     {error && <ErrorState description={error.message} onRetry={() => dispatch(loadCertifications({ status, limit: 100 }))} />}
     <section className='appPanel appPanel--table'><DataTable caption='Supplier certifications' columns={columns} rows={certifications} emptyTitle='No certifications in this view' emptyDescription='Add optional quality or regulatory credentials whenever they are available.' /></section>
     <ResponsiveDrawer open={selected !== null} title={selected?.id ? 'Edit certification' : 'Add certification'} onClose={() => setSelected(null)}>
-      <CertificationForm key={selected?.id || 'new'} initial={initial} facilities={facilities} types={vocabularies.certification_types || []} pending={pending} feedback={feedback} onSubmit={save} onFile={prepareFile} onDownload={downloadFile} />
+      <CertificationForm key={selected?.id || 'new'} initial={initial} facilities={facilities} types={vocabularies.certification_types || []} pending={pending} feedback={feedback} onSubmit={save} onFile={prepareFile} onDownload={downloadFile} onRemove={setRemoveTarget} canRemoveDocument={selectedAttachmentOwner || canManage} />
       {selected?.id && <Button className='drawerDanger' variant='secondary' onClick={() => archive(selected)} disabled={pending}><Archive aria-hidden='true' /> Archive certification</Button>}
     </ResponsiveDrawer>
+    <ConfirmationDialog open={Boolean(removeTarget)} title='Remove this certification document?' description='The certification will remain, but this file will no longer be available. Its audit history is preserved.' confirmLabel='Remove document' onConfirm={removeFile} onClose={() => setRemoveTarget(null)} danger confirmDisabled={pending} />
   </>
 }
 
