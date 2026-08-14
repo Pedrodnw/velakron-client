@@ -42,6 +42,13 @@ describe('role-aware application navigation', () => {
       .toEqual(['Overview', 'Tasks & priorities', 'IMTS leads', 'Dynamic Endpoint', 'Account'])
   })
 
+  it('shows CRM navigation only when the founder-only CRM permission is present', () => {
+    expect(labels('velakron', ['crm.dashboard.read', 'internal_task.read']))
+      .toEqual(['Overview', 'CRM', 'Tasks & priorities', 'Account'])
+    expect(labels('velakron', ['platform.support', 'audit.read']))
+      .not.toContain('CRM')
+  })
+
   it('removes account management from temporary IMTS workspaces', () => {
     expect(getNavigationItems('oem', ['production_record.read'], { demoWorkspace: true }).map(item => item.label))
       .toEqual(['Overview', 'Production'])

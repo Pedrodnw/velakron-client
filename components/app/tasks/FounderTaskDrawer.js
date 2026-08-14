@@ -17,7 +17,7 @@ const emptyForm = () => ({
   due_date: defaultDueDate(), assignee_ids: [],
 })
 
-const taskForm = task => task ? {
+const taskForm = (task, defaults = {}) => task ? {
   title: task.title || '',
   description: task.description || '',
   project_name: task.project_name || '',
@@ -25,11 +25,11 @@ const taskForm = task => task ? {
   importance: task.importance || 'medium',
   due_date: dateInputValue(task.due_at),
   assignee_ids: (task.assignees || []).map(item => item.id),
-} : emptyForm()
+} : { ...emptyForm(), ...defaults }
 
-const FounderTaskDrawer = ({ open, task, assignees, pending, feedback, onClose, onSubmit, onArchive, canArchive }) => {
+const FounderTaskDrawer = ({ open, task, defaultValues, assignees, pending, feedback, onClose, onSubmit, onArchive, canArchive }) => {
   const [form, setForm] = useState(emptyForm)
-  useEffect(() => { if (open) setForm(taskForm(task)) }, [open, task])
+  useEffect(() => { if (open) setForm(taskForm(task, defaultValues)) }, [defaultValues, open, task])
   const change = event => setForm(current => ({ ...current, [event.target.name]: event.target.value }))
   const toggleAssignee = id => setForm(current => ({
     ...current,

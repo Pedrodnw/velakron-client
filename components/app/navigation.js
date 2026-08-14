@@ -19,6 +19,7 @@ const itemsByOrganizationType = {
   ],
   velakron: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/crm', label: 'CRM', icon: 'crm', permission: 'crm.dashboard.read' },
     { href: '/app/tasks', label: 'Tasks & priorities', icon: 'tasks', permission: 'internal_task.read' },
     { href: '/app/leads', label: 'IMTS leads', icon: 'leads', permission: 'trade_show_lead.read' },
     { href: '/app/dynamic-endpoint', label: 'Dynamic Endpoint', icon: 'dynamic', permission: 'dynamic_endpoint.manage' },

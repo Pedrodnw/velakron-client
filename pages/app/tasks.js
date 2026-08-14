@@ -78,8 +78,10 @@ const FounderTasks = () => {
   const [archiveTarget, setArchiveTarget] = useState(null)
   const [fileRemoveTarget, setFileRemoveTarget] = useState(null)
   const handledTaskQuery = useRef('')
+  const handledCrmCreateQuery = useRef('')
   const taskHistoryPushed = useRef(false)
   const [feedback, setFeedback] = useState(null)
+  const [taskDefaults, setTaskDefaults] = useState(null)
   const [filters, setFilters] = useState({ search: '', assignee: '', project: '', status: '' })
 
   const reload = useCallback(() => {
@@ -117,6 +119,20 @@ const FounderTasks = () => {
     setFeedback(null)
     dispatch(loadInternalTaskDetail(requestedId))
   }, [detailOpen, dispatch, router.isReady, router.query.task, tasks])
+  useEffect(() => {
+    const crmOrganization = String(router.query.crm_organization || '')
+    if (!router.isReady || !canCreate || router.query.task) return
+    if (!crmOrganization) {
+      handledCrmCreateQuery.current = ''
+      return
+    }
+    if (handledCrmCreateQuery.current === crmOrganization || drawerOpen) return
+    handledCrmCreateQuery.current = crmOrganization
+    setDrawerTask(null)
+    setTaskDefaults({ project_name: 'CRM follow-up' })
+    setFeedback(null)
+    setDrawerOpen(true)
+  }, [canCreate, drawerOpen, router.isReady, router.query.crm_organization, router.query.task])
 
   const projects = useMemo(() => [...new Set(tasks.map(task => task.project_name).filter(Boolean))].sort(), [tasks])
   const visibleTasks = useMemo(() => tasks.filter(task => {
@@ -131,11 +147,30 @@ const FounderTasks = () => {
   const closedTasks = visibleTasks.filter(task => ['completed', 'cancelled'].includes(task.status))
   const overdueCount = tasks.filter(task => task.overdue && activeStatuses.includes(task.status)).length
   const blockedCount = tasks.filter(task => task.status === 'blocked').length
+  const crmTaskAssignees = useMemo(
+    () => router.query.crm_organization ? assignees.filter(assignee => assignee.role === 'founder') : assignees,
+    [assignees, router.query.crm_organization],
+  )
 
   if (!canRead) return <PermissionDenied description='Founder task access is available only to Velakron founders and administrators.' />
   if (loading && !tasks.length) return <section className='appPanel'><AppSkeleton lines={10} /></section>
 
-  const openCreate = () => { setDrawerTask(null); setFeedback(null); setDrawerOpen(true) }
+  const clearCrmCreateQuery = () => {
+    if (!router.isReady || !router.query.crm_organization) return
+    const query = { ...router.query }
+    delete query.crm_organization
+    delete query.crm_contact
+    delete query.crm_opportunity
+    delete query.crm_onboarding
+    delete query.crm_meeting
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true })
+  }
+  const openCreate = () => {
+    setDrawerTask(null)
+    setTaskDefaults(null)
+    setFeedback(null)
+    setDrawerOpen(true)
+  }
   const openEdit = task => {
     setDetailOpen(false)
     setDetailTask(null)
@@ -147,10 +182,18 @@ const FounderTasks = () => {
     }
     taskHistoryPushed.current = false
     setDrawerTask(task)
+    setTaskDefaults(null)
     setFeedback(null)
     setDrawerOpen(true)
   }
-  const closeDrawer = () => { if (!mutating) { setDrawerOpen(false); setDrawerTask(undefined); setFeedback(null) } }
+  const closeDrawer = () => {
+    if (mutating) return
+    setDrawerOpen(false)
+    setDrawerTask(undefined)
+    setTaskDefaults(null)
+    setFeedback(null)
+    clearCrmCreateQuery()
+  }
   const openTask = (task, initialTab = 'details') => {
     handledTaskQuery.current = task.id
     setDetailTask(task)
@@ -193,6 +236,13 @@ const FounderTasks = () => {
       importance: form.importance,
       due_at: dueAt,
       assignee_ids: form.assignee_ids,
+      ...(!drawerTask && router.query.crm_organization ? {
+        crm_organization: String(router.query.crm_organization),
+        ...(router.query.crm_contact ? { crm_contact: String(router.query.crm_contact) } : {}),
+        ...(router.query.crm_opportunity ? { crm_opportunity: String(router.query.crm_opportunity) } : {}),
+        ...(router.query.crm_onboarding ? { crm_onboarding: String(router.query.crm_onboarding) } : {}),
+        ...(router.query.crm_meeting ? { crm_meeting: String(router.query.crm_meeting) } : {}),
+      } : {}),
       ...(drawerTask ? { version: drawerTask.version } : {}),
     }
     setFeedback(null)
@@ -205,8 +255,10 @@ const FounderTasks = () => {
     }
     setDrawerOpen(false)
     setDrawerTask(undefined)
+    setTaskDefaults(null)
     setFeedback({ type: 'success', message: drawerTask ? 'Task updated.' : 'Task created.' })
     dispatch(loadInternalTasks({ page_size: 100 }))
+    clearCrmCreateQuery()
   }
 
   const moveTask = async (task, axis, direction) => {
@@ -281,6 +333,7 @@ const FounderTasks = () => {
   const requestArchive = task => {
     setDrawerOpen(false)
     setDrawerTask(undefined)
+    setTaskDefaults(null)
     setArchiveTarget(task)
   }
 
@@ -353,7 +406,7 @@ const FounderTasks = () => {
       userId={user?.id || user?._id}
       canUpdate={canUpdate}
     />
-    <FounderTaskDrawer open={drawerOpen} task={drawerTask} assignees={assignees} pending={mutating} feedback={feedback} onClose={closeDrawer} onSubmit={submitTask} onArchive={requestArchive} canArchive={canArchive} />
+    <FounderTaskDrawer open={drawerOpen} task={drawerTask} defaultValues={taskDefaults} assignees={crmTaskAssignees} pending={mutating} feedback={feedback} onClose={closeDrawer} onSubmit={submitTask} onArchive={requestArchive} canArchive={canArchive} />
     <ConfirmationDialog open={Boolean(archiveTarget)} title='Archive this task?' description='It will leave the active founder workspace but remain in the company audit history.' confirmLabel='Archive task' onConfirm={confirmArchive} onClose={() => setArchiveTarget(null)} danger confirmDisabled={mutating} />
     <ConfirmationDialog open={Boolean(fileRemoveTarget)} title='Remove this task file?' description='It will no longer be available from the task. Its upload and removal remain in the audit history.' confirmLabel='Remove file' onConfirm={removeFile} onClose={() => setFileRemoveTarget(null)} danger confirmDisabled={collaborationMutating} />
     </div>

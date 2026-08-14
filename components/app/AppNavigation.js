@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListTodo,
   ContactRound,
+  BriefcaseBusiness,
   QrCode,
   MapPin,
   ScrollText,
@@ -35,6 +36,7 @@ const icons = {
   tasks: ListTodo,
   leads: ContactRound,
   dynamic: QrCode,
+  crm: BriefcaseBusiness,
 }
 
 const AppNavigation = ({ onNavigate }) => {
