@@ -4,8 +4,10 @@
   padding: 74px 0 92px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 25%, rgba($primary, 0.12), transparent 31%),
-    $background;
+    radial-gradient(circle at 18% 25%, rgba($primary, 0.08), transparent 31%),
+    var(--vk-workspace-canvas);
+  color: var(--vk-workspace-text);
+  @include technical-grid-light;
 
   &::after {
     position: absolute;
@@ -41,6 +43,7 @@
     h1 {
       max-width: 660px;
       margin-bottom: 24px;
+      color: var(--vk-workspace-text);
       font-size: clamp(54px, 6.3vw, 84px);
     }
   }
@@ -48,6 +51,7 @@
   &__description {
     max-width: 610px;
     margin-bottom: 0;
+    color: var(--vk-workspace-text-secondary);
     font-size: 18px;
   }
 
@@ -55,18 +59,19 @@
     @include flex-row(flex-start, center, 18px);
     max-width: 560px;
     padding: 22px;
-    border: 1px solid $border;
+    border: 1px solid var(--vk-workspace-border);
     border-radius: $radius;
-    background: rgba($surface, 0.72);
+    background: var(--vk-workspace-surface);
+    box-shadow: var(--vk-shadow-surface);
 
     &Icon {
       display: grid;
       flex: 0 0 46px;
       height: 46px;
-      border: 1px solid rgba($primary, 0.32);
+      border: 1px solid var(--vk-info-border);
       border-radius: $radius;
-      background: rgba($primary, 0.09);
-      color: $primary;
+      background: var(--vk-info-soft);
+      color: var(--vk-info);
       place-items: center;
 
       svg {
@@ -78,22 +83,23 @@
     span {
       display: block;
       margin-bottom: 2px;
-      color: $foreground;
+      color: var(--vk-workspace-text);
       font-weight: 700;
     }
 
     p {
       margin: 0;
+      color: var(--vk-workspace-text-secondary);
       font-size: 13px;
     }
   }
 
   &__panel {
     padding: 38px;
-    border: 1px solid $border-strong;
+    border: 1px solid var(--vk-workspace-border);
     border-radius: 12px;
-    background: rgba($surface, 0.96);
-    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.3);
+    background: var(--vk-workspace-surface);
+    box-shadow: var(--vk-shadow-elevated);
   }
 
   &__panelHeading {
@@ -104,10 +110,10 @@
       display: grid;
       flex: 0 0 48px;
       height: 48px;
-      border: 1px solid rgba($primary, 0.35);
+      border: 1px solid var(--vk-info-border);
       border-radius: $radius;
-      background: rgba($primary, 0.1);
-      color: $primary;
+      background: var(--vk-info-soft);
+      color: var(--vk-info);
       place-items: center;
 
       svg {
@@ -123,6 +129,7 @@
 
     h2 {
       margin: 0;
+      color: var(--vk-workspace-text);
       font-size: 28px;
     }
   }
@@ -131,12 +138,12 @@
     @include flex-col(flex-start, stretch, 9px);
     margin: 28px 0 0;
     padding: 22px 0 0;
-    border-top: 1px solid $border;
+    border-top: 1px solid var(--vk-workspace-border);
     list-style: none;
 
     li {
       @include flex-row(flex-start, center, 9px);
-      color: $muted;
+      color: var(--vk-workspace-text-muted);
       font-size: 12px;
     }
 
@@ -144,7 +151,7 @@
       flex: 0 0 auto;
       width: 15px;
       height: 15px;
-      color: $primary;
+      color: var(--vk-info);
     }
   }
 }
@@ -169,7 +176,7 @@
 
   &__alternate {
     margin: -3px 0 0;
-    color: $muted;
+    color: var(--vk-workspace-text-muted);
     font-size: 13px;
     text-align: center;
 
@@ -182,11 +189,11 @@
   &__options {
     @include flex-row(space-between, center, 14px);
     margin-top: -4px;
-    color: $muted;
+    color: var(--vk-workspace-text-muted);
     font-size: 11px;
 
     > a {
-      color: #9fc5ff;
+      color: var(--vk-info);
       font-weight: 650;
     }
   }
@@ -210,13 +217,13 @@
   min-height: 170px;
   place-items: center;
   align-content: center;
-  color: $muted;
+  color: var(--vk-workspace-text-muted);
   text-align: center;
 
   > svg {
     width: 30px;
     height: 30px;
-    color: $primary;
+    color: var(--vk-info);
   }
 
   > p {
@@ -227,7 +234,7 @@
 
 .authNotice {
   @include flex-row(center, center, 8px);
-  color: #75e3a6;
+  color: var(--vk-success);
   font-size: 11px;
 
   svg { width: 16px; height: 16px; }
@@ -238,19 +245,19 @@
   grid-template-columns: minmax(100px, 0.7fr) minmax(0, 1.3fr);
   gap: 0;
   overflow: hidden;
-  border: 1px solid $border;
+  border: 1px solid var(--vk-workspace-border);
   border-radius: $radius;
-  background: rgba($primary, 0.045);
+  background: var(--vk-workspace-surface-subtle);
 
   span,
   strong {
     padding: 10px 12px;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--vk-workspace-border);
     font-size: 11px;
   }
 
-  span { color: $muted; }
-  strong { color: $foreground; overflow-wrap: anywhere; }
+  span { color: var(--vk-workspace-text-muted); }
+  strong { color: var(--vk-workspace-text); overflow-wrap: anywhere; }
 
   :nth-last-child(-n + 2) { border-bottom: 0; }
 }
@@ -259,7 +266,7 @@
   label {
     display: block;
     margin-bottom: 7px;
-    color: rgba($foreground, 0.9);
+    color: var(--vk-workspace-text);
     font-size: 13px;
     font-weight: 650;
   }
@@ -271,24 +278,24 @@
       width: 100%;
       height: 48px;
       padding: 0 14px;
-      border: 1px solid $border-strong;
+      border: 1px solid var(--vk-workspace-border-strong);
       border-radius: $radius;
       outline: none;
-      background: rgba($background, 0.72);
-      color: $foreground;
+      background: var(--vk-workspace-surface);
+      color: var(--vk-workspace-text);
       transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 
       &::placeholder {
-        color: rgba($muted, 0.56);
+        color: var(--vk-workspace-text-muted);
       }
 
       &:hover {
-        border-color: rgba($foreground, 0.2);
+        border-color: var(--vk-info-border);
       }
 
       &:focus {
         border-color: rgba($primary, 0.72);
-        background: rgba($background, 0.95);
+        background: var(--vk-workspace-surface);
         box-shadow: 0 0 0 3px rgba($primary, 0.12);
       }
     }
@@ -307,12 +314,12 @@
       padding: 0;
       border: 0;
       background: transparent;
-      color: $muted;
+      color: var(--vk-workspace-text-muted);
       cursor: pointer;
       place-items: center;
 
       &:hover {
-        color: $foreground;
+        color: var(--vk-workspace-text);
       }
 
       svg {
@@ -325,7 +332,7 @@
   small {
     display: block;
     margin-top: 6px;
-    color: rgba($muted, 0.78);
+    color: var(--vk-workspace-text-muted);
     font-size: 11px;
   }
 }
@@ -346,15 +353,15 @@
   }
 
   &--error {
-    border-color: rgba($danger, 0.4);
-    background: rgba($danger, 0.08);
-    color: #ffb7b9;
+    border-color: var(--vk-danger-border);
+    background: var(--vk-danger-soft);
+    color: var(--vk-danger);
   }
 
   &--success {
-    border-color: rgba(39, 191, 121, 0.36);
-    background: rgba(39, 191, 121, 0.08);
-    color: #9ce4bf;
+    border-color: var(--vk-success-border);
+    background: var(--vk-success-soft);
+    color: var(--vk-success);
   }
 }
 
@@ -365,7 +372,7 @@
   svg {
     width: 28px;
     height: 28px;
-    color: $primary;
+    color: var(--vk-info);
     animation: vk-spin 800ms linear infinite;
   }
 
@@ -373,15 +380,17 @@
 }
 
 .accountPage {
-  min-height: 75vh;
+  min-height: calc(100vh - 72px);
+  background: var(--app-canvas);
+  color: var(--app-text);
 }
 
 .accountHero {
-  padding: 52px 0 46px;
-  border-bottom: 1px solid $border;
+  padding: 44px 0 38px;
+  border-bottom: 1px solid var(--app-border);
   background:
-    radial-gradient(circle at 82% 18%, rgba($primary, 0.12), transparent 28%),
-    $background;
+    radial-gradient(circle at 82% 18%, rgba($primary, 0.06), transparent 30%),
+    var(--app-surface);
 
   .max {
     @include flex-row(space-between, flex-end, 40px);
@@ -391,12 +400,14 @@
 
   h1 {
     margin-bottom: 13px;
+    color: var(--app-text);
     font-size: clamp(36px, 4vw, 46px);
   }
 
   p:last-child {
     max-width: 640px;
     margin-bottom: 0;
+    color: var(--app-text-secondary);
     font-size: 15px;
   }
 }
@@ -408,9 +419,10 @@
   align-items: center;
   min-width: 390px;
   padding: 18px;
-  border: 1px solid $border-strong;
+  border: 1px solid var(--app-border);
   border-radius: $radius;
-  background: rgba($surface, 0.9);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
 
   &__initials {
     display: grid;
@@ -418,7 +430,8 @@
     height: 46px;
     border: 1px solid rgba($primary, 0.42);
     border-radius: 50%;
-    background: rgba($primary, 0.12);
+    background: var(--vk-info-soft);
+    color: var(--vk-info);
     font-size: 13px;
     font-weight: 800;
     place-items: center;
@@ -427,16 +440,19 @@
   strong,
   span { display: block; }
 
+  strong { color: var(--app-text); }
+
   div > span {
-    color: $muted;
+    color: var(--app-text-muted);
     font-size: 12px;
   }
 
   &__role {
     padding: 5px 8px;
-    border: 1px solid rgba($primary, 0.3);
+    border: 1px solid var(--vk-info-border);
     border-radius: 999px;
-    color: $primary;
+    background: var(--vk-info-soft);
+    color: var(--vk-info);
     font-family: 'JetBrains Mono', monospace;
     font-size: 9px;
     letter-spacing: 0.08em;
@@ -458,30 +474,31 @@
   position: sticky;
   top: 106px;
   padding: 10px 22px 22px;
-  border: 1px solid $border;
+  border: 1px solid var(--app-border);
   border-radius: $radius;
-  background: rgba($surface, 0.72);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
 
   &__item {
     @include flex-row(flex-start, center, 12px);
     padding: 18px 0;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--app-border);
 
     svg {
       width: 19px;
       height: 19px;
-      color: $primary;
+      color: var(--vk-info);
     }
 
     span,
     strong { display: block; }
 
     span {
-      color: $muted;
+      color: var(--app-text-muted);
       font-size: 11px;
     }
 
-    strong { font-size: 13px; }
+    strong { color: var(--app-text); font-size: 13px; }
   }
 
   .vk-button {
@@ -496,9 +513,10 @@
 
 .accountCard {
   padding: 30px;
-  border: 1px solid $border-strong;
+  border: 1px solid var(--app-border);
   border-radius: $radius;
-  background: rgba($surface-raised, 0.76);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
 
   &__heading {
     @include flex-row(flex-start, center, 14px);
@@ -508,10 +526,10 @@
       display: grid;
       width: 44px;
       height: 44px;
-      border: 1px solid rgba($primary, 0.34);
+      border: 1px solid var(--vk-info-border);
       border-radius: $radius;
-      background: rgba($primary, 0.09);
-      color: $primary;
+      background: var(--vk-info-soft);
+      color: var(--vk-info);
       place-items: center;
 
       svg {
@@ -527,12 +545,14 @@
 
     h2 {
       margin: 0;
+      color: var(--app-text);
       font-size: 24px;
     }
   }
 
   &__intro {
     margin: -12px 0 22px;
+    color: var(--app-text-secondary);
     font-size: 13px;
   }
 }
@@ -592,6 +612,10 @@
 }
 
 @media (max-width: $phone) {
+  .formField input {
+    font-size: 16px;
+  }
+
   .authForm__options {
     align-items: flex-start;
     flex-direction: column;
@@ -643,7 +667,7 @@
     gap: 0;
     padding: 5px 20px 20px;
 
-    &__item { border-bottom: 1px solid $border; }
+    &__item { border-bottom: 1px solid var(--app-border); }
 
     .vk-button {
       width: 100%;

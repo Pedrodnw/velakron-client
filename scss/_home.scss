@@ -4,6 +4,8 @@
   border-bottom: 1px solid $border;
   @include technical-grid;
 
+  .technicalLabel { color: var(--vk-shell-accent, #6ea8ff); }
+
   &::before {
     position: absolute;
     z-index: 0;
@@ -84,7 +86,21 @@
 
 .realitySection {
   padding: 108px 0 116px;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--vk-workspace-border);
+  background-color: var(--vk-workspace-canvas);
+  color: var(--vk-workspace-text);
+  @include technical-grid-light;
+
+  .sectionHeading h2,
+  h3,
+  strong {
+    color: var(--vk-workspace-text);
+  }
+
+  .sectionHeading__description,
+  p {
+    color: var(--vk-workspace-text-secondary);
+  }
 
   .sectionHeading h2 {
     max-width: 690px;
@@ -111,7 +127,7 @@
 
     .technicalLabel {
       margin-bottom: 18px;
-      color: rgba($muted, 0.75);
+      color: var(--vk-workspace-text-muted);
     }
 
     ul {
@@ -123,7 +139,7 @@
 
     li {
       @include flex-row(flex-start, center, 12px);
-      color: $muted;
+      color: var(--vk-workspace-text-secondary);
       font-size: 14px;
 
       span {
@@ -131,10 +147,10 @@
         flex: 0 0 21px;
         width: 21px;
         height: 21px;
-        border: 1px solid rgba($primary, 0.45);
+        border: 1px solid var(--vk-info-border);
         border-radius: 5px;
-        background: rgba($primary, 0.08);
-        color: $primary;
+        background: var(--vk-info-soft);
+        color: var(--vk-info);
         place-items: center;
       }
 
@@ -151,18 +167,30 @@
 
   &__image {
     aspect-ratio: 1.23;
-    border: 1px solid $border;
+    border: 1px solid var(--vk-workspace-border);
     border-radius: $radius;
-    background: $surface;
+    background: var(--vk-workspace-surface);
+    box-shadow: var(--vk-shadow-surface);
   }
 }
 
 .processSection {
   padding-top: 108px;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--vk-workspace-border);
   background:
-    radial-gradient(circle at 50% 10%, rgba($primary, 0.045), transparent 34%),
-    #070a0f;
+    radial-gradient(circle at 50% 10%, rgba($primary, 0.055), transparent 34%),
+    var(--vk-workspace-surface);
+  color: var(--vk-workspace-text);
+
+  .sectionHeading h2,
+  h3 {
+    color: var(--vk-workspace-text);
+  }
+
+  .sectionHeading__description,
+  p {
+    color: var(--vk-workspace-text-secondary);
+  }
 
   .sectionHeading {
     max-width: 750px;
@@ -188,9 +216,10 @@
 .processCard {
   min-height: 220px;
   padding: 28px 24px;
-  border: 1px solid $border-strong;
+  border: 1px solid var(--vk-workspace-border);
   border-radius: $radius;
-  background: rgba($surface-raised, 0.74);
+  background: var(--vk-workspace-surface);
+  box-shadow: var(--vk-shadow-surface);
 
   > span {
     display: block;
@@ -216,6 +245,7 @@
 .statisticsStrip {
   border-top: 1px solid $border;
   background-color: #0c1016;
+  color: $foreground;
 
   .max {
     display: grid;
@@ -235,6 +265,7 @@
 
   strong {
     max-width: 260px;
+    color: $foreground;
     font-family: 'JetBrains Mono', monospace;
     font-size: clamp(38px, 4vw, 54px);
     font-weight: 700;
@@ -256,7 +287,20 @@
 
 .capabilitiesSection {
   padding: 108px 0 116px;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--vk-workspace-border);
+  background-color: var(--vk-workspace-canvas);
+  color: var(--vk-workspace-text);
+  @include technical-grid-light;
+
+  .sectionHeading h2,
+  h3 {
+    color: var(--vk-workspace-text);
+  }
+
+  .sectionHeading__description,
+  p {
+    color: var(--vk-workspace-text-secondary);
+  }
 
   &__grid {
     display: grid;
@@ -267,7 +311,7 @@
 
   &__label {
     margin-bottom: 28px;
-    color: rgba($muted, 0.74);
+    color: var(--vk-workspace-text-muted);
     text-align: center;
   }
 }
@@ -275,9 +319,10 @@
 .capabilityCard {
   min-height: 258px;
   padding: 25px 22px;
-  border: 1px solid $border-strong;
+  border: 1px solid var(--vk-workspace-border);
   border-radius: $radius;
-  background: rgba($surface-raised, 0.78);
+  background: var(--vk-workspace-surface);
+  box-shadow: var(--vk-shadow-surface);
   transition: border-color 180ms ease, transform 180ms ease;
 
   &:hover {
@@ -290,10 +335,10 @@
     width: 42px;
     height: 42px;
     margin-bottom: 26px;
-    border: 1px solid $border;
+    border: 1px solid var(--vk-info-border);
     border-radius: 6px;
-    background: rgba($background, 0.65);
-    color: $primary;
+    background: var(--vk-info-soft);
+    color: var(--vk-info);
     place-items: center;
 
     svg {
@@ -324,16 +369,17 @@
   @include flex-col(center, center, 14px);
   min-height: 108px;
   padding: 18px 10px;
-  border: 1px solid $border-strong;
+  border: 1px solid var(--vk-workspace-border);
   border-radius: $radius;
-  background: rgba($surface-raised, 0.78);
-  color: $muted;
+  background: var(--vk-workspace-surface);
+  color: var(--vk-workspace-text-secondary);
+  box-shadow: var(--vk-shadow-surface);
   text-align: center;
 
   svg {
     width: 25px;
     height: 25px;
-    color: $primary;
+    color: var(--vk-info);
   }
 
   span {
@@ -367,6 +413,7 @@
 
     .technicalLabel {
       margin-bottom: 20px;
+      color: var(--vk-shell-accent, #6ea8ff);
     }
 
     h2 {

@@ -20,6 +20,13 @@
   background-size: 48px 48px;
 }
 
+@mixin technical-grid-light($opacity: 1) {
+  background-image:
+    linear-gradient(rgba(16, 19, 25, 0.035 * $opacity) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 19, 25, 0.035 * $opacity) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
 @mixin focus-ring {
   outline: 2px solid $primary;
   outline-offset: 3px;

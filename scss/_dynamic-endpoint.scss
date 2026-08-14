@@ -5,7 +5,7 @@
   align-items: center;
   margin-bottom: 20px;
   border-color: rgba($primary, 0.28);
-  background: linear-gradient(110deg, rgba($primary, 0.1), #10141a 46%);
+  background: linear-gradient(110deg, rgba($primary, 0.1), var(--app-surface) 46%);
 
   &__icon {
     display: grid;
@@ -15,13 +15,13 @@
     border: 1px solid rgba($primary, 0.3);
     border-radius: 10px;
     background: rgba($primary, 0.12);
-    color: #8bbcff;
+    color: var(--vk-info);
 
     svg { width: 21px; height: 21px; }
   }
 
   .technicalLabel { margin-bottom: 5px; }
-  a { color: #bcd7ff; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-wrap: anywhere; }
+  a { color: var(--vk-info); font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-wrap: anywhere; }
   p:last-child { margin: 7px 0 0; font-size: 11px; }
 
   &__status {
@@ -58,12 +58,12 @@
     display: grid;
     gap: 9px;
     padding: 20px;
-    border: 1px solid $border;
+    border: 1px solid var(--app-border);
     border-radius: $radius;
-    background: #0b0e13;
+    background: var(--app-canvas);
 
-    > a { color: #9fc5ff; overflow-wrap: anywhere; }
-    > strong { color: $foreground; font-size: 15px; overflow-wrap: anywhere; }
+    > a { color: var(--vk-info); overflow-wrap: anywhere; }
+    > strong { color: var(--app-text); font-size: 15px; overflow-wrap: anywhere; }
     > p { margin: 0; font-size: 11px; }
   }
 
@@ -80,8 +80,8 @@
     svg { width: 14px; height: 14px; }
   }
 
-  &__empty { padding: 28px; border: 1px dashed $border-strong; border-radius: $radius; color: $muted; font-size: 12px; text-align: center; }
-  &__updated { margin: auto 0 0; padding-top: 18px; color: #747e8b; font-size: 10px; }
+  &__empty { padding: 28px; border: 1px dashed var(--app-border-strong); border-radius: $radius; color: var(--app-text-muted); font-size: 12px; text-align: center; }
+  &__updated { margin: auto 0 0; padding-top: 18px; color: var(--app-text-muted); font-size: 10px; }
 }
 
 .dynamicEndpointQr {
@@ -114,21 +114,21 @@
   min-height: 330px;
   flex-direction: column;
 
-  > label { margin-bottom: 8px; color: $foreground; font-size: 12px; font-weight: 700; }
+  > label { margin-bottom: 8px; color: var(--app-text); font-size: 12px; font-weight: 700; }
   > input {
     width: 100%;
     min-height: 46px;
     padding: 10px 12px;
-    border: 1px solid $border-strong;
+    border: 1px solid var(--app-border-strong);
     border-radius: $radius;
     outline: none;
-    background: #0b0e13;
-    color: $foreground;
+    background: var(--app-canvas);
+    color: var(--app-text);
     font: inherit;
     font-size: 12px;
 
     &:focus { border-color: rgba($primary, 0.7); box-shadow: 0 0 0 3px rgba($primary, 0.12); }
-    &::file-selector-button { margin-right: 12px; padding: 7px 10px; border: 0; border-radius: 5px; background: rgba($primary, 0.16); color: #bcd7ff; cursor: pointer; font-weight: 700; }
+    &::file-selector-button { margin-right: 12px; padding: 7px 10px; border: 0; border-radius: 5px; background: rgba($primary, 0.16); color: var(--vk-info); cursor: pointer; font-weight: 700; }
   }
 
   .vk-button { margin-top: auto; }
@@ -143,8 +143,8 @@
     background: rgba($primary, 0.08);
     font-size: 11px;
 
-    strong { min-width: 0; overflow: hidden; color: $foreground; text-overflow: ellipsis; white-space: nowrap; }
-    span { flex: 0 0 auto; color: $muted; }
+    strong { min-width: 0; overflow: hidden; color: var(--app-text); text-overflow: ellipsis; white-space: nowrap; }
+    span { flex: 0 0 auto; color: var(--app-text-muted); }
   }
 }
 
@@ -155,10 +155,10 @@
   margin-top: 12px;
   border: 1px solid rgba($primary, 0.2);
   border-radius: 6px;
-  background: #0b0e13;
+  background: var(--app-canvas);
 
   > div { position: absolute; inset: 0 auto 0 0; background: rgba($primary, 0.2); transition: width 160ms ease; }
-  > span { position: relative; z-index: 1; display: block; padding: 6px 9px; color: #bcd7ff; font-size: 10px; }
+  > span { position: relative; z-index: 1; display: block; padding: 6px 9px; color: var(--vk-info); font-size: 10px; }
 }
 
 @media (max-width: $laptop) {

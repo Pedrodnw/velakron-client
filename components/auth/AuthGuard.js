@@ -17,7 +17,7 @@ const AuthGuard = ({ children }) => {
   }, [initialized, router, user])
 
   if (!initialized || !user) {
-    return <section className='authLoading' aria-live='polite'>
+    return <section className='authLoading authLoading--workspace' aria-live='polite'>
       <LoaderCircle aria-hidden='true' />
       <p>Checking your secure session…</p>
     </section>

@@ -25,11 +25,12 @@ const loadOcctRuntime = () => {
 const safeColor = (THREE, value) => {
   const scale = Array.isArray(value) && value.some(channel => channel > 1) ? 255 : 1
   const color = !Array.isArray(value) || value.length < 3
-    ? new THREE.Color(0x9bbfe8)
+    ? new THREE.Color(0x4f86c6)
     : new THREE.Color(value[0] / scale, value[1] / scale, value[2] / scale)
   const hsl = {}
   color.getHSL(hsl)
-  if (hsl.l < 0.48) color.setHSL(hsl.h, Math.min(hsl.s, 0.55), 0.56)
+  const lightness = Math.min(Math.max(hsl.l, 0.32), 0.62)
+  color.setHSL(hsl.h, Math.min(hsl.s, 0.58), lightness)
   return color
 }
 
@@ -52,17 +53,15 @@ const buildStepGroup = (THREE, result) => {
     geometry.computeBoundingBox()
     const material = new THREE.MeshStandardMaterial({
       color: safeColor(THREE, imported.color),
-      emissive: 0x101820,
-      emissiveIntensity: 0.2,
-      metalness: 0.04,
-      roughness: 0.5,
+      metalness: 0.06,
+      roughness: 0.62,
       side: THREE.DoubleSide,
     })
     const mesh = new THREE.Mesh(geometry, material)
     mesh.name = imported.name || 'STEP part'
     const edges = new THREE.LineSegments(
       new THREE.EdgesGeometry(geometry, 28),
-      new THREE.LineBasicMaterial({ color: 0xd5e6f8, transparent: true, opacity: 0.28 }),
+      new THREE.LineBasicMaterial({ color: 0x4f5f72, transparent: true, opacity: 0.48 }),
     )
     mesh.add(edges)
     group.add(mesh)
@@ -115,14 +114,14 @@ const ModelViewer = ({ file, source }) => {
         if (stopped) return
 
         const scene = new THREE.Scene()
-        scene.background = new THREE.Color(0x111821)
+        scene.background = new THREE.Color(0xf7f9fc)
         const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 1000000)
         camera.up.set(0, 0, 1)
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
         renderer.outputColorSpace = THREE.SRGBColorSpace
         renderer.toneMapping = THREE.ACESFilmicToneMapping
-        renderer.toneMappingExposure = 1.35
+        renderer.toneMappingExposure = 1.08
         mountRef.current.replaceChildren(renderer.domElement)
         renderer.domElement.setAttribute('aria-label', `Interactive ${modelFormatLabel(file)} viewer`)
         renderer.domElement.setAttribute('aria-describedby', guidanceId)
@@ -134,14 +133,14 @@ const ModelViewer = ({ file, source }) => {
         controls.dampingFactor = 0.08
         controls.screenSpacePanning = true
 
-        scene.add(new THREE.HemisphereLight(0xf1f7ff, 0x314152, 3.2))
-        const keyLight = new THREE.DirectionalLight(0xffffff, 3.4)
+        scene.add(new THREE.HemisphereLight(0xffffff, 0xb8c3d0, 2.15))
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2.35)
         keyLight.position.set(4, -5, 7)
         scene.add(keyLight)
-        const fillLight = new THREE.DirectionalLight(0x9fc8ff, 2.1)
+        const fillLight = new THREE.DirectionalLight(0xc9ddf7, 1.25)
         fillLight.position.set(-5, 3, 2)
         scene.add(fillLight)
-        const rimLight = new THREE.DirectionalLight(0xffffff, 1.8)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.8)
         rimLight.position.set(-2, -4, -3)
         scene.add(rimLight)
 
@@ -149,16 +148,14 @@ const ModelViewer = ({ file, source }) => {
           const geometry = new parser.STLLoader().parse(bytes)
           geometry.computeVertexNormals()
           model = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
-            color: 0x9bbfe8,
-            emissive: 0x101820,
-            emissiveIntensity: 0.2,
-            metalness: 0.04,
-            roughness: 0.5,
+            color: 0x4f86c6,
+            metalness: 0.06,
+            roughness: 0.62,
             side: THREE.DoubleSide,
           }))
           model.add(new THREE.LineSegments(
             new THREE.EdgesGeometry(geometry, 28),
-            new THREE.LineBasicMaterial({ color: 0xd5e6f8, transparent: true, opacity: 0.28 }),
+            new THREE.LineBasicMaterial({ color: 0x4f5f72, transparent: true, opacity: 0.48 }),
           ))
         } else {
           const result = parser.ReadStepFile(new Uint8Array(bytes), {
