@@ -39,7 +39,7 @@ describe('role-aware application navigation', () => {
 
   it('gives founders the internal task workspace without platform administration links', () => {
     expect(labels('velakron', ['organization.read', 'internal_task.read', 'trade_show_lead.read', 'dynamic_endpoint.manage']))
-      .toEqual(['Overview', 'Tasks & priorities', 'IMTS leads', 'Dynamic Endpoint', 'Account'])
+      .toEqual(['Overview', 'Tasks & priorities', 'Dynamic Endpoint', 'Account'])
   })
 
   it('shows CRM navigation only when the founder-only CRM permission is present', () => {
@@ -47,6 +47,11 @@ describe('role-aware application navigation', () => {
       .toEqual(['Overview', 'CRM', 'Tasks & priorities', 'Account'])
     expect(labels('velakron', ['platform.support', 'audit.read']))
       .not.toContain('CRM')
+  })
+
+  it('keeps IMTS acquisition inside the founder-only CRM instead of the primary workspace navigation', () => {
+    expect(labels('velakron', ['crm.dashboard.read', 'trade_show_lead.read']))
+      .toEqual(['Overview', 'CRM', 'Account'])
   })
 
   it('removes account management from temporary IMTS workspaces', () => {

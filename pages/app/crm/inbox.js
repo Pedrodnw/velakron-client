@@ -35,12 +35,12 @@ const CrmInbox = () => {
   const load = useCallback(async (selected = tab) => {
     setState(value => ({ ...value, loading: true, error: '' }))
     const status = selected === 'inbox' ? 'received' : selected === 'sent' ? 'sent' : 'draft,approval_required,scheduled,queued,failed'
-    const result = await dispatch(crmRequest({ url: '/emails', params: { status, page_size: 100 }, requestKey: `crm-emails-${selected}` }))
+    const [result, reviewResult] = await Promise.all([
+      dispatch(crmRequest({ url: '/emails', params: { status, page_size: 100 }, requestKey: `crm-emails-${selected}` })),
+      dispatch(crmRequest({ url: '/inbox-review', requestKey: 'crm-inbox-review' })),
+    ])
     setState(result?.ok ? { loading: false, messages: result.payload.data.messages || [], unread: result.payload.data.unread_count || 0, error: '' } : { loading: false, messages: [], unread: 0, error: crmErrorMessage(result) })
-    if (selected === 'review') {
-      const reviewResult = await dispatch(crmRequest({ url: '/inbox-review', requestKey: 'crm-inbox-review' }))
-      if (reviewResult?.ok) setReview(reviewResult.payload.data.reviews || [])
-    }
+    if (reviewResult?.ok) setReview(reviewResult.payload.data.reviews || [])
   }, [dispatch, tab])
   useEffect(() => { load(tab) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {

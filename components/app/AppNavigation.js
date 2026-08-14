@@ -7,7 +7,6 @@ import {
   Handshake,
   LayoutDashboard,
   ListTodo,
-  ContactRound,
   BriefcaseBusiness,
   QrCode,
   MapPin,
@@ -34,7 +33,6 @@ const icons = {
   relationships: Handshake,
   team: UsersRound,
   tasks: ListTodo,
-  leads: ContactRound,
   dynamic: QrCode,
   crm: BriefcaseBusiness,
 }
