@@ -5,10 +5,14 @@ const initialState = {
   memberships: [],
   activeOrganization: null,
   activeMembership: null,
+  experience: null,
+  availableExperiences: [],
   permissions: [],
   status: 'loading',
   switching: false,
   switchingToOrganizationId: null,
+  switchingExperience: false,
+  switchingToExperience: null,
   error: null,
   contextVersion: 0,
 }
@@ -36,10 +40,16 @@ const applyContext = (state, payload) => {
   state.memberships = Array.isArray(context.memberships) ? context.memberships : state.memberships
   state.activeOrganization = context.active_organization || context.activeOrganization || context.organization || null
   state.activeMembership = context.active_membership || context.activeMembership || context.membership || null
+  state.experience = context.experience || null
+  state.availableExperiences = Array.isArray(context.available_experiences)
+    ? context.available_experiences
+    : []
   state.permissions = Array.isArray(context.permissions) ? context.permissions : []
   state.status = deriveContextStatus(context)
   state.switching = false
   state.switchingToOrganizationId = null
+  state.switchingExperience = false
+  state.switchingToExperience = null
   state.error = null
   state.contextVersion += 1
 }
@@ -86,6 +96,20 @@ const slice = createSlice({
       state.switchingToOrganizationId = null
       state.error = action.payload?.error || action.payload
     },
+    experienceSwitchRequested: (state, action) => {
+      state.switchingExperience = true
+      state.switchingToExperience = action.payload
+      state.error = null
+      state.contextVersion += 1
+    },
+    experienceSwitchReceived: (state, action) => {
+      applyContext(state, action.payload)
+    },
+    experienceSwitchFailed: (state, action) => {
+      state.switchingExperience = false
+      state.switchingToExperience = null
+      state.error = action.payload?.error || action.payload
+    },
     organizationContextCleared: clearContext,
   },
   extraReducers: builder => {
@@ -102,6 +126,9 @@ const slice = createSlice({
 })
 
 export const {
+  experienceSwitchFailed,
+  experienceSwitchReceived,
+  experienceSwitchRequested,
   organizationContextCleared,
   organizationContextFailed,
   organizationContextReceived,
@@ -131,14 +158,29 @@ export const switchOrganization = organizationId => dispatch => {
   }))
 }
 
+export const switchExperience = experience => dispatch => {
+  dispatch(experienceSwitchRequested(experience))
+  return dispatch(apiCallBegan({
+    url: '/auth/experience',
+    method: 'post',
+    data: { experience },
+    onSuccess: experienceSwitchReceived.type,
+    onError: experienceSwitchFailed.type,
+    requestKey: 'experience-switch',
+  }))
+}
+
 export const getActiveOrganization = state => state.appContext.activeOrganization
 export const getActiveMembership = state => state.appContext.activeMembership
+export const getActiveExperience = state => state.appContext.experience
+export const getAvailableExperiences = state => state.appContext.availableExperiences
 export const getAvailableMemberships = state => state.appContext.memberships
 export const getAppContextError = state => state.appContext.error
 export const getAppContextStatus = state => state.appContext.status
 export const getEffectivePermissions = state => state.appContext.permissions
 export const getOrganizationContextVersion = state => state.appContext.contextVersion
 export const getOrganizationSwitching = state => state.appContext.switching
+export const getExperienceSwitching = state => state.appContext.switchingExperience
 export const getSwitchingToOrganizationId = state => state.appContext.switchingToOrganizationId
 export const getHasPermission = permission => state => (
   state.appContext.permissions.includes(permission)

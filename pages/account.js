@@ -191,7 +191,7 @@ const AccountContent = () => {
             <strong>{user.full_name}</strong>
             <span>{user.email}</span>
           </div>
-          <span className='accountIdentity__role'>{roleLabels[membership?.role] || 'Account holder'}</span>
+          <span className='accountIdentity__role'>{roleLabels[membership?.assigned_role || membership?.role] || 'Account holder'}</span>
         </div>
       </div>
     </section>

@@ -4,6 +4,7 @@ import { VelakronLogo } from '../design-system'
 import AppNavigation from '../app/AppNavigation'
 import AppBreadcrumbs from '../app/AppBreadcrumbs'
 import OrganizationSwitcher from '../app/OrganizationSwitcher'
+import ExperienceSwitcher from '../app/ExperienceSwitcher'
 import AppAccessBoundary from '../app/AppAccessBoundary'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
@@ -50,9 +51,10 @@ const AppLayout = ({ children, wide = false }) => {
           <Menu aria-hidden='true' />
         </button>
         <div className='appTopbar__actions'>
+          <ExperienceSwitcher />
           <LinkWrap className='appIdentity' href={organization?.demo_workspace ? '/app' : '/account'}>
             <UserAvatar user={user} fallback={<UserRound aria-hidden='true' />} size={36} priority />
-            <span><strong>{user?.full_name || user?.email || 'Account'}</strong><small>{roleLabels[membership?.role] || 'Account holder'}</small></span>
+            <span><strong>{user?.full_name || user?.email || 'Account'}</strong><small>{membership?.assigned_role === 'founder' ? 'Founder' : roleLabels[membership?.role] || 'Account holder'}</small></span>
           </LinkWrap>
         </div>
       </header>

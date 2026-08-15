@@ -4,6 +4,7 @@ import appContextReducer, {
   deriveContextStatus,
   organizationContextReceived,
   organizationSwitchRequested,
+  experienceSwitchRequested,
 } from '../store/slices/appContext'
 
 const activeContext = {
@@ -17,6 +18,8 @@ const activeContext = {
   ],
   active_organization: { id: 'organization-a', name: 'OEM A', type: 'oem', status: 'active' },
   active_membership: { id: 'membership-a', role: 'oem_admin', status: 'active' },
+  experience: null,
+  available_experiences: [],
   permissions: ['organization.read', 'membership.read'],
 }
 
@@ -54,5 +57,30 @@ describe('organization context', () => {
     expect(state.appContext.activeOrganization.id).toBe('organization-a')
     expect(state.appContext.switching).toBe(true)
     expect(state.appContext.contextVersion).toBe(previousVersion + 1)
+  })
+
+  it('hydrates founder experiences and clears cached records before changing access', () => {
+    const founderContext = {
+      ...activeContext,
+      active_organization: { id: 'organization-v', name: 'Velakron', type: 'velakron', status: 'active' },
+      active_membership: { id: 'membership-v', role: 'founder', assigned_role: 'founder', status: 'active' },
+      experience: 'founder',
+      available_experiences: ['founder', 'velakron_admin'],
+      permissions: ['crm.dashboard.read'],
+    }
+    let state = reducer(undefined, { type: '@@init' })
+    state = reducer(state, organizationContextReceived({ data: founderContext }))
+    state = reducer(state, {
+      type: 'organizations/listReceived',
+      payload: { data: { organizations: [{ id: 'private-crm-record', name: 'Private CRM record' }] } },
+    })
+    expect(state.appContext.experience).toBe('founder')
+    expect(state.appContext.availableExperiences).toEqual(['founder', 'velakron_admin'])
+    expect(state.entities.organizations.ids).toEqual(['private-crm-record'])
+
+    state = reducer(state, experienceSwitchRequested('velakron_admin'))
+    expect(state.entities.organizations.ids).toEqual([])
+    expect(state.appContext.switchingExperience).toBe(true)
+    expect(state.appContext.switchingToExperience).toBe('velakron_admin')
   })
 })

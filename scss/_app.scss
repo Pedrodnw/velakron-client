@@ -354,6 +354,91 @@
   }
 }
 
+.experienceSwitcher {
+  position: relative;
+  @include flex-row(flex-start, center, 8px);
+  min-width: 178px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: $radius;
+  background: var(--app-surface);
+
+  &__icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    border-radius: 6px;
+    background: rgba($primary, 0.1);
+    color: var(--vk-action);
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  label {
+    min-width: 0;
+    flex: 1;
+
+    > span {
+      display: block;
+      color: var(--app-text-muted);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+  }
+
+  select {
+    width: 100%;
+    padding: 1px 18px 0 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--app-text);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+
+    &:focus-visible {
+      border-radius: 3px;
+      box-shadow: 0 0 0 2px rgba($primary, 0.4);
+    }
+  }
+
+  &__loading {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+    color: var(--vk-action);
+  }
+
+  &__error {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 260px;
+    padding: 8px 10px;
+    border: 1px solid var(--vk-danger-border);
+    border-radius: 6px;
+    background: var(--vk-danger-soft);
+    color: var(--vk-danger);
+    font-size: 11px;
+    box-shadow: 0 8px 24px rgba(15, 28, 44, 0.14);
+  }
+
+  &.has-error {
+    border-color: var(--vk-danger-border);
+  }
+}
+
 .appSearch {
   @include flex-row(flex-start, center, 9px);
   width: min(420px, 42vw);
@@ -1215,6 +1300,16 @@
 
     &__actions > button,
     .appIdentity > span:nth-child(2) {
+      display: none;
+    }
+  }
+
+  .experienceSwitcher {
+    min-width: 158px;
+    padding-right: 8px;
+    padding-left: 8px;
+
+    &__icon {
       display: none;
     }
   }
