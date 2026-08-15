@@ -1,5 +1,5 @@
-import { Building2, ExternalLink, LoaderCircle, Plus, Search } from 'lucide-react'
-import { useState } from 'react'
+import { Building2, ExternalLink, LoaderCircle, Plus, Search, ShieldCheck } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   AppPageHeader, AppSkeleton, DataTable, ErrorState, FilterBar, Pagination,
@@ -29,16 +29,19 @@ const Organizations = () => {
   const [filters, setFilters] = useState({ search: '', type: '', status: '', onboarding_state: '', page: 1 })
   const [createOpen, setCreateOpen] = useState(false)
   const [create, setCreate] = useState(emptyCreate)
+  const [createReason, setCreateReason] = useState('')
+  const [createReasonError, setCreateReasonError] = useState('')
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const createReasonRef = useRef(null)
 
   const validReason = () => {
     const value = reason.trim()
     if (value.length < 8) { setReasonError('Enter at least 8 characters explaining the support need.'); return null }
     setReasonError(''); return value
   }
-  const load = (page = filters.page) => {
-    const value = validReason()
+  const load = (page = filters.page, reasonOverride = null) => {
+    const value = reasonOverride || validReason()
     if (!value) return
     const next = { ...filters, page }
     setFilters(next)
@@ -46,10 +49,27 @@ const Organizations = () => {
     dispatch(trackProductEvent('admin.directory_viewed', 'platform_admin'))
   }
   const submitSearch = event => { event.preventDefault(); load(1) }
+  const openCreate = () => {
+    setFeedback(null)
+    setCreateReasonError('')
+    setCreateReason(current => current || (reason.trim().length >= 8 ? reason.trim() : ''))
+    setCreateOpen(true)
+  }
+  const closeCreate = () => {
+    if (pending) return
+    setCreateOpen(false)
+    setFeedback(null)
+    setCreateReasonError('')
+  }
   const submitCreate = async event => {
     event.preventDefault()
-    const supportReason = validReason()
-    if (!supportReason) return
+    const supportReason = createReason.trim()
+    if (supportReason.length < 8) {
+      setCreateReasonError('Enter at least 8 characters explaining why this organization is being created.')
+      createReasonRef.current?.focus()
+      return
+    }
+    setCreateReasonError('')
     setPending(true); setFeedback(null)
     const result = await dispatch(createPlatformOrganization({
       name: create.name, slug: create.slug, type: create.type, status: create.status,
@@ -57,7 +77,7 @@ const Organizations = () => {
     }, supportReason))
     setPending(false)
     if (!result?.ok) return setFeedback({ type: 'error', message: resultError(result, 'The organization could not be created.') })
-    setCreate(emptyCreate); setCreateOpen(false); load(1)
+    setReason(supportReason); setReasonError(''); setCreateReason(''); setCreate(emptyCreate); setCreateOpen(false); load(1, supportReason)
   }
   if (!allowed) return <PermissionDenied description='Only Velakron platform administrators can search across organizations.' />
 
@@ -72,7 +92,7 @@ const Organizations = () => {
 
   return <>
     <Seo title='Organizations' description='Audited organization support directory.' path='/admin/organizations' noIndex />
-    <AppPageHeader eyebrow='Platform directory' title='Organizations' description='Search, create, and inspect organizations through audited support controls.' actions={<Button onClick={() => setCreateOpen(true)}><Plus aria-hidden='true' /> New organization</Button>} />
+    <AppPageHeader eyebrow='Platform directory' title='Organizations' description='Search, create, and inspect organizations through audited support controls.' actions={<Button onClick={openCreate}><Plus aria-hidden='true' /> New organization</Button>} />
     <section className='appPanel supportReasonPanel'>
       <label htmlFor='support-reason'>Reason for accessing customer organizations</label>
       <input id='support-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={8} maxLength={500} placeholder='Example: Investigating onboarding ticket VK-104' required />
@@ -87,17 +107,59 @@ const Organizations = () => {
     {error && <ErrorState description={error.message} onRetry={() => load()} />}
     <section className='appPanel appPanel--table'>{loading ? <AppSkeleton lines={8} /> : <DataTable caption='Organizations returned for this support request' columns={columns} rows={organizations} emptyTitle='No organizations found' emptyDescription='Enter a support reason and adjust the filters.' />}</section>
     <Pagination meta={pagination} onPageChange={load} label='Organization pages' />
-    <ResponsiveDrawer open={createOpen} title='Create organization' onClose={() => setCreateOpen(false)}>
-      <form className='drawerForm' onSubmit={submitCreate}>
-        <p>Create only the company record here. Invite its first administrator from the organization detail page.</p>
+    <ResponsiveDrawer open={createOpen} title='Create organization' onClose={closeCreate}>
+      <form className='drawerForm organizationCreateForm' onSubmit={submitCreate} aria-busy={pending}>
+        <div className='organizationCreateIntro'>
+          <span><Building2 aria-hidden='true' /></span>
+          <div>
+            <strong>Company workspace</strong>
+            <p>Create the company record first. You can invite its first administrator from the organization detail page.</p>
+          </div>
+        </div>
         <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-        <label><span>Organization name</span><input value={create.name} onChange={event => setCreate(value => ({ ...value, name: event.target.value }))} minLength={2} maxLength={180} required /></label>
-        <label><span>URL slug</span><input value={create.slug} onChange={event => setCreate(value => ({ ...value, slug: event.target.value.toLowerCase() }))} pattern='[a-z0-9]+(?:-[a-z0-9]+)*' required /></label>
-        <label><span>Type</span><select value={create.type} onChange={event => setCreate(value => ({ ...value, type: event.target.value }))}><option value='oem'>OEM</option><option value='supplier'>Supplier</option></select></label>
-        <label><span>Initial status</span><select value={create.status} onChange={event => setCreate(value => ({ ...value, status: event.target.value }))}><option value='pending'>Pending</option><option value='active'>Active</option></select></label>
-        <label><span>Primary contact name</span><input value={create.contact_name} onChange={event => setCreate(value => ({ ...value, contact_name: event.target.value }))} maxLength={160} /></label>
-        <label><span>Primary contact email</span><input type='email' value={create.contact_email} onChange={event => setCreate(value => ({ ...value, contact_email: event.target.value }))} maxLength={320} /></label>
-        <Button type='submit' disabled={pending}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Building2 aria-hidden='true' />} Create organization</Button>
+
+        <section className='drawerForm__section'>
+          <header><span>01</span><div><h3>Organization identity</h3><p>Name and workspace address shown throughout Velakron.</p></div></header>
+          <div className='drawerForm__grid'>
+            <label className='drawerForm__field drawerForm__field--wide'><span>Organization name</span><input value={create.name} onChange={event => setCreate(value => ({ ...value, name: event.target.value }))} minLength={2} maxLength={180} placeholder='Example: Asterion Aerostructures' required /></label>
+            <label className='drawerForm__field drawerForm__field--wide'><span>URL slug</span><input value={create.slug} onChange={event => setCreate(value => ({ ...value, slug: event.target.value.toLowerCase() }))} pattern='[a-z0-9]+(?:-[a-z0-9]+)*' placeholder='asterion-aerostructures' required /><small>Lowercase letters, numbers, and hyphens only.</small></label>
+            <label className='drawerForm__field'><span>Organization type</span><select value={create.type} onChange={event => setCreate(value => ({ ...value, type: event.target.value }))}><option value='oem'>OEM</option><option value='supplier'>Supplier</option></select></label>
+            <label className='drawerForm__field'><span>Initial status</span><select value={create.status} onChange={event => setCreate(value => ({ ...value, status: event.target.value }))}><option value='pending'>Pending</option><option value='active'>Active</option></select></label>
+          </div>
+        </section>
+
+        <section className='drawerForm__section'>
+          <header><span>02</span><div><h3>Primary contact</h3><p>Optional contact details for onboarding and follow-up.</p></div></header>
+          <div className='drawerForm__grid'>
+            <label className='drawerForm__field drawerForm__field--wide'><span>Contact name</span><input value={create.contact_name} onChange={event => setCreate(value => ({ ...value, contact_name: event.target.value }))} maxLength={160} placeholder='Full name' /></label>
+            <label className='drawerForm__field drawerForm__field--wide'><span>Contact email</span><input type='email' value={create.contact_email} onChange={event => setCreate(value => ({ ...value, contact_email: event.target.value }))} maxLength={320} placeholder='name@company.com' /></label>
+          </div>
+        </section>
+
+        <section className='drawerForm__audit'>
+          <header><ShieldCheck aria-hidden='true' /><div><h3>Administrative reason</h3><p>Recorded in the audit history with this action.</p></div></header>
+          <label className='drawerForm__field' htmlFor='create-organization-reason'><span>Reason for creating this organization</span></label>
+          <textarea
+            id='create-organization-reason'
+            ref={createReasonRef}
+            value={createReason}
+            onChange={event => { setCreateReason(event.target.value); if (createReasonError) setCreateReasonError('') }}
+            onInvalid={event => { event.preventDefault(); setCreateReasonError('Enter at least 8 characters explaining why this organization is being created.') }}
+            minLength={8}
+            maxLength={500}
+            rows={3}
+            placeholder='Example: Approved onboarding request from the sales team'
+            aria-invalid={Boolean(createReasonError)}
+            aria-describedby={createReasonError ? 'create-organization-reason-error' : 'create-organization-reason-help'}
+            required
+          />
+          <p id={createReasonError ? 'create-organization-reason-error' : 'create-organization-reason-help'} className={createReasonError ? 'formHint formHint--error' : 'formHint'} role={createReasonError ? 'alert' : undefined}>{createReasonError || 'Use at least 8 characters. This note is never placed in the URL.'}</p>
+        </section>
+
+        <footer className='drawerForm__actions'>
+          <Button type='button' variant='secondary' onClick={closeCreate} disabled={pending}>Cancel</Button>
+          <Button type='submit' disabled={pending}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Building2 aria-hidden='true' />} {pending ? 'Creating…' : 'Create organization'}</Button>
+        </footer>
       </form>
     </ResponsiveDrawer>
   </>

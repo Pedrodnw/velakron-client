@@ -1206,9 +1206,29 @@
     }
 
     button {
-      border: 0;
-      background: transparent;
+      display: grid;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 1px solid var(--app-border);
+      border-radius: 7px;
+      background: var(--app-surface);
       color: var(--app-text-muted);
+      cursor: pointer;
+      place-items: center;
+
+      &:hover {
+        border-color: var(--app-border-strong);
+        background: var(--app-surface-subtle);
+        color: var(--app-text);
+      }
+
+      &:focus-visible {
+        outline: 3px solid rgba($primary, 0.24);
+        outline-offset: 2px;
+      }
+
+      svg { width: 18px; height: 18px; }
     }
   }
 
@@ -1730,6 +1750,188 @@
   }
 
   > .vk-button { width: 100%; }
+}
+
+.organizationCreateForm {
+  gap: 20px;
+}
+
+.organizationCreateIntro {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid rgba($primary, 0.2);
+  border-radius: 9px;
+  background: rgba($primary, 0.055);
+
+  > span {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba($primary, 0.28);
+    border-radius: 8px;
+    background: rgba($primary, 0.1);
+    color: var(--vk-info);
+    place-items: center;
+
+    svg { width: 19px; height: 19px; }
+  }
+
+  strong {
+    display: block;
+    margin: 1px 0 4px;
+    color: var(--app-text);
+    font-size: 13px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--app-text-muted);
+    font-size: 11px;
+    line-height: 1.55;
+  }
+}
+
+.drawerForm__section {
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--app-border);
+
+  > header {
+    display: grid;
+    grid-template-columns: 29px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+
+    > span {
+      padding-top: 2px;
+      color: var(--vk-info);
+      font: 700 10px/1.4 'JetBrains Mono', monospace;
+      letter-spacing: 0.12em;
+    }
+
+    h3,
+    p { margin: 0; }
+
+    h3 {
+      color: var(--app-text);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    p {
+      margin-top: 3px;
+      color: var(--app-text-muted);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+  }
+}
+
+.drawerForm__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px 12px;
+}
+
+.drawerForm__field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+
+  > span {
+    color: var(--app-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  > small {
+    color: var(--app-text-muted);
+    font-size: 9px;
+    line-height: 1.45;
+  }
+
+  &--wide { grid-column: 1 / -1; }
+}
+
+.organizationCreateForm input,
+.organizationCreateForm select,
+.organizationCreateForm textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 7px;
+  outline: 0;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 12px;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+
+  &::placeholder { color: var(--app-text-soft); }
+
+  &:hover { border-color: rgba($primary, 0.42); }
+
+  &:focus {
+    border-color: rgba($primary, 0.78);
+    box-shadow: 0 0 0 3px rgba($primary, 0.12);
+    background: #fff;
+  }
+
+  &[aria-invalid='true'] {
+    border-color: rgba($danger, 0.72);
+    box-shadow: 0 0 0 3px rgba($danger, 0.09);
+  }
+}
+
+.organizationCreateForm textarea {
+  min-height: 88px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.drawerForm__audit {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba($primary, 0.22);
+  border-radius: 9px;
+  background: rgba($primary, 0.045);
+
+  > header {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+
+    > svg {
+      width: 19px;
+      height: 19px;
+      margin-top: 1px;
+      color: var(--vk-info);
+    }
+
+    h3,
+    p { margin: 0; }
+    h3 { color: var(--app-text); font-size: 13px; }
+    p { margin-top: 2px; color: var(--app-text-muted); font-size: 10px; line-height: 1.45; }
+  }
+
+  > .formHint { margin: -2px 0 0; }
+}
+
+.drawerForm__actions {
+  display: grid;
+  grid-template-columns: minmax(112px, 0.7fr) minmax(0, 1.3fr);
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--app-border);
+
+  .vk-button { width: 100%; }
 }
 
 .onboardingLayout {
@@ -3277,6 +3479,11 @@
       font-size: 16px;
     }
   }
+
+  .responsiveDrawer__body { padding: 18px; }
+  .drawerForm__grid,
+  .drawerForm__actions { grid-template-columns: 1fr; }
+  .drawerForm__field--wide { grid-column: auto; }
 }
 .demoWorkspaceBanner {
   display: grid;
