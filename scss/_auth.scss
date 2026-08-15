@@ -383,6 +383,7 @@
   min-height: calc(100vh - 72px);
   background: var(--app-canvas);
   color: var(--app-text);
+  @include technical-grid-light;
 }
 
 .accountHero {

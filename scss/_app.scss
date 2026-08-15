@@ -13,6 +13,7 @@
   min-height: 100vh;
   background: var(--app-canvas);
   color: var(--app-text);
+  @include technical-grid-light;
 
   h1,
   h2,

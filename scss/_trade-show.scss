@@ -161,6 +161,7 @@
   min-height: 100vh;
   padding: 44px 24px;
   background: var(--vk-workspace-canvas);
+  @include technical-grid-light;
 }
 
 .tradeShowQrPoster {
