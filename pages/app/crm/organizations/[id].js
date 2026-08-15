@@ -13,12 +13,14 @@ import { Field, FieldGrid, OwnerName, formatDateTime, formatMoney, formatShortDa
 import { Button } from '../../../../components/design-system'
 import { WidePortalPageLayout } from '../../../../components/app/PortalPageLayout'
 import Seo from '../../../../components/Seo'
+import { apiCallBegan } from '../../../../store/api'
 import { crmErrorMessage, crmRequest } from '../../../../store/crmApi'
 
 const initialContact = { first_name: '', last_name: '', email: '', phone: '', job_title: '', department: '', role: 'user', owner: '', make_primary: false, notes: '' }
 const initialNote = { subject: '', summary: '', outcome: '', next_action: '', follow_up_at: '' }
 const initialOrganization = { name: '', status: 'prospect', industry: '', website: '', account_owner: '', lead_source: '', next_action: '', next_action_at: '', notes: '' }
 const initialRelationship = { organization: '', status: 'potential', owner: '', next_action: '', next_follow_up_at: '', notes: '' }
+const initialInvitation = { first_name: '', last_name: '', email: '', access: 'admin', message: '' }
 
 const OrganizationDetail = () => {
   const router = useRouter()
@@ -34,6 +36,7 @@ const OrganizationDetail = () => {
   const [organizationForm, setOrganizationForm] = useState(initialOrganization)
   const [relationshipForm, setRelationshipForm] = useState(initialRelationship)
   const [relationshipCandidates, setRelationshipCandidates] = useState([])
+  const [invitationForm, setInvitationForm] = useState(initialInvitation)
 
   const load = useCallback(async () => {
     if (!router.isReady || !router.query.id) return
@@ -109,6 +112,38 @@ const OrganizationDetail = () => {
     if (!result?.ok) return setFeedback({ type: 'error', message: crmErrorMessage(result, 'The organization could not be archived.') })
     router.push('/app/crm/organizations')
   }
+  const openInvitation = () => {
+    setInvitationForm({
+      ...initialInvitation,
+      first_name: organization.primary_contact?.first_name || '',
+      last_name: organization.primary_contact?.last_name || '',
+      email: organization.primary_contact?.email || '',
+    })
+    setFeedback(null)
+    setModal('invitation')
+  }
+  const sendInvitation = async event => {
+    event.preventDefault()
+    const platformId = organization.platform_organization?.id || organization.platform_organization?._id
+    if (!platformId) return setFeedback({ type: 'error', message: 'Activate or link the platform account before sending an invitation.' })
+    setSaving(true); setFeedback(null)
+    const rolePrefix = organization.type === 'supplier' ? 'supplier' : 'oem'
+    const result = await dispatch(apiCallBegan({
+      url: `/organizations/${platformId}/invitations`, method: 'post', organizationScoped: true,
+      requestKey: `founder-platform-invitation-${platformId}`,
+      data: {
+        first_name: invitationForm.first_name,
+        last_name: invitationForm.last_name,
+        email: invitationForm.email,
+        role: `${rolePrefix}_${invitationForm.access}`,
+        message: invitationForm.message,
+      },
+    }))
+    setSaving(false)
+    if (!result?.ok) return setFeedback({ type: 'error', message: crmErrorMessage(result, 'The invitation could not be sent.') })
+    setModal(''); setInvitationForm(initialInvitation)
+    setFeedback({ type: 'success', message: `Invitation sent to ${result.payload.data.invitation.email}.` })
+  }
 
   const contactColumns = [
     { key: 'name', label: 'Contact', render: item => <LinkWrap href={`/app/crm/contacts?contact=${item.id}`} className='tablePrimary'><strong>{item.full_name}</strong><span>{item.email || 'No email'}</span></LinkWrap> },
@@ -139,10 +174,10 @@ const OrganizationDetail = () => {
     ]} activeKey={tab} onChange={setTab} /></div>
 
     {tab === 'overview' && <div className='crmTwoColumn'>
-      <section className='appPanel'><CrmPanelHeader eyebrow='Organization' title='Who they are' /><dl className='appDetailList'>
+      <section className='appPanel'><CrmPanelHeader eyebrow='Organization' title='Who they are' actions={organization.platform_organization && <Button variant='secondary' onClick={openInvitation}><UserPlus aria-hidden='true' /> Invite user</Button>} /><dl className='appDetailList'>
         <div><dt>Type</dt><dd>{organization.type.toUpperCase()}</dd></div><div><dt>Industry</dt><dd>{organization.industry || 'Not set'}</dd></div>
         <div><dt>Website</dt><dd>{organization.website ? <a href={organization.website} target='_blank' rel='noreferrer'>{organization.website}</a> : 'Not set'}</dd></div>
-        <div><dt>Lead source</dt><dd>{organization.lead_source || 'Not set'}</dd></div><div><dt>Platform account</dt><dd>{organization.platform_organization?.name || 'Not activated'}</dd></div>
+        <div><dt>Lead source</dt><dd>{organization.lead_source || 'Not set'}</dd></div><div><dt>Platform account</dt><dd>{organization.platform_organization?.name || 'Not activated'}</dd>{!organization.platform_organization && <small>Link the platform account before inviting users.</small>}</div>
       </dl></section>
       <section className='appPanel'><CrmPanelHeader eyebrow='Current work' title='Commercial position' /><dl className='appDetailList'>
         <div><dt>Open opportunities</dt><dd>{opportunities.filter(item => !['won', 'lost'].includes(item.stage)).length}</dd></div>
@@ -174,6 +209,12 @@ const OrganizationDetail = () => {
       <Field label='Summary' wide><textarea required rows={4} maxLength={2000} value={noteForm.summary} onChange={event => setNoteForm(value => ({ ...value, summary: event.target.value }))} /></Field>
       <Field label='Outcome' wide><textarea rows={3} maxLength={5000} value={noteForm.outcome} onChange={event => setNoteForm(value => ({ ...value, outcome: event.target.value }))} /></Field>
       <Field label='Next action'><input maxLength={500} value={noteForm.next_action} onChange={event => setNoteForm(value => ({ ...value, next_action: event.target.value }))} /></Field><Field label='Follow-up date'><input type='datetime-local' value={noteForm.follow_up_at} onChange={event => setNoteForm(value => ({ ...value, follow_up_at: event.target.value }))} /></Field>
+    </FieldGrid></form></CrmModal>
+    <CrmModal open={modal === 'invitation'} title={`Invite someone to ${organization.name}`} description='The recipient will receive a secure link to create or connect their Velakron account.' onClose={() => !saving && setModal('')} actions={<><Button variant='secondary' onClick={() => setModal('')}>Cancel</Button><Button type='submit' form='crm-invitation-form' disabled={saving}>{saving ? 'Sending…' : 'Send invitation'}</Button></>}><form id='crm-invitation-form' onSubmit={sendInvitation}><FieldGrid>
+      <Field label='First name'><input maxLength={80} value={invitationForm.first_name} onChange={event => setInvitationForm(value => ({ ...value, first_name: event.target.value }))} /></Field><Field label='Last name'><input maxLength={80} value={invitationForm.last_name} onChange={event => setInvitationForm(value => ({ ...value, last_name: event.target.value }))} /></Field>
+      <Field label='Business email' wide><input type='email' required maxLength={320} value={invitationForm.email} onChange={event => setInvitationForm(value => ({ ...value, email: event.target.value }))} /></Field>
+      <Field label='Access level' wide><select value={invitationForm.access} onChange={event => setInvitationForm(value => ({ ...value, access: event.target.value }))}><option value='admin'>Administrator</option><option value='user'>Member</option></select></Field>
+      <Field label='Optional message' wide><textarea rows={4} maxLength={1000} value={invitationForm.message} onChange={event => setInvitationForm(value => ({ ...value, message: event.target.value }))} /></Field>
     </FieldGrid></form></CrmModal>
     <CrmModal open={modal === 'edit'} title='Edit organization' description='Update the internal CRM record. This does not change a linked platform tenant.' onClose={() => !saving && setModal('')} wide actions={<><Button variant='secondary' onClick={() => setModal('')}>Cancel</Button><Button type='submit' form='crm-organization-edit' disabled={saving}>Save changes</Button></>}><form id='crm-organization-edit' onSubmit={updateOrganization}><FieldGrid><Field label='Company name'><input required value={organizationForm.name} onChange={event => setOrganizationForm(value => ({ ...value, name: event.target.value }))} /></Field><Field label='Status'><select value={organizationForm.status} onChange={event => setOrganizationForm(value => ({ ...value, status: event.target.value }))}>{['prospect','onboarding','active','inactive'].map(value => <option key={value} value={value}>{value}</option>)}</select></Field><Field label='Industry'><input value={organizationForm.industry} onChange={event => setOrganizationForm(value => ({ ...value, industry: event.target.value }))} /></Field><Field label='Website'><input type='url' value={organizationForm.website} onChange={event => setOrganizationForm(value => ({ ...value, website: event.target.value }))} /></Field><Field label='Velakron owner'><select value={organizationForm.account_owner} onChange={event => setOrganizationForm(value => ({ ...value, account_owner: event.target.value }))}><option value=''>Unassigned</option>{owners.map(owner => <option key={owner.id} value={owner.id}>{owner.user.full_name}</option>)}</select></Field><Field label='Lead source'><input value={organizationForm.lead_source} onChange={event => setOrganizationForm(value => ({ ...value, lead_source: event.target.value }))} /></Field><Field label='Next action'><input value={organizationForm.next_action} onChange={event => setOrganizationForm(value => ({ ...value, next_action: event.target.value }))} /></Field><Field label='Follow-up date'><input type='datetime-local' value={organizationForm.next_action_at} onChange={event => setOrganizationForm(value => ({ ...value, next_action_at: event.target.value }))} /></Field><Field label='Notes' wide><textarea rows={6} value={organizationForm.notes} onChange={event => setOrganizationForm(value => ({ ...value, notes: event.target.value }))} /></Field></FieldGrid></form></CrmModal>
     <CrmModal open={modal === 'relationship'} title={`Connect ${organization.name}`} description={`Choose a ${organization.type === 'oem' ? 'supplier' : 'OEM'} CRM record.`} onClose={() => !saving && setModal('')} actions={<><Button variant='secondary' onClick={() => setModal('')}>Cancel</Button><Button type='submit' form='crm-relationship-form' disabled={saving}>Create connection</Button></>}><form id='crm-relationship-form' onSubmit={connectOrganization}><FieldGrid><Field label={organization.type === 'oem' ? 'Supplier' : 'OEM'} wide><select required value={relationshipForm.organization} onChange={event => setRelationshipForm(value => ({ ...value, organization: event.target.value }))}><option value=''>Choose organization</option>{relationshipCandidates.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><Field label='Status'><select value={relationshipForm.status} onChange={event => setRelationshipForm(value => ({ ...value, status: event.target.value }))}>{['potential','introduced','onboarding','active'].map(value => <option key={value} value={value}>{value}</option>)}</select></Field><Field label='Owner'><select value={relationshipForm.owner} onChange={event => setRelationshipForm(value => ({ ...value, owner: event.target.value }))}><option value=''>Unassigned</option>{owners.map(owner => <option key={owner.id} value={owner.id}>{owner.user.full_name}</option>)}</select></Field><Field label='Next action'><input value={relationshipForm.next_action} onChange={event => setRelationshipForm(value => ({ ...value, next_action: event.target.value }))} /></Field><Field label='Follow-up date'><input type='datetime-local' value={relationshipForm.next_follow_up_at} onChange={event => setRelationshipForm(value => ({ ...value, next_follow_up_at: event.target.value }))} /></Field><Field label='Notes' wide><textarea rows={4} value={relationshipForm.notes} onChange={event => setRelationshipForm(value => ({ ...value, notes: event.target.value }))} /></Field></FieldGrid></form></CrmModal>
