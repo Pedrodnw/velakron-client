@@ -27,6 +27,8 @@ import {
   relationshipStatusLabel,
 } from '../../components/app/relationshipWorkflow'
 
+// Keep both sides of a pending relationship explicit: suppliers decide while
+// OEMs see that the next action belongs to the supplier.
 const relatedOrganization = (relationship, activeType) => (
   activeType === 'supplier' ? relationship.oem_organization : relationship.supplier_organization
 )
