@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, ShieldCheck, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, BellRing, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -19,9 +19,10 @@ import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
 import { loadProductionSummary, productionCollaborationSelectors } from '../../store/slices/entities/productionCollaboration'
-import { loadPlatformSummary, platformSelectors, trackProductEvent } from '../../store/slices/entities/platformAdministration'
+import { loadPlatformActionCenter, loadPlatformSummary, platformSelectors, trackProductEvent } from '../../store/slices/entities/platformAdministration'
 import { internalTaskSelectors, loadInternalTasks } from '../../store/slices/entities/internalTasks'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
+import PlatformActionQueue from '../../components/app/PlatformActionQueue'
 
 const metric = value => String(value ?? '—')
 const recordCompany = (record, organizationType) => organizationType === 'supplier'
@@ -56,9 +57,14 @@ const StageDistribution = ({ distribution = {} }) => {
 const PlatformDashboard = ({ organization }) => {
   const dispatch = useDispatch()
   const summary = useSelector(platformSelectors.getSummary)
+  const actionCenter = useSelector(platformSelectors.getActionCenter)
   const loading = useSelector(platformSelectors.getSummaryLoading)
   const error = useSelector(platformSelectors.getSummaryError)
-  useEffect(() => { if (organization?.id) dispatch(loadPlatformSummary()) }, [dispatch, organization?.id])
+  useEffect(() => {
+    if (!organization?.id) return
+    dispatch(loadPlatformSummary())
+    dispatch(loadPlatformActionCenter())
+  }, [dispatch, organization?.id])
   if (loading && !summary) return <section className='appPanel'><AppSkeleton lines={9} /></section>
   if (error && !summary) return <ErrorState title='Platform overview is temporarily unavailable' description='Velakron will not show platform totals or health conclusions until current data loads.' onRetry={() => dispatch(loadPlatformSummary())} />
   if (!summary) return <section className='appPanel'><AppSkeleton lines={9} /></section>
@@ -66,17 +72,26 @@ const PlatformDashboard = ({ organization }) => {
   return <>
     {error && <ErrorState title='Platform overview could not refresh' description='Showing the last successful snapshot. Try again before making a support decision.' onRetry={() => dispatch(loadPlatformSummary())} />}
     <section className='metricGrid metricGrid--priority' aria-label='Platform priorities'>
-      <MetricCard label='Organizations' value={metric(summary.organizations?.total)} detail={`${summary.organizations?.by_status?.active || 0} active`} icon={Building2} href='/admin/organizations' />
-      <MetricCard label='Awaiting supplier review' value={metric(summary.supplier_onboarding?.ready_for_review)} detail='Submitted onboarding profiles' icon={Factory} tone='warning' href='/admin/suppliers' />
-      <MetricCard label='Security events' value={metric(summary.security_activity?.last_24_hours)} detail='Recorded in the last 24 hours' icon={ShieldCheck} href='/admin' />
+      <MetricCard label='Needs Velakron' value={metric(actionCenter?.counts?.needs_velakron)} detail='Approvals and operational intervention' icon={BellRing} tone={actionCenter?.counts?.needs_velakron ? 'warning' : 'success'} href='/admin/action-center' />
+      <MetricCard label='Waiting on companies' value={metric(actionCenter?.counts?.waiting_external)} detail='Visible follow-up owned by an OEM or supplier' icon={Clock3} href='/admin/action-center' />
+      <MetricCard label='Active organizations' value={metric(summary.organizations?.by_status?.active)} detail={`${summary.organizations?.total || 0} total company records`} icon={Building2} href='/admin/organizations' />
       <MetricCard label='Active relationships' value={metric(summary.relationships?.active)} detail='OEM–supplier connections' icon={Handshake} href='/admin/relationships' />
     </section>
+    {actionCenter && <PlatformActionQueue
+      title='Needs Velakron now'
+      description='The highest-priority approvals and operational exceptions across the platform.'
+      items={actionCenter.needs_velakron || []}
+      emptyTitle='The Velakron queue is clear'
+      emptyDescription='New customer approvals and platform exceptions will appear here automatically.'
+      compact
+    />}
     <p className='dashboardMetricContext'><UsersRound aria-hidden='true' /> {metric(summary.memberships?.active)} active members <span aria-hidden='true'>·</span> <Activity aria-hidden='true' /> {metric(summary.product_usage?.accepted_events_last_7_days)} privacy-safe usage events in the last 7 days</p>
     <div className='appDashboardGrid'>
       <section className='appPanel'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Administration</p><h2>Platform operations</h2></div></header>
         <div className='dashboardActionGrid'>
           <Button href='/admin/organizations'>Organizations</Button>
+          <Button href='/admin/action-center' variant='secondary'>Action center</Button>
           <Button href='/admin/users' variant='secondary'>Users & memberships</Button>
           <Button href='/admin/suppliers' variant='secondary'>Supplier reviews</Button>
           <Button href='/admin/relationships' variant='secondary'>Relationships</Button>

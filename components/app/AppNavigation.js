@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  BellRing,
   Building2,
   ClipboardCheck,
   Cog,
@@ -15,13 +16,16 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { useRouter } from 'next/router'
-import { useSelector } from 'react-redux'
+import { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import LinkWrap from '../LinkWrap'
 import { getActiveOrganization, getEffectivePermissions } from '../../store/slices/appContext'
 import { getNavigationItems } from './navigation'
+import { loadPlatformActionCenter, platformSelectors } from '../../store/slices/entities/platformAdministration'
 
 const icons = {
   account: UserRound,
+  actions: BellRing,
   audit: ScrollText,
   certifications: BadgeCheck,
   facilities: MapPin,
@@ -38,21 +42,40 @@ const icons = {
 }
 
 const AppNavigation = ({ onNavigate }) => {
+  const dispatch = useDispatch()
   const router = useRouter()
   const organization = useSelector(getActiveOrganization)
   const permissions = useSelector(getEffectivePermissions)
+  const actionCenter = useSelector(platformSelectors.getActionCenter)
   const visibleItems = getNavigationItems(organization?.type, permissions, {
     demoWorkspace: organization?.demo_workspace,
   })
+  const canReviewPlatform = permissions.includes('platform.support')
+  useEffect(() => {
+    if (!canReviewPlatform) return undefined
+    const refresh = () => dispatch(loadPlatformActionCenter())
+    refresh()
+    const interval = window.setInterval(refresh, 60_000)
+    const refreshOnFocus = () => { if (document.visibilityState !== 'hidden') refresh() }
+    window.addEventListener('focus', refreshOnFocus)
+    document.addEventListener('visibilitychange', refreshOnFocus)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshOnFocus)
+      document.removeEventListener('visibilitychange', refreshOnFocus)
+    }
+  }, [canReviewPlatform, dispatch])
 
   return <nav className='appNavigation' aria-label='Portal navigation'>
     <p>Workspace</p>
     {visibleItems.map(({ href, label, icon, exact }) => {
       const Icon = icons[icon]
       const active = exact ? router.pathname === href : router.pathname.startsWith(href)
+      const count = href === '/admin/action-center' ? actionCenter?.counts?.needs_velakron || 0 : 0
       return <LinkWrap key={href} href={href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
         <Icon aria-hidden='true' />
         <span>{label}</span>
+        {count > 0 && <strong className='appNavigation__count' aria-label={`${count} item${count === 1 ? '' : 's'} need Velakron`}>{count > 99 ? '99+' : count}</strong>}
       </LinkWrap>
     })}
   </nav>

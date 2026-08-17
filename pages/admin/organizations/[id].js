@@ -17,6 +17,7 @@ import { getHasPermission } from '../../../store/slices/appContext'
 import UserTableIdentity from '../../../components/app/UserTableIdentity'
 import {
   invitePlatformOrganizationAdmin,
+  loadPlatformActionCenter,
   loadPlatformOrganization,
   platformSelectors,
   revokePlatformInvitation,
@@ -81,7 +82,7 @@ const OrganizationDetail = () => {
       version: detail.organization.version,
     }, value))
     if (!result?.ok) setFeedback({ type: 'error', message: resultError(result, 'The status could not be changed.') })
-    else { setFeedback({ type: 'success', message: `Organization changed to ${formatLabel(statusIntent)}.` }); setStatusIntent(null); setActionReason(''); load() }
+    else { setFeedback({ type: 'success', message: `Organization changed to ${formatLabel(statusIntent)}.` }); setStatusIntent(null); setActionReason(''); dispatch(loadPlatformActionCenter()); load() }
   }
 
   if (!allowed) return <PermissionDenied description='Only Velakron platform administrators can use organization support tools.' />

@@ -1,4 +1,4 @@
-import { Check, ExternalLink, LoaderCircle, MailPlus, X } from 'lucide-react'
+import { Check, Clock3, ExternalLink, LoaderCircle, LockKeyhole, MailPlus, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -21,6 +21,11 @@ import { Button } from '../../components/design-system'
 import { getActiveOrganization, getHasPermission } from '../../store/slices/appContext'
 import { loadRelationships, relationshipSelectors, updateRelationship } from '../../store/slices/entities/relationships'
 import { inviteSupplier } from '../../store/slices/entities/invitations'
+import {
+  RELATIONSHIP_ACTIONS,
+  relationshipActionFor,
+  relationshipStatusLabel,
+} from '../../components/app/relationshipWorkflow'
 
 const relatedOrganization = (relationship, activeType) => (
   activeType === 'supplier' ? relationship.oem_organization : relationship.supplier_organization
@@ -48,18 +53,23 @@ const Suppliers = () => {
   if (loading && !relationships.length) return <section className='appPanel'><AppSkeleton lines={6} /></section>
   if (error?.code === 'NOT_FOUND') return <ResourceNotFound />
 
+  const pendingRelationships = relationships.filter(item => item.status === 'pending_supplier')
+
   const columns = [
     { key: 'organization', label: organization.type === 'supplier' ? 'OEM' : 'Supplier', render: item => {
       const related = relatedOrganization(item, organization.type)
       return <div className='tablePrimary'><strong>{related?.name || 'Unavailable'}</strong><span>{formatLabel(related?.type)}</span></div>
     } },
-    { key: 'status', label: 'Relationship', render: item => <StatusBadge tone={statusTone(item.status)}>{formatLabel(item.status)}</StatusBadge> },
+    { key: 'status', label: 'Relationship', render: item => <StatusBadge tone={statusTone(item.status)}>{relationshipStatusLabel({ organizationType: organization.type, status: item.status }) || formatLabel(item.status)}</StatusBadge> },
     { key: 'oem_supplier_code', label: 'Supplier code', render: item => item.oem_supplier_code || '—' },
     { key: 'updated_at', label: 'Updated', render: item => formatDate(item.updated_at) },
     { key: 'actions', label: '', render: item => {
       const related = relatedOrganization(item, organization.type)
       if (organization.type === 'oem' && item.status === 'active') return <Button href={`/app/suppliers/${related?.id}`} variant='secondary' className='tableAction'>Profile <ExternalLink aria-hidden='true' /></Button>
-      if (organization.type === 'supplier' && item.status === 'pending_supplier' && canManage) return <div className='tableActions'><button className='tableAction' type='button' onClick={() => decideRelationship(item, 'active')}><Check aria-hidden='true' /> Accept</button><button className='tableAction tableAction--danger' type='button' onClick={() => decideRelationship(item, 'declined')}><X aria-hidden='true' /> Decline</button></div>
+      const action = relationshipActionFor({ organizationType: organization.type, status: item.status, canManage })
+      if (action === RELATIONSHIP_ACTIONS.SUPPLIER_DECISION) return <div className='tableActions'><button className='tableAction' type='button' disabled={pending} onClick={() => decideRelationship(item, 'active')}><Check aria-hidden='true' /> Accept</button><button className='tableAction tableAction--danger' type='button' disabled={pending} onClick={() => decideRelationship(item, 'declined')}><X aria-hidden='true' /> Decline</button></div>
+      if (action === RELATIONSHIP_ACTIONS.SUPPLIER_ADMIN_REQUIRED) return <span className='relationshipActionHint'><LockKeyhole aria-hidden='true' /> Supplier administrator required</span>
+      if (action === RELATIONSHIP_ACTIONS.WAITING_FOR_SUPPLIER) return <span className='relationshipActionHint'><Clock3 aria-hidden='true' /> Waiting for supplier response</span>
       return null
     } },
   ]
@@ -74,6 +84,12 @@ const Suppliers = () => {
     }))
     setPending(false)
     if (!result?.ok) return setFeedback({ type: 'error', message: resultError(result, 'We could not update this customer relationship.') })
+    setFeedback({
+      type: 'success',
+      message: status === 'active'
+        ? 'Customer relationship accepted. The OEM can see your profile after Velakron approves it.'
+        : 'Customer relationship declined.',
+    })
     dispatch(loadRelationships(organization.id))
   }
 
@@ -98,8 +114,19 @@ const Suppliers = () => {
       eyebrow='Supply network'
       title={organization.type === 'supplier' ? 'Customers' : 'Suppliers'}
       description={organization.type === 'supplier' ? 'Accept customer invitations and see which OEM companies can view your active supplier profile.' : 'Invite suppliers and open active company capability profiles.'}
-      actions={<>{canInvite && organization.type === 'oem' && <Button onClick={() => setDrawerOpen(true)}><MailPlus aria-hidden='true' /> Invite Supplier</Button>}<StatusBadge tone='info'>{relationships.length} relationships</StatusBadge></>}
+      actions={<>{canInvite && organization.type === 'oem' && <Button onClick={() => setDrawerOpen(true)}><MailPlus aria-hidden='true' /> Invite Supplier</Button>}<StatusBadge tone='info'>{relationships.length} relationship{relationships.length === 1 ? '' : 's'}</StatusBadge></>}
     />
+    {pendingRelationships.length > 0 && <section className='relationshipWorkflowNotice' aria-live='polite'>
+      <span className='relationshipWorkflowNotice__icon'>{organization.type === 'supplier' ? <Check aria-hidden='true' /> : <Clock3 aria-hidden='true' />}</span>
+      <div>
+        <strong>{organization.type === 'supplier' ? `${pendingRelationships.length} customer invitation${pendingRelationships.length === 1 ? ' needs' : 's need'} a response` : `${pendingRelationships.length} supplier invitation${pendingRelationships.length === 1 ? '' : 's'} awaiting a response`}</strong>
+        <p>{organization.type === 'supplier'
+          ? canManage
+            ? 'Accept or decline each invitation from the controls in the table below.'
+            : 'A supplier administrator must accept or decline these customer invitations.'
+          : 'The supplier has been invited. No OEM action is required until the supplier responds.'}</p>
+      </div>
+    </section>}
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     {error && <ErrorState description={error.message} onRetry={() => dispatch(loadRelationships(organization.id))} />}
     <section className='appPanel appPanel--table'>

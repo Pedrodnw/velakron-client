@@ -1,5 +1,5 @@
 import { Building2, ExternalLink, LoaderCircle, Plus, Search, ShieldCheck } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   AppPageHeader, AppSkeleton, DataTable, ErrorState, FilterBar, Pagination,
@@ -13,7 +13,8 @@ import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { getHasPermission } from '../../store/slices/appContext'
 import { loadOrganizations, organizationSelectors } from '../../store/slices/entities/organizations'
-import { createPlatformOrganization, trackProductEvent } from '../../store/slices/entities/platformAdministration'
+import { createPlatformOrganization, loadPlatformActionCenter, platformSelectors, trackProductEvent } from '../../store/slices/entities/platformAdministration'
+import PlatformActionQueue from '../../components/app/PlatformActionQueue'
 
 const emptyCreate = { name: '', slug: '', type: 'oem', status: 'pending', contact_name: '', contact_email: '' }
 
@@ -24,6 +25,7 @@ const Organizations = () => {
   const loading = useSelector(organizationSelectors.getEntityLoading)
   const error = useSelector(organizationSelectors.getEntityError)
   const pagination = useSelector(organizationSelectors.getEntityPagination)
+  const actionCenter = useSelector(platformSelectors.getActionCenter)
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState('')
   const [filters, setFilters] = useState({ search: '', type: '', status: '', onboarding_state: '', page: 1 })
@@ -34,6 +36,8 @@ const Organizations = () => {
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const createReasonRef = useRef(null)
+
+  useEffect(() => { if (allowed) dispatch(loadPlatformActionCenter()) }, [allowed, dispatch])
 
   const validReason = () => {
     const value = reason.trim()
@@ -77,7 +81,7 @@ const Organizations = () => {
     }, supportReason))
     setPending(false)
     if (!result?.ok) return setFeedback({ type: 'error', message: resultError(result, 'The organization could not be created.') })
-    setReason(supportReason); setReasonError(''); setCreateReason(''); setCreate(emptyCreate); setCreateOpen(false); load(1, supportReason)
+    setReason(supportReason); setReasonError(''); setCreateReason(''); setCreate(emptyCreate); setCreateOpen(false); dispatch(loadPlatformActionCenter()); load(1, supportReason)
   }
   if (!allowed) return <PermissionDenied description='Only Velakron platform administrators can search across organizations.' />
 
@@ -93,6 +97,14 @@ const Organizations = () => {
   return <>
     <Seo title='Organizations' description='Audited organization support directory.' path='/admin/organizations' noIndex />
     <AppPageHeader eyebrow='Platform directory' title='Organizations' description='Search, create, and inspect organizations through audited support controls.' actions={<Button onClick={openCreate}><Plus aria-hidden='true' /> New organization</Button>} />
+    <PlatformActionQueue
+      title='Organization approvals'
+      description='Activated OEM accounts appear automatically. Full company details still require a recorded review reason.'
+      items={(actionCenter?.needs_velakron || []).filter(item => item.kind === 'organization_review')}
+      emptyTitle='No organizations are awaiting approval'
+      emptyDescription='An OEM will appear here as soon as its invited administrator activates the account.'
+      compact
+    />
     <section className='appPanel supportReasonPanel'>
       <label htmlFor='support-reason'>Reason for accessing customer organizations</label>
       <input id='support-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={8} maxLength={500} placeholder='Example: Investigating onboarding ticket VK-104' required />

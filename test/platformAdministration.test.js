@@ -6,6 +6,7 @@ import { platformSelectors, trackProductEvent } from '../store/slices/entities/p
 describe('platform administration state', () => {
   it('stores bounded platform results and clears them before a company switch', () => {
     let state = reducer(undefined, { type: '@@init' })
+    state = reducer(state, { type: 'platformAdministration/actionCenterReceived', payload: { data: { counts: { needs_velakron: 2 } } } })
     state = reducer(state, { type: 'platformAdministration/summaryReceived', payload: { data: { organizations: { total: 4 } } } })
     state = reducer(state, {
       type: 'platformAdministration/usersReceived',
@@ -16,11 +17,13 @@ describe('platform administration state', () => {
       payload: { data: { organization: { id: 'organization-a', name: 'OEM A' }, support_access: { mode: 'read_only' } } },
     })
 
+    expect(platformSelectors.getActionCenter(state).counts.needs_velakron).toBe(2)
     expect(platformSelectors.getSummary(state).organizations.total).toBe(4)
     expect(platformSelectors.getUsers(state)).toMatchObject({ items: [{ id: 'membership-a' }], pagination: { page: 1, total: 1 } })
     expect(platformSelectors.getOrganizationDetail('organization-a')(state).support_access.mode).toBe('read_only')
 
     state = reducer(state, organizationSwitchRequested('organization-b'))
+    expect(platformSelectors.getActionCenter(state)).toBe(null)
     expect(platformSelectors.getSummary(state)).toBe(null)
     expect(platformSelectors.getUsers(state).items).toEqual([])
     expect(platformSelectors.getOrganizationDetail('organization-a')(state)).toBe(null)

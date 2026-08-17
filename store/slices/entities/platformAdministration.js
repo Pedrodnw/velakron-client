@@ -4,6 +4,9 @@ import { organizationContextCleared, organizationSwitchRequested } from '../appC
 
 const collection = () => ({ items: [], pagination: null, loading: false, error: null })
 const initialState = {
+  actionCenter: null,
+  actionCenterLoading: false,
+  actionCenterError: null,
   summary: null,
   summaryLoading: false,
   summaryError: null,
@@ -26,6 +29,9 @@ const slice = createSlice({
   name: 'platformAdministration',
   initialState,
   reducers: {
+    actionCenterRequested: state => { state.actionCenterLoading = true; state.actionCenterError = null },
+    actionCenterReceived: (state, action) => { state.actionCenter = action.payload?.data || null; state.actionCenterLoading = false },
+    actionCenterFailed: (state, action) => { state.actionCenterLoading = false; state.actionCenterError = action.payload?.error || action.payload },
     summaryRequested: state => { state.summaryLoading = true; state.summaryError = null },
     summaryReceived: (state, action) => { state.summary = action.payload?.data || null; state.summaryLoading = false },
     summaryFailed: (state, action) => { state.summaryLoading = false; state.summaryError = action.payload?.error || action.payload },
@@ -70,6 +76,12 @@ export const loadPlatformSummary = () => call({
   url: '/platform/summary', onStart: actions.summaryRequested.type,
   onSuccess: actions.summaryReceived.type, onError: actions.summaryFailed.type,
   requestKey: 'platform-summary',
+})
+
+export const loadPlatformActionCenter = () => call({
+  url: '/platform/action-center', onStart: actions.actionCenterRequested.type,
+  onSuccess: actions.actionCenterReceived.type, onError: actions.actionCenterFailed.type,
+  requestKey: 'platform-action-center',
 })
 
 export const loadPlatformUsers = (params, reason) => call({
@@ -192,6 +204,9 @@ export const trackProductEvent = (eventName, surface) => call({
 
 const root = state => state.entities.platformAdministration
 export const platformSelectors = {
+  getActionCenter: state => root(state).actionCenter,
+  getActionCenterLoading: state => root(state).actionCenterLoading,
+  getActionCenterError: state => root(state).actionCenterError,
   getSummary: state => root(state).summary,
   getSummaryLoading: state => root(state).summaryLoading,
   getSummaryError: state => root(state).summaryError,
