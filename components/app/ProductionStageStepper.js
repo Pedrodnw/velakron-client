@@ -5,8 +5,8 @@ const ProductionStageStepper = ({ stages = [], currentStage, lifecycleState }) =
   const currentIndex = stages.findIndex(stage => stage.key === currentStage)
   return <ol className='productionStages' aria-label='Production progress'>
     {stages.map((stage, index) => {
-      const complete = index < currentIndex || currentStage === 'delivered'
-      const current = index === currentIndex && currentStage !== 'delivered'
+      const complete = index < currentIndex || (index === currentIndex && lifecycleState === 'completed')
+      const current = index === currentIndex && lifecycleState !== 'completed'
       return <li key={stage.key} className={`${complete ? 'is-complete' : ''} ${current ? 'is-current' : ''}`}>
         <span>{complete ? <Check aria-hidden='true' /> : <Circle aria-hidden='true' />}</span>
         <div><strong>{stage.label}</strong>{stage.skippable && <small>Optional</small>}</div>

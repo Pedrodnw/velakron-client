@@ -19,7 +19,7 @@ const views = {
   oem: [{ key: 'active', label: 'Active' }, { key: 'draft', label: 'Drafts' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }],
   supplier: [{ key: 'action_required', label: 'Action required' }, { key: 'active', label: 'Active parts' }, { key: 'completed', label: 'Recently completed' }],
 }
-const stages = ['assigned', 'accepted', 'material_ordered', 'material_received', 'programming', 'in_production', 'inspection', 'ready_to_ship', 'shipped', 'delivered']
+const stages = ['assigned', 'accepted', 'material_ordered', 'material_received', 'programming', 'in_production', 'inspection', 'ready_to_ship', 'shipped', 'delivered', 'quality_review', 'approved']
 const healthValues = ['on_schedule', 'at_risk', 'delayed', 'needs_attention', 'unassessed']
 const initialFilters = type => ({ view: type === 'supplier' ? 'action_required' : 'active', search: '', stage: '', health: '', attention: '', supplier_organization_id: '', required_from: '', required_to: '', first_article: '', page: 1 })
 const cleanQuery = filters => Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== '' && value !== undefined && value !== 1))

@@ -16,7 +16,8 @@ import {
   confidentialitySelectors,
   configureRelationshipConfidentiality,
   loadRelationshipConfidentiality,
-  uploadConfidentialityNda,
+  updateRelationshipNdaDates,
+  uploadRelationshipNda,
 } from '../../../store/slices/entities/confidentiality'
 
 const tags = values => values?.length ? <div className='tagList'>{values.map(value => <span key={value}>{formatLabel(value)}</span>)}</div> : <p>Not provided</p>
@@ -40,9 +41,6 @@ const SupplierProfileDetail = () => {
   useEffect(() => { if (allowed && organization?.id) dispatch(loadRelationships(organization.id)) }, [allowed, dispatch, organization?.id])
   useEffect(() => { if (relationship?.id) dispatch(loadRelationshipConfidentiality(relationship.id)) }, [dispatch, relationship?.id])
   if (!allowed || organization?.type !== 'oem') return <PermissionDenied />
-  if (loading && (!detail?.organization || detail.organization.id !== router.query.id)) return <section className='appPanel'><AppSkeleton lines={10} /></section>
-  if (error || !detail?.profile) return <><Button href='/app/suppliers' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Suppliers</Button><ErrorState title='Supplier profile unavailable' description={error?.message || 'This supplier has not activated a customer-facing profile yet.'} /></>
-  const { profile, facilities = [], certifications = [], machines = [] } = detail
   const runConfidentiality = async (action, successMessage) => {
     setFeedback(null)
     const result = await action()
@@ -54,6 +52,29 @@ const SupplierProfileDetail = () => {
     if (relationship?.id) await dispatch(loadRelationshipConfidentiality(relationship.id))
     return true
   }
+  const confidentialityPanel = relationship && <RelationshipConfidentialityPanel
+    confidentiality={confidentialityEntry?.data}
+    loading={confidentialityEntry?.loading}
+    pending={confidentialityEntry?.mutating}
+    upload={confidentialityEntry?.upload}
+    feedback={confidentialityEntry?.error ? { type: 'error', message: confidentialityEntry.error.message } : feedback}
+    onConfigure={payload => runConfidentiality(() => dispatch(configureRelationshipConfidentiality(relationship.id, payload)), 'Relationship confidentiality default saved.')}
+    onUploadNda={payload => runConfidentiality(() => dispatch(uploadRelationshipNda(relationship.id, payload)), 'Supplier NDA uploaded. Current production access now requires a new signature.')}
+    onUpdateNdaDates={payload => runConfidentiality(() => dispatch(updateRelationshipNdaDates(relationship.id, payload)), 'Supplier NDA dates updated. Current production access now requires a new signature.')}
+  />
+  if (loading && (!detail?.organization || detail.organization.id !== router.query.id) && !relationship) return <section className='appPanel'><AppSkeleton lines={10} /></section>
+  if (error || !detail?.profile) {
+    const supplierName = relationship?.supplier_organization?.name || 'Supplier relationship'
+    return <>
+      <Seo title={supplierName} description='Supplier relationship and NDA management.' path={`/app/suppliers/${router.query.id}`} noIndex />
+      <Button href='/app/suppliers' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Suppliers</Button>
+      <AppPageHeader eyebrow='Connected supplier' title={supplierName} description='Manage supplier-wide NDA dates and confidentiality even before the capability profile is available.' actions={relationship && <StatusBadge tone='success'>Active relationship</StatusBadge>} />
+      {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
+      {confidentialityPanel}
+      <ErrorState title='Supplier profile unavailable' description={error?.message || 'This supplier has not activated a customer-facing profile yet.'} />
+    </>
+  }
+  const { profile, facilities = [], certifications = [], machines = [] } = detail
 
   const machineColumns = [
     { key: 'machine', label: 'Machine', render: item => <div className='tablePrimary'><strong>{item.manufacturer} {item.model}</strong><span>{item.shop_identifier}</span></div> },
@@ -67,15 +88,7 @@ const SupplierProfileDetail = () => {
     <Button href='/app/suppliers' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Suppliers</Button>
     <AppPageHeader eyebrow='Connected supplier' title={profile.display_name} description={profile.business_description} actions={<StatusBadge tone='success'>Active supplier</StatusBadge>} />
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
-    {relationship && <RelationshipConfidentialityPanel
-      confidentiality={confidentialityEntry?.data}
-      loading={confidentialityEntry?.loading}
-      pending={confidentialityEntry?.mutating}
-      upload={confidentialityEntry?.upload}
-      feedback={confidentialityEntry?.error ? { type: 'error', message: confidentialityEntry.error.message } : feedback}
-      onConfigure={payload => runConfidentiality(() => dispatch(configureRelationshipConfidentiality(relationship.id, payload)), 'Relationship confidentiality default saved.')}
-      onUploadNda={payload => runConfidentiality(() => dispatch(uploadConfidentialityNda('relationship', relationship.id, payload)), 'Relationship NDA uploaded. Current production access now requires a new signature.')}
-    />}
+    {confidentialityPanel}
     <section className='supplierPublicSummary'>
       <article className='appPanel'><Building2 aria-hidden='true' /><strong>Processes</strong>{tags(profile.process_keys)}</article>
       <article className='appPanel'><Cog aria-hidden='true' /><strong>Materials</strong>{tags(profile.material_keys)}</article>

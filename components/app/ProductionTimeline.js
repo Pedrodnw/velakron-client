@@ -1,4 +1,5 @@
 import { AlertTriangle, Archive, CheckCircle2, CircleDot, Cog, FileCheck2, MessageSquareText, PackageCheck, RotateCcw, Truck, UserRoundCheck, XCircle } from 'lucide-react'
+import { attentionCategoryFor } from './attentionCategories'
 import TimelineRow from './TimelineRow'
 import { formatDateTime, formatLabel } from './formatters'
 
@@ -26,6 +27,8 @@ const presentation = {
   'attachment.archived': { title: 'File archived', icon: Archive },
   'attention.reported': { title: 'Attention reason reported', icon: AlertTriangle },
   'attention.resolved': { title: 'Attention reason resolved', icon: CheckCircle2 },
+  'production_record.quality_issue_reported': { title: 'Quality issue opened', icon: AlertTriangle },
+  'production_record.quality_approved': { title: 'Parts approved by OEM', icon: CheckCircle2 },
 }
 
 const describe = event => {
@@ -49,9 +52,15 @@ const ProductionTimeline = ({ events = [] }) => <div className='productionTimeli
       title: formatLabel(event.event_type?.replaceAll('.', '_')),
       icon: CircleDot,
     }
+    const category = attentionCategoryFor(event.after?.category)
+    const title = category && event.event_type === 'attention.reported'
+      ? `${category.label} flagged`
+      : category && event.event_type === 'attention.resolved'
+        ? `${category.label} resolved`
+        : item.title
     return <TimelineRow
       key={event.id || event._id}
-      title={item.title}
+      title={title}
       description={describe(event)}
       time={formatDateTime(event.occurred_at)}
       icon={item.icon}

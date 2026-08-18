@@ -151,6 +151,8 @@ export const declineProductionRecord = (id, payload) => mutate(id, '/decline', '
 export const assignProductionMachine = (id, payload) => mutate(id, '/machine', 'post', payload)
 export const transitionProductionRecord = (id, payload) => mutate(id, '/transition', 'post', payload)
 export const confirmProductionDelivery = (id, payload) => mutate(id, '/confirm-delivery', 'post', payload)
+export const reportProductionQualityIssue = (id, payload) => mutate(id, '/report-quality-issue', 'post', payload)
+export const approveProductionQuality = (id, payload) => mutate(id, '/approve-quality', 'post', payload)
 export const cancelProductionRecord = (id, payload) => mutate(id, '/cancel', 'post', payload)
 export const reopenProductionRecord = (id, payload) => mutate(id, '/reopen', 'post', payload)
 export const archiveProductionRecord = (id, payload) => mutate(id, '/archive', 'post', payload)

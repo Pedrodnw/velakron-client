@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ATTENTION_CATEGORIES, attentionCategoryFor } from '../components/app/attentionCategories'
 import reducer from '../store/reducer'
 import { organizationSwitchRequested } from '../store/slices/appContext'
 import { machineAssignmentsReceived } from '../store/slices/entities/machineAssignments'
@@ -25,6 +26,17 @@ const detailPayload = {
 }
 
 describe('production record state', () => {
+  it('presents the approved attention categories and fixed risk labels', () => {
+    expect(ATTENTION_CATEGORIES.map(item => item.value)).toEqual([
+      'non_conformance',
+      'production_block',
+      'issue',
+      'information_flag',
+    ])
+    expect(attentionCategoryFor('non_conformance')).toMatchObject({ riskLabel: 'High risk', tone: 'danger' })
+    expect(attentionCategoryFor('information_flag')).toMatchObject({ riskLabel: 'No schedule risk', tone: 'info' })
+  })
+
   it('normalizes detail data while retaining the workflow and allowed actions', () => {
     let state = reducer(undefined, { type: '@@init' })
     state = reducer(state, { type: 'productionRecords/detailReceived', payload: detailPayload })

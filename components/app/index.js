@@ -1,6 +1,7 @@
 export { default as AppPageHeader } from './AppPageHeader'
 export { default as AppBreadcrumbs } from './AppBreadcrumbs'
 export { default as AttentionReason } from './AttentionReason'
+export { ATTENTION_CATEGORIES, attentionCategoryFor } from './attentionCategories'
 export { default as AuditEventRow } from './AuditEventRow'
 export { default as AppAccessBoundary } from './AppAccessBoundary'
 export { PermissionDenied, ResourceNotFound } from './AccessState'

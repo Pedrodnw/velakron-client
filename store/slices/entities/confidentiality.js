@@ -105,11 +105,16 @@ export const configureRelationshipConfidentiality = (id, data) => async dispatch
   return result
 }
 
-export const uploadConfidentialityNda = (scope, id, { file, reason = '' }) => async dispatch => {
-  const stateScope = scope === 'production' ? 'production' : 'relationships'
+export const uploadRelationshipNda = (id, {
+  file,
+  reason = '',
+  effective_on,
+  expires_on,
+}) => async dispatch => {
+  const stateScope = 'relationships'
   dispatch(mutationRequested({ scope: stateScope, id }))
   dispatch(uploadChanged({ scope: stateScope, id, upload: { filename: file.name, progress: 0, state: 'preparing' } }))
-  const base = `${scopeUrl(scope, id)}/nda`
+  const base = `${scopeUrl('relationship', id)}/nda`
   const intent = await dispatch(call({
     url: `${base}/intents`,
     method: 'post',
@@ -139,16 +144,31 @@ export const uploadConfidentialityNda = (scope, id, { file, reason = '' }) => as
   const finalized = await dispatch(call({
     url: `${base}/${intent.payload.data.attachment.id}/finalize`,
     method: 'post',
-    data: { reason },
+    data: { reason, effective_on, expires_on },
   }))
   if (!finalized?.ok) {
     dispatch(failed({ scope: stateScope, id, error: finalized?.error || { message: 'The NDA PDF could not be verified.' } }))
     return finalized
   }
   dispatch(uploadChanged({ scope: stateScope, id, upload: { filename: file.name, progress: 100, state: 'complete' } }))
-  if (scope === 'production') await dispatch(loadProductionConfidentiality(id))
-  else await dispatch(loadRelationshipConfidentiality(id))
+  await dispatch(loadRelationshipConfidentiality(id))
   return finalized
+}
+
+export const updateRelationshipNdaDates = (id, data) => async dispatch => {
+  dispatch(mutationRequested({ scope: 'relationships', id }))
+  const result = await dispatch(call({
+    url: `${scopeUrl('relationship', id)}/nda/dates`,
+    method: 'patch',
+    data,
+  }))
+  if (result?.ok) await dispatch(loadRelationshipConfidentiality(id))
+  else dispatch(failed({
+    scope: 'relationships',
+    id,
+    error: result?.error || { message: 'The NDA dates could not be saved.' },
+  }))
+  return result
 }
 
 const stateFor = state => state.entities.confidentiality

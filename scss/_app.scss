@@ -1530,6 +1530,7 @@
   small { color: var(--app-text-muted); font-size: 11px; }
 
   &--high > svg { color: var(--vk-danger); }
+  &--low > svg { color: var(--vk-info); }
 }
 
 .productionAttentionReason__actions {
@@ -2660,6 +2661,55 @@
   small { margin-top: 4px; color: var(--app-text-muted); font-size: 12px; }
 }
 
+.attentionCategoryField {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend {
+    margin-bottom: 8px;
+    color: var(--app-text);
+    font-size: 13px;
+    font-weight: 650;
+  }
+}
+
+.attentionCategoryGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.attentionCategoryOption {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: start;
+  padding: 13px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: $radius;
+  background: var(--app-surface);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+
+  &:hover { border-color: var(--vk-info-border); background: var(--app-surface-hover); }
+  &:focus-within { border-color: var(--vk-action); box-shadow: 0 0 0 3px rgba($primary, 0.12); }
+  &--selected { border-color: rgba($primary, 0.55); background: rgba($primary, 0.055); }
+
+  input {
+    width: 17px;
+    height: 17px;
+    margin: 2px 0 0;
+    accent-color: $primary;
+  }
+
+  strong,
+  small { display: block; }
+  strong { color: var(--app-text); font-size: 12px; }
+  small { margin-top: 4px; color: var(--app-text-muted); font-size: 11px; line-height: 1.45; }
+  .statusBadge { margin-top: 0; white-space: nowrap; }
+}
+
 .productionReview { max-width: 760px; }
 
 .productionFormFooter {
@@ -2673,7 +2723,7 @@
 
 .productionStatusStrip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   margin-bottom: 20px;
@@ -3432,7 +3482,7 @@
 }
 
 .confidentialityOemControls {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 
   > form {
     display: flex;
@@ -3448,15 +3498,83 @@
   > .formMessage { grid-column: 1 / -1; }
 }
 
+.productionNdaLocationNotice {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(#2d7ff9, 0.2);
+  border-radius: 8px;
+  background: rgba(#2d7ff9, 0.055);
+
+  > svg { width: 20px; height: 20px; color: var(--vk-info); }
+  strong,
+  span { display: block; }
+  strong { font-size: 12px; }
+  span { margin-top: 3px; color: var(--app-text-muted); font-size: 11px; line-height: 1.5; }
+}
+
 .relationshipConfidentialityPanel {
   display: grid;
   gap: 15px;
   margin-bottom: 20px;
 
   > p { margin: 0; }
+
+  > .appPanel__header {
+    align-items: flex-start;
+    p:not(.technicalLabel) { max-width: 760px; margin: 5px 0 0; color: var(--app-text-muted); font-size: 12px; line-height: 1.55; }
+  }
 }
 
-.relationshipConfidentialityControls { grid-template-columns: minmax(210px, 0.8fr) minmax(260px, 1.2fr) auto; align-items: end; }
+.relationshipNdaOverview,
+.relationshipConfidentialitySections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.relationshipNdaStatus,
+.relationshipNdaReminderPolicy {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-subtle);
+
+  > svg { width: 21px; height: 21px; color: var(--vk-info); }
+  span,
+  strong,
+  small { display: block; }
+  span { color: var(--app-text-muted); font: 9px/1.4 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+  strong { margin-top: 3px; font-size: 13px; }
+  small { margin-top: 3px; color: var(--app-text-secondary); font-size: 10px; line-height: 1.5; }
+}
+
+.relationshipNdaReminderPolicy { grid-template-columns: 28px minmax(0, 1fr); }
+
+.relationshipConfidentialityControls,
+.relationshipNdaDateForm,
+.relationshipNdaUploader {
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+
+  h3 { margin: 3px 0 5px; font-size: 15px; }
+  p:not(.technicalLabel) { margin: 0; color: var(--app-text-muted); font-size: 11px; line-height: 1.55; }
+}
+
+.relationshipConfidentialityControls { grid-template-columns: 1fr; align-items: stretch; }
+.relationshipConfidentialityControls > .confidentialityBadge { width: fit-content; }
+.relationshipNdaDateForm { display: grid; gap: 14px; }
+.relationshipNdaDateFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.relationshipNdaUploader { display: grid; gap: 14px; }
+.relationshipConfidentialitySections > .relationshipNdaUploader:nth-child(3) { grid-column: 1 / -1; }
 .relationshipNdaAcceptance { color: var(--vk-success); font-size: 12px; }
 .complianceAcknowledgement { margin-top: 12px; }
 
@@ -3634,7 +3752,9 @@
   .productionDesktopTable { display: none; }
   .productionMobileCards { display: grid; }
   .confidentialityOemControls { grid-template-columns: 1fr; }
-  .relationshipConfidentialityControls { grid-template-columns: 1fr; align-items: stretch; }
+  .relationshipNdaOverview,
+  .relationshipConfidentialitySections { grid-template-columns: 1fr; }
+  .relationshipConfidentialitySections > .relationshipNdaUploader:nth-child(3) { grid-column: auto; }
   .platformActionItem { grid-template-columns: 40px minmax(0, 1fr); }
   .platformActionItem > .vk-button { grid-column: 2; width: fit-content; }
 }
@@ -3694,6 +3814,11 @@
   .confidentialityPanel__status { justify-content: flex-start; }
   .confidentialityDocument { grid-template-columns: 22px minmax(0, 1fr); }
   .confidentialityDocument .vk-button { grid-column: 1 / -1; width: 100%; }
+  .relationshipNdaDateFields { grid-template-columns: 1fr; }
+  .relationshipNdaStatus { grid-template-columns: 24px minmax(0, 1fr); }
+  .relationshipNdaStatus .statusBadge { grid-column: 2; width: fit-content; }
+  .productionNdaLocationNotice { grid-template-columns: 22px minmax(0, 1fr); }
+  .productionNdaLocationNotice .vk-button { grid-column: 1 / -1; width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

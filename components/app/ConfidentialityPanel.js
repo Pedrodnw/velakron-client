@@ -1,4 +1,4 @@
-import { Check, FileSignature, FileUp, LockKeyhole, ShieldAlert, ShieldCheck, UsersRound } from 'lucide-react'
+import { Check, FileSignature, LockKeyhole, ShieldAlert, ShieldCheck, UsersRound } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
@@ -8,7 +8,6 @@ import StatusBadge from './StatusBadge'
 import { formatDateTime, formatLabel } from './formatters'
 
 const ndaHref = path => path ? `${process.env.NEXT_PUBLIC_API_URL || ''}${path}` : null
-const isPdf = file => Boolean(file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)))
 
 const NdaDocument = ({ document, scope }) => {
   if (!document) return null
@@ -31,7 +30,7 @@ const RequirementTerms = ({ confidentiality }) => <div className='confidentialit
   {confidentiality.requirement && <section>
     <p className='technicalLabel'>Production requirement · version {confidentiality.requirement.version_number}</p>
     <pre>{confidentiality.requirement.policy_snapshot}</pre>
-    <NdaDocument document={confidentiality.requirement.custom_nda} scope='Production' />
+    <NdaDocument document={confidentiality.requirement.custom_nda} scope='Historical production' />
   </section>}
 </div>
 
@@ -104,17 +103,13 @@ const RosterManager = ({ members, pending, feedback, onSave }) => {
   </form>
 }
 
-const OemControls = ({ confidentiality, pending, upload, feedback, onConfigure, onUploadNda }) => {
+const OemControls = ({ confidentiality, pending, feedback, onConfigure }) => {
   const [level, setLevel] = useState(confidentiality.level || 'confidential')
   const [reason, setReason] = useState('')
-  const [ndaReason, setNdaReason] = useState('')
-  const [file, setFile] = useState(null)
   const [overrideRelationshipDefault, setOverrideRelationshipDefault] = useState(false)
   useEffect(() => setLevel(confidentiality.level || 'confidential'), [confidentiality.level])
-  useEffect(() => { if (upload?.state === 'complete') setFile(null) }, [upload?.state])
   const weakensRelationshipDefault = confidentiality.relationship_default_level === 'restricted'
     && level === 'confidential'
-  const replacingNda = Boolean(confidentiality.requirement?.custom_nda)
   return <div className='confidentialityOemControls'>
     {confidentiality.can_configure && <form onSubmit={event => { event.preventDefault(); onConfigure({ level, reason, override_relationship_default: overrideRelationshipDefault }) }}>
       <label className='selectField' htmlFor='production-confidentiality-level'><span>Required confidentiality level</span><select id='production-confidentiality-level' value={level} onChange={event => { setLevel(event.target.value); setOverrideRelationshipDefault(false) }}><option value='confidential'>Confidential — supplier team</option><option value='restricted'>Restricted — named supplier users only</option></select></label>
@@ -122,11 +117,7 @@ const OemControls = ({ confidentiality, pending, upload, feedback, onConfigure, 
       <FormField id='production-confidentiality-reason' label='Reason for this requirement or change' value={reason} onChange={event => setReason(event.target.value)} hint='Required when the selected level changes or an accepted requirement is replaced.' />
       <Button type='submit' disabled={pending || (weakensRelationshipDefault && (!confidentiality.can_override_relationship_default || !overrideRelationshipDefault)) || (level === confidentiality.level && confidentiality.state !== 'active')}><ShieldCheck aria-hidden='true' /> Apply requirement</Button>
     </form>}
-    {confidentiality.can_upload_nda && <form onSubmit={event => { event.preventDefault(); if (file) onUploadNda({ file, reason: ndaReason }) }}>
-      <label className='fileUploader__drop' htmlFor='production-nda-upload'><FileUp aria-hidden='true' /><span><strong>Add a production-specific NDA</strong><small>Optional PDF, up to 25 MB. It adds to any relationship NDA and requires a new signature.</small></span><input id='production-nda-upload' type='file' accept='application/pdf,.pdf' onChange={event => setFile(event.target.files?.[0] || null)} /></label>
-      {file && <><p className='fileUploader__selection'>{file.name} · {(file.size / 1024).toFixed(1)} KB</p><FormField id='production-nda-reason' label={replacingNda ? 'Reason for replacing the NDA' : 'NDA version note'} value={ndaReason} onChange={event => setNdaReason(event.target.value)} required={replacingNda} hint={replacingNda ? 'Required because the current signed evidence remains immutable.' : 'Optional for the first version.'} /><Button type='submit' disabled={pending || !isPdf(file) || (replacingNda && ndaReason.trim().length < 8)}><FileUp aria-hidden='true' /> Upload NDA version</Button></>}
-      {upload && <div className='uploadProgress'><span style={{ width: `${upload.progress || 0}%` }} /><small>{formatLabel(upload.state)} {upload.progress || 0}%</small></div>}
-    </form>}
+    <div className='productionNdaLocationNotice'><FileSignature aria-hidden='true' /><div><strong>NDAs apply to the supplier relationship</strong><span>Upload and renew supplier-wide NDAs from the OEM Suppliers workspace. Production-specific confidentiality and Restricted rosters remain here.</span></div><Button href='/app/suppliers' variant='secondary'>Open Suppliers</Button></div>
     <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
   </div>
 }
@@ -135,13 +126,11 @@ const ConfidentialityPanel = ({
   confidentiality,
   loading,
   pending,
-  upload,
   feedback,
   organizationType,
   onConfigure,
   onSign,
   onRosterSave,
-  onUploadNda,
 }) => {
   if (loading && !confidentiality) return <section className='appPanel confidentialityPanel'><p>Loading confidentiality requirements…</p></section>
   if (!confidentiality) return null
@@ -160,7 +149,7 @@ const ConfidentialityPanel = ({
     {receipt && <div className='confidentialityReceiptSummary'><Check aria-hidden='true' /><div><strong>Signed by {receipt.legal_name}</strong><span>{receipt.business_title} · {formatDateTime(receipt.accepted_at)} · requirement version {receipt.requirement_version}</span></div></div>}
     {organizationType === 'supplier' && confidentiality.can_sign && <SigningForm confidentiality={confidentiality} pending={pending} feedback={feedback} onSign={onSign} />}
     {organizationType === 'supplier' && confidentiality.can_manage_roster && <RosterManager members={confidentiality.authorized_memberships || []} pending={pending} feedback={feedback} onSave={onRosterSave} />}
-    {organizationType === 'oem' && <OemControls confidentiality={confidentiality} pending={pending} upload={upload} feedback={feedback} onConfigure={onConfigure} onUploadNda={onUploadNda} />}
+    {organizationType === 'oem' && <OemControls confidentiality={confidentiality} pending={pending} feedback={feedback} onConfigure={onConfigure} />}
     <div className='regulatedDataNotice'><ShieldAlert aria-hidden='true' /><p><strong>Regulated data is not supported.</strong> {confidentiality.regulated_data_notice}</p></div>
   </section>
 }

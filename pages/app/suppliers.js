@@ -32,6 +32,8 @@ import {
 const relatedOrganization = (relationship, activeType) => (
   activeType === 'supplier' ? relationship.oem_organization : relationship.supplier_organization
 )
+const ndaTone = status => ({ active: 'success', scheduled: 'info', renewal_due: 'warning', expired: 'danger', dates_missing: 'warning' }[status] || 'neutral')
+const ndaLabel = status => ({ not_required: 'No NDA', dates_missing: 'Dates needed', renewal_due: 'Renewal due' }[status] || formatLabel(status))
 
 const Suppliers = () => {
   const dispatch = useDispatch()
@@ -64,10 +66,11 @@ const Suppliers = () => {
     } },
     { key: 'status', label: 'Relationship', render: item => <StatusBadge tone={statusTone(item.status)}>{relationshipStatusLabel({ organizationType: organization.type, status: item.status }) || formatLabel(item.status)}</StatusBadge> },
     { key: 'oem_supplier_code', label: 'Supplier code', render: item => item.oem_supplier_code || '—' },
+    { key: 'nda', label: 'NDA', render: item => <div className='tablePrimary'><StatusBadge tone={ndaTone(item.nda?.status)}>{ndaLabel(item.nda?.status || 'not_required')}</StatusBadge><span>{item.nda?.expires_on ? `Through ${formatDate(item.nda.expires_on)}` : 'Supplier-wide agreement'}</span></div> },
     { key: 'updated_at', label: 'Updated', render: item => formatDate(item.updated_at) },
     { key: 'actions', label: '', render: item => {
       const related = relatedOrganization(item, organization.type)
-      if (organization.type === 'oem' && item.status === 'active') return <Button href={`/app/suppliers/${related?.id}`} variant='secondary' className='tableAction'>Profile <ExternalLink aria-hidden='true' /></Button>
+      if (organization.type === 'oem' && item.status === 'active') return <Button href={`/app/suppliers/${related?.id}`} variant='secondary' className='tableAction'>Manage <ExternalLink aria-hidden='true' /></Button>
       const action = relationshipActionFor({ organizationType: organization.type, status: item.status, canManage })
       if (action === RELATIONSHIP_ACTIONS.SUPPLIER_DECISION) return <div className='tableActions'><button className='tableAction' type='button' disabled={pending} onClick={() => decideRelationship(item, 'active')}><Check aria-hidden='true' /> Accept</button><button className='tableAction tableAction--danger' type='button' disabled={pending} onClick={() => decideRelationship(item, 'declined')}><X aria-hidden='true' /> Decline</button></div>
       if (action === RELATIONSHIP_ACTIONS.SUPPLIER_ADMIN_REQUIRED) return <span className='relationshipActionHint'><LockKeyhole aria-hidden='true' /> Supplier administrator required</span>
@@ -115,7 +118,7 @@ const Suppliers = () => {
     <AppPageHeader
       eyebrow='Supply network'
       title={organization.type === 'supplier' ? 'Customers' : 'Suppliers'}
-      description={organization.type === 'supplier' ? 'Accept customer invitations and see which OEM companies can view your active supplier profile.' : 'Invite suppliers and open active company capability profiles.'}
+      description={organization.type === 'supplier' ? 'Accept customer invitations and see relationship-wide NDA renewal status.' : 'Invite suppliers, manage supplier-wide NDAs, and open active company capability profiles.'}
       actions={<>{canInvite && organization.type === 'oem' && <Button onClick={() => setDrawerOpen(true)}><MailPlus aria-hidden='true' /> Invite Supplier</Button>}<StatusBadge tone='info'>{relationships.length} relationship{relationships.length === 1 ? '' : 's'}</StatusBadge></>}
     />
     {pendingRelationships.length > 0 && <section className='relationshipWorkflowNotice' aria-live='polite'>
