@@ -1,19 +1,13 @@
 import Seo from '../components/Seo'
-import CapabilitiesSection from '../components/home/CapabilitiesSection'
-import ClosingSection from '../components/home/ClosingSection'
-import HeroSection from '../components/home/HeroSection'
-import ProcessSection from '../components/home/ProcessSection'
-import RealitySection from '../components/home/RealitySection'
+import VisibilityLandingPage from '../components/home/VisibilityLandingPage'
 
-const description = 'Velakron takes ownership of engineering, manufacturing, quality, and production execution—from initial requirements through final delivery.'
+const description = 'Velakron gives OEMs real-time visibility into every part, every machine, and every supplier—so teams can make faster decisions and keep production moving.'
 
 const Home = () => <>
-  <Seo title='Home' description={description} />
-  <HeroSection />
-  <RealitySection />
-  <ProcessSection />
-  <CapabilitiesSection />
-  <ClosingSection />
+  <Seo title='Stop asking. Start knowing.' description={description} />
+  <VisibilityLandingPage />
 </>
+
+Home.getLayout = page => page
 
 export default Home

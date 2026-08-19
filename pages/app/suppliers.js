@@ -18,6 +18,7 @@ import FormField from '../../components/auth/FormField'
 import FormMessage from '../../components/auth/FormMessage'
 import { resultError } from '../../components/auth/utils'
 import { Button } from '../../components/design-system'
+import LinkWrap from '../../components/LinkWrap'
 import { getActiveOrganization, getHasPermission } from '../../store/slices/appContext'
 import { loadRelationships, relationshipSelectors, updateRelationship } from '../../store/slices/entities/relationships'
 import { inviteSupplier } from '../../store/slices/entities/invitations'
@@ -58,11 +59,17 @@ const Suppliers = () => {
   if (error?.code === 'NOT_FOUND') return <ResourceNotFound />
 
   const pendingRelationships = relationships.filter(item => item.status === 'pending_supplier')
+  const visibleRelationships = organization.type === 'supplier'
+    ? relationships.filter(item => !['ended', 'declined'].includes(item.status))
+    : relationships
 
   const columns = [
     { key: 'organization', label: organization.type === 'supplier' ? 'OEM' : 'Supplier', render: item => {
       const related = relatedOrganization(item, organization.type)
-      return <div className='tablePrimary'><strong>{related?.name || 'Unavailable'}</strong><span>{formatLabel(related?.type)}</span></div>
+      const identity = <><strong>{related?.name || 'Unavailable'}</strong><span>{formatLabel(related?.type)}</span></>
+      return organization.type === 'supplier' && related?.id
+        ? <LinkWrap className='tablePrimary tablePrimaryLink' href={`/app/suppliers/${related.id}`}>{identity}</LinkWrap>
+        : <div className='tablePrimary'>{identity}</div>
     } },
     { key: 'status', label: 'Relationship', render: item => <StatusBadge tone={statusTone(item.status)}>{relationshipStatusLabel({ organizationType: organization.type, status: item.status }) || formatLabel(item.status)}</StatusBadge> },
     { key: 'oem_supplier_code', label: 'Supplier code', render: item => item.oem_supplier_code || '—' },
@@ -71,6 +78,7 @@ const Suppliers = () => {
     { key: 'actions', label: '', render: item => {
       const related = relatedOrganization(item, organization.type)
       if (organization.type === 'oem' && item.status === 'active') return <Button href={`/app/suppliers/${related?.id}`} variant='secondary' className='tableAction'>Manage <ExternalLink aria-hidden='true' /></Button>
+      if (organization.type === 'supplier' && related?.id && item.status !== 'pending_supplier') return <Button href={`/app/suppliers/${related.id}`} variant='secondary' className='tableAction'>View customer <ExternalLink aria-hidden='true' /></Button>
       const action = relationshipActionFor({ organizationType: organization.type, status: item.status, canManage })
       if (action === RELATIONSHIP_ACTIONS.SUPPLIER_DECISION) return <div className='tableActions'><button className='tableAction' type='button' disabled={pending} onClick={() => decideRelationship(item, 'active')}><Check aria-hidden='true' /> Accept</button><button className='tableAction tableAction--danger' type='button' disabled={pending} onClick={() => decideRelationship(item, 'declined')}><X aria-hidden='true' /> Decline</button></div>
       if (action === RELATIONSHIP_ACTIONS.SUPPLIER_ADMIN_REQUIRED) return <span className='relationshipActionHint'><LockKeyhole aria-hidden='true' /> Supplier administrator required</span>
@@ -119,7 +127,7 @@ const Suppliers = () => {
       eyebrow='Supply network'
       title={organization.type === 'supplier' ? 'Customers' : 'Suppliers'}
       description={organization.type === 'supplier' ? 'Accept customer invitations and see relationship-wide NDA renewal status.' : 'Invite suppliers, manage supplier-wide NDAs, and open active company capability profiles.'}
-      actions={<>{canInvite && organization.type === 'oem' && <Button onClick={() => setDrawerOpen(true)}><MailPlus aria-hidden='true' /> Invite Supplier</Button>}<StatusBadge tone='info'>{relationships.length} relationship{relationships.length === 1 ? '' : 's'}</StatusBadge></>}
+      actions={<>{canInvite && organization.type === 'oem' && <Button onClick={() => setDrawerOpen(true)}><MailPlus aria-hidden='true' /> Invite Supplier</Button>}<StatusBadge tone='info'>{visibleRelationships.length} relationship{visibleRelationships.length === 1 ? '' : 's'}</StatusBadge></>}
     />
     {pendingRelationships.length > 0 && <section className='relationshipWorkflowNotice' aria-live='polite'>
       <span className='relationshipWorkflowNotice__icon'>{organization.type === 'supplier' ? <Check aria-hidden='true' /> : <Clock3 aria-hidden='true' />}</span>
@@ -138,9 +146,9 @@ const Suppliers = () => {
       <DataTable
         caption={`Relationships for ${organization.name}`}
         columns={columns}
-        rows={relationships}
+        rows={visibleRelationships}
         emptyTitle='No relationships yet'
-        emptyDescription='Supplier relationships will appear here after they are created through an authorized workflow.'
+        emptyDescription={organization.type === 'supplier' ? 'Active customer relationships and new invitations will appear here.' : 'Supplier relationships will appear here after they are created through an authorized workflow.'}
       />
     </section>
     <ResponsiveDrawer open={drawerOpen} title='Invite a supplier company' onClose={() => setDrawerOpen(false)}>

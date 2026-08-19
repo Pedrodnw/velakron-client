@@ -1,5 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/router'
+import { useSelector } from 'react-redux'
+import { getActiveOrganization } from '../../store/slices/appContext'
 import LinkWrap from '../LinkWrap'
 
 const routeTrails = [
@@ -26,11 +28,16 @@ const routeTrails = [
 
 const AppBreadcrumbs = () => {
   const { pathname } = useRouter()
+  const organization = useSelector(getActiveOrganization)
   if (pathname === '/app') return null
   const trail = routeTrails.find(item => item.match === pathname)
   if (!trail) return null
 
-  const items = [['/app', 'Dashboard'], ...trail.items]
+  const supplierCustomerView = organization?.type === 'supplier' && pathname.startsWith('/app/suppliers')
+  const contextualItems = supplierCustomerView
+    ? trail.items.map(([href, label]) => [href, label === 'Suppliers' ? 'Customers' : label === 'Supplier' ? 'Customer' : label])
+    : trail.items
+  const items = [['/app', 'Dashboard'], ...contextualItems]
   return <nav className='appBreadcrumbs' aria-label='Breadcrumb'>
     <ol>
       {items.map(([href, label], index) => <li key={`${href || 'current'}-${label}`}>

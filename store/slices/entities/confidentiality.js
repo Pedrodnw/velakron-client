@@ -171,6 +171,22 @@ export const updateRelationshipNdaDates = (id, data) => async dispatch => {
   return result
 }
 
+export const acceptRelationshipNda = (id, data) => async dispatch => {
+  dispatch(mutationRequested({ scope: 'relationships', id }))
+  const result = await dispatch(call({
+    url: `${scopeUrl('relationship', id)}/accept`,
+    method: 'post',
+    data,
+  }))
+  if (result?.ok) dispatch(received({ scope: 'relationships', id, data: result.payload.data.confidentiality }))
+  else dispatch(failed({
+    scope: 'relationships',
+    id,
+    error: result?.error || { message: 'The NDA could not be signed.' },
+  }))
+  return result
+}
+
 const stateFor = state => state.entities.confidentiality
 const EMPTY = Object.freeze(emptyEntry())
 export const confidentialitySelectors = {
