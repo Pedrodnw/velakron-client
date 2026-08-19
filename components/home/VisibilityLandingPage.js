@@ -17,13 +17,6 @@ import { useState } from 'react'
 import LinkWrap from '../LinkWrap'
 import { VelakronLogo } from '../design-system'
 
-const navigation = [
-  { label: 'Product', href: '/#product' },
-  { label: 'Solutions', href: '/#solutions' },
-  { label: 'Resources', href: '/#resources' },
-  { label: 'Company', href: '/#company' },
-]
-
 const features = [
   {
     icon: Eye,
@@ -105,10 +98,6 @@ export const MarketingHeader = () => {
         <VelakronLogo priority sizes='156px' />
       </LinkWrap>
 
-      <nav className='visibilityHomeHeader__nav' aria-label='Primary navigation'>
-        {navigation.map(item => <LinkWrap href={item.href} key={item.label}>{item.label}</LinkWrap>)}
-      </nav>
-
       <div className='visibilityHomeHeader__actions'>
         <LinkWrap className='visibilityHomeHeader__login' href='/login'>Log in</LinkWrap>
         <ButtonLink href='/request-demo'>Request a Demo</ButtonLink>
@@ -127,9 +116,6 @@ export const MarketingHeader = () => {
     </div>
 
     <nav id='visibility-home-mobile-navigation' className='visibilityHomeHeader__mobileNav' aria-label='Mobile navigation'>
-      {navigation.map(item => (
-        <LinkWrap href={item.href} key={item.label} onClick={() => setOpen(false)}>{item.label}</LinkWrap>
-      ))}
       <LinkWrap href='/login' onClick={() => setOpen(false)}>Log in</LinkWrap>
       <ButtonLink href='/request-demo' className='visibilityHomeHeader__mobileCta'>Request a Demo</ButtonLink>
     </nav>

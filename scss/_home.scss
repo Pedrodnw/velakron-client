@@ -1071,7 +1071,7 @@
   &__inner {
     display: grid;
     min-height: 72px;
-    grid-template-columns: 190px 1fr auto;
+    grid-template-columns: 190px 1fr;
     align-items: center;
     gap: 30px;
   }
@@ -1083,25 +1083,10 @@
     img { width: 100%; }
   }
 
-  &__nav {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(24px, 3vw, 44px);
-
-    a {
-      color: #bdc7d1;
-      font-size: 13px;
-      font-weight: 600;
-      transition: color 150ms ease;
-
-      &:hover { color: #fff; }
-    }
-  }
-
   &__actions {
     display: flex;
     align-items: center;
+    justify-self: end;
     gap: 22px;
 
     .visibilityHome__button {
@@ -1947,8 +1932,7 @@
 
 @media (max-width: $tablet) {
   .visibilityHomeHeader {
-    &__inner { grid-template-columns: 170px 1fr auto; }
-    &__nav { display: none; }
+    &__inner { grid-template-columns: 170px 1fr; }
     &__actions { justify-self: end; }
     &__menu { display: none; }
   }
