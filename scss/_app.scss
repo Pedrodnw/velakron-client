@@ -191,6 +191,46 @@
       font-size: 11px;
     }
   }
+
+  &__finishDemo {
+    @include flex-row(flex-start, center, 7px);
+    width: 100%;
+    margin-top: 12px;
+    padding: 9px 0 0;
+    border: 0;
+    border-top: 1px solid var(--app-border);
+    background: transparent;
+    color: var(--app-text-muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 650;
+    text-align: left;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: var(--app-text);
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgba($primary, 0.6);
+      outline-offset: 4px;
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+  }
+
+  &__finishError {
+    color: #fda4af !important;
+  }
 }
 
 .organizationSwitcher {

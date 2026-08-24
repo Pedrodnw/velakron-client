@@ -123,6 +123,24 @@ export const loadProductionRecords = (params = {}) => apiCallBegan({
   organizationScoped: true,
 })
 
+const supplierFallbackOrder = ['active', 'action_required', 'completed']
+
+export const findFirstNonEmptySupplierProductionView = currentView => async dispatch => {
+  const candidates = supplierFallbackOrder.filter(view => view !== currentView)
+  for (const view of candidates) {
+    const result = await dispatch(apiCallBegan({
+      url: '/production-records',
+      params: { view, page: 1, page_size: 1 },
+      requestKey: `production-records-view-check-${view}`,
+      organizationScoped: true,
+    }))
+    if (!result?.ok) return null
+    const total = Number(result.payload?.meta?.total ?? result.payload?.data?.records?.length ?? 0)
+    if (total > 0) return view
+  }
+  return null
+}
+
 export const loadProductionRecord = id => async dispatch => ingestHistory(dispatch, await dispatch(apiCallBegan({
   url: `/production-records/${id}`,
   onStart: detailRequested.type,

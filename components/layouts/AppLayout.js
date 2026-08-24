@@ -1,4 +1,5 @@
-import { Clock3, Menu, UserRound, X } from 'lucide-react'
+import { Clock3, LoaderCircle, LogOut, Menu, UserRound, X } from 'lucide-react'
+import { useRouter } from 'next/router'
 import LinkWrap from '../LinkWrap'
 import { VelakronLogo } from '../design-system'
 import AppNavigation from '../app/AppNavigation'
@@ -7,8 +8,8 @@ import OrganizationSwitcher from '../app/OrganizationSwitcher'
 import ExperienceSwitcher from '../app/ExperienceSwitcher'
 import AppAccessBoundary from '../app/AppAccessBoundary'
 import { useState } from 'react'
-import { useSelector } from 'react-redux'
-import { getAuthUser } from '../../store/slices/auth'
+import { useDispatch, useSelector } from 'react-redux'
+import { getAuthUser, logoutAccount } from '../../store/slices/auth'
 import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
 import UserAvatar from '../UserAvatar'
 
@@ -22,11 +23,28 @@ const roleLabels = {
 }
 
 const AppLayout = ({ children, wide = false }) => {
+  const router = useRouter()
+  const dispatch = useDispatch()
   const [navigationOpen, setNavigationOpen] = useState(false)
+  const [finishingDemo, setFinishingDemo] = useState(false)
+  const [finishError, setFinishError] = useState('')
   const user = useSelector(getAuthUser)
   const membership = useSelector(getActiveMembership)
   const organization = useSelector(getActiveOrganization)
   const closeNavigation = () => setNavigationOpen(false)
+  const finishDemo = async () => {
+    if (finishingDemo) return
+    setFinishingDemo(true)
+    setFinishError('')
+    const result = await dispatch(logoutAccount())
+    if (!result?.ok) {
+      setFinishingDemo(false)
+      setFinishError(result?.error?.message || 'The experience could not be finished. Please try again.')
+      return
+    }
+    closeNavigation()
+    await router.replace('/imts-demo')
+  }
 
   return <div className='appLayout'>
     <a className='skipLink' href='#app-main-content'>Skip to main content</a>
@@ -40,6 +58,13 @@ const AppLayout = ({ children, wide = false }) => {
       <div className='appSidebar__footer'>
         <span>Velakron workspace</span>
         <small>{organization?.demo_workspace ? 'Private IMTS workspace' : 'Organization access is enforced'}</small>
+        {organization?.demo_workspace && <>
+          <button className='appSidebar__finishDemo' type='button' onClick={finishDemo} disabled={finishingDemo}>
+            {finishingDemo ? <LoaderCircle className='spin' aria-hidden='true' /> : <LogOut aria-hidden='true' />}
+            {finishingDemo ? 'Finishing…' : 'Finish experience'}
+          </button>
+          {finishError && <small className='appSidebar__finishError' role='alert'>{finishError}</small>}
+        </>}
       </div>
     </aside>
 

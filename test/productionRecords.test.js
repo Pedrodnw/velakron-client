@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ATTENTION_CATEGORIES, attentionCategoryFor } from '../components/app/attentionCategories'
 import reducer from '../store/reducer'
 import { organizationSwitchRequested } from '../store/slices/appContext'
 import { machineAssignmentsReceived } from '../store/slices/entities/machineAssignments'
 import { productionEventsReceived } from '../store/slices/entities/productionEvents'
-import { productionRecordSelectors } from '../store/slices/entities/productionRecords'
+import {
+  findFirstNonEmptySupplierProductionView,
+  productionRecordSelectors,
+} from '../store/slices/entities/productionRecords'
 import { productionCollaborationSelectors } from '../store/slices/entities/productionCollaboration'
 import { supplierAssignmentsReceived } from '../store/slices/entities/supplierAssignments'
 
@@ -26,6 +29,31 @@ const detailPayload = {
 }
 
 describe('production record state', () => {
+  it('selects the first non-empty supplier view without probing the empty current view again', async () => {
+    const totals = { active: 0, action_required: 0, completed: 4 }
+    const dispatch = vi.fn(action => Promise.resolve({
+      ok: true,
+      payload: { data: { records: [] }, meta: { total: totals[action.payload.params.view] } },
+    }))
+
+    const fallback = await findFirstNonEmptySupplierProductionView('action_required')(dispatch)
+
+    expect(fallback).toBe('completed')
+    expect(dispatch.mock.calls.map(([action]) => action.payload.params.view)).toEqual(['active', 'completed'])
+  })
+
+  it('stops supplier view selection as soon as Active Parts has records', async () => {
+    const dispatch = vi.fn(action => Promise.resolve({
+      ok: true,
+      payload: { data: { records: [{ id: 'production-a' }] }, meta: { total: 1 } },
+    }))
+
+    const fallback = await findFirstNonEmptySupplierProductionView('action_required')(dispatch)
+
+    expect(fallback).toBe('active')
+    expect(dispatch).toHaveBeenCalledTimes(1)
+  })
+
   it('presents the approved attention categories and fixed risk labels', () => {
     expect(ATTENTION_CATEGORIES.map(item => item.value)).toEqual([
       'non_conformance',

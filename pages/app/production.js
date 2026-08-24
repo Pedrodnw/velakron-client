@@ -1,6 +1,6 @@
 import { ExternalLink, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { useRouter } from 'next/router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   AppPageHeader, AppSkeleton, DataTable, ErrorState, FilterBar, Pagination,
@@ -11,7 +11,11 @@ import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { Button } from '../../components/design-system'
 import { getActiveOrganization, getHasPermission } from '../../store/slices/appContext'
-import { loadProductionRecords, productionRecordSelectors } from '../../store/slices/entities/productionRecords'
+import {
+  findFirstNonEmptySupplierProductionView,
+  loadProductionRecords,
+  productionRecordSelectors,
+} from '../../store/slices/entities/productionRecords'
 import { loadRelationships, relationshipSelectors } from '../../store/slices/entities/relationships'
 import { trackProductEvent } from '../../store/slices/entities/platformAdministration'
 
@@ -39,6 +43,8 @@ const Production = () => {
   const [filtersReady, setFiltersReady] = useState(false)
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [checkingAlternativeView, setCheckingAlternativeView] = useState(false)
+  const refreshSequence = useRef(0)
   const type = organization?.type
 
   useEffect(() => {
@@ -68,6 +74,17 @@ const Production = () => {
     return () => window.clearTimeout(timeout)
   }, [filters.search])
 
+  const filterCount = ['search', 'stage', 'health', 'attention', 'supplier_organization_id', 'required_from', 'required_to', 'first_article']
+    .filter(key => Boolean(filters[key])).length
+  const canChooseAlternativeView = type === 'supplier' && filters.page === 1 && filterCount === 0
+
+  const updateFilters = changes => {
+    setCheckingAlternativeView(false)
+    const next = { ...filters, ...changes }
+    setFilters(next)
+    router.replace({ pathname: '/app/production', query: cleanQuery(next) }, undefined, { shallow: true })
+  }
+
   const requestFilters = useMemo(() => ({
     ...filters,
     search: debouncedSearch || undefined,
@@ -75,9 +92,30 @@ const Production = () => {
     sort: 'required_delivery_date',
     direction: 'asc',
   }), [debouncedSearch, filters])
-  const refresh = useCallback(() => {
-    if (allowed && organization?.id && filtersReady) dispatch(loadProductionRecords(requestFilters))
-  }, [allowed, dispatch, filtersReady, organization?.id, requestFilters])
+  const refresh = useCallback(async () => {
+    if (!allowed || !organization?.id || !filtersReady) return null
+    const sequence = ++refreshSequence.current
+    if (canChooseAlternativeView) setCheckingAlternativeView(true)
+    const result = await dispatch(loadProductionRecords(requestFilters))
+    if (sequence !== refreshSequence.current) return result
+    if (!result?.ok) {
+      setCheckingAlternativeView(false)
+      return result
+    }
+    const loadedRecords = result.payload?.data?.records || []
+    if (canChooseAlternativeView && loadedRecords.length === 0) {
+      const fallbackView = await dispatch(findFirstNonEmptySupplierProductionView(filters.view))
+      if (sequence !== refreshSequence.current) return result
+      if (fallbackView) {
+        const next = { ...filters, view: fallbackView, page: 1 }
+        setFilters(next)
+        router.replace({ pathname: '/app/production', query: cleanQuery(next) }, undefined, { shallow: true })
+        return result
+      }
+    }
+    setCheckingAlternativeView(false)
+    return result
+  }, [allowed, canChooseAlternativeView, dispatch, filters, filtersReady, organization?.id, requestFilters, router])
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
     if (!filtersReady) return undefined
@@ -88,14 +126,8 @@ const Production = () => {
     return () => { window.clearInterval(interval); window.removeEventListener('focus', refreshWhenVisible); document.removeEventListener('visibilitychange', refreshWhenVisible) }
   }, [filtersReady, refresh])
 
-  const updateFilters = changes => {
-    const next = { ...filters, ...changes }
-    setFilters(next)
-    router.replace({ pathname: '/app/production', query: cleanQuery(next) }, undefined, { shallow: true })
-  }
   if (!allowed) return <PermissionDenied />
-  const filterCount = ['search', 'stage', 'health', 'attention', 'supplier_organization_id', 'required_from', 'required_to', 'first_article']
-    .filter(key => Boolean(filters[key])).length
+  const showListSkeleton = !filtersReady || loading || (canChooseAlternativeView && (checkingAlternativeView || !pagination))
   const recordHref = item => ({ pathname: '/app/production/[id]', query: { id: item.id, return_to: router.asPath } })
   const company = item => type === 'supplier' ? item.oem_organization?.name : item.supplier_organization?.name || 'Unassigned'
   const lockedTitle = item => item.confidentiality_locked ? 'Protected production record' : item.part_number || item.part_name || 'Production record'
@@ -126,7 +158,7 @@ const Production = () => {
     </FilterBar>
     </div>
     {error && <ErrorState description={error.message} onRetry={refresh} />}
-    <section className='appPanel appPanel--table productionDesktopTable'>{loading && !records.length ? <AppSkeleton lines={8} /> : <DataTable caption='Production records' columns={columns} rows={records} emptyTitle='No production records in this view' emptyDescription={type === 'oem' ? 'Create an awarded-work record or adjust the filters.' : 'Assigned work will appear here when an OEM sends it to your company.'} />}</section>
+    <section className='appPanel appPanel--table productionDesktopTable'>{showListSkeleton && !records.length ? <AppSkeleton lines={8} /> : <DataTable caption='Production records' columns={columns} rows={records} emptyTitle='No production records in this view' emptyDescription={type === 'oem' ? 'Create an awarded-work record or adjust the filters.' : 'Assigned work will appear here when an OEM sends it to your company.'} />}</section>
     <section className='productionMobileCards' aria-label='Production records'>{records.map(item => <RecordCard key={item.id} href={recordHref(item)} eyebrow={item.public_reference} title={lockedTitle(item)} description={company(item)} badges={item.confidentiality_locked ? <><ConfidentialityBadge level={item.confidentiality_level} compact /><StatusBadge tone='warning'>Access required</StatusBadge></> : <><StageBadge value={item.current_stage || item.acceptance_status} /><ScheduleHealthBadge value={item.schedule_health} /></>} facts={item.confidentiality_locked ? [{ label: 'Details', value: 'Protected until the confidentiality requirements are accepted and you are authorized.' }] : [{ label: 'PO', value: item.po_number }, { label: 'Required arrival', value: formatDate(item.required_delivery_date) }, { label: 'Expected ship', value: formatDate(item.expected_ship_date) }]} actionLabel={item.confidentiality_locked ? 'Review access' : 'Open'} />)}</section>
     <Pagination meta={pagination} onPageChange={page => updateFilters({ page })} label='Production pages' />
   </>
