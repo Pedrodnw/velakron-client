@@ -569,7 +569,7 @@ const SalesDemoDashboard = () => {
     <Seo title='Sales Demo' description='Founder Sales Demo control center.' path='/app/sales-demo' noIndex />
     <AppPageHeader eyebrow='Founder sales workspace' title='Sales Demo' description='Prepare reusable product stories, follow live prospects, and introduce realistic synthetic interactions without touching customer data.' actions={<Button variant='secondary' onClick={refresh} disabled={loading}><RefreshCw aria-hidden='true' /> Refresh</Button>} />
     <nav className='salesDemoTabs' aria-label='Sales Demo sections'>{tabs.map(item => <button key={item.key} type='button' className={tab === item.key ? 'is-active' : ''} onClick={() => setTab(item.key)}>{item.label}{item.key === 'sessions' && summary?.counts?.active_prospects > 0 && <strong>{summary.counts.active_prospects}</strong>}</button>)}</nav>
-    <FormMessage type={feedback?.type}>{feedback?.message}{previewLink && <Button href={previewLink} target='_blank' rel='noreferrer' variant='secondary'>Open latest preview</Button>}</FormMessage>
+    {(feedback?.message || previewLink) && <FormMessage type={feedback?.type}>{feedback?.message}{previewLink && <Button href={previewLink} target='_blank' rel='noreferrer' variant='secondary'>Open latest preview</Button>}</FormMessage>}
     {error && <ErrorState title='Sales Demo controls could not be loaded' description={error.message} onRetry={refresh} />}
     {loading && !summary ? <section className='appPanel'><AppSkeleton lines={10} /></section> : <>
       {tab === 'overview' && <div className='salesDemoOverview'>
