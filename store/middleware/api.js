@@ -28,13 +28,22 @@ const api = ({ dispatch, getState }) => next => async action => {
   next(action)
 
   try {
+    const previewExchangeRequest = typeof window !== 'undefined'
+      && window.location.pathname === '/sales-demo/preview'
+      && ['/auth/session', '/sales-demos/presenter-grants/exchange'].includes(String(url))
+    const presenterToken = typeof window !== 'undefined' && !previewExchangeRequest
+      ? window.sessionStorage.getItem('velakron_sales_demo_presenter')
+      : null
     const response = await axios.request({
       baseURL: process.env.NEXT_PUBLIC_API_URL,
       url,
       method,
       data,
       params,
-      headers,
+      headers: {
+        ...(presenterToken ? { 'X-Velakron-Demo-Presenter': presenterToken } : {}),
+        ...headers,
+      },
       withCredentials: true,
       signal: controller.signal,
     })
@@ -48,6 +57,17 @@ const api = ({ dispatch, getState }) => next => async action => {
 
     dispatch(apiCallSuccess(response.data))
     if (onSuccess) dispatch({ type: onSuccess, payload: response.data })
+    if (
+      typeof window !== 'undefined'
+      && method.toLowerCase() !== 'get'
+      && getState().appContext?.activeOrganization?.demo_workspace
+      && !String(url).startsWith('/sales-demos/current/')
+      && String(url) !== '/product-events'
+    ) {
+      window.dispatchEvent(new CustomEvent('velakron:demo-mutation-completed', {
+        detail: { method: method.toLowerCase(), path: String(url).split('?')[0].slice(0, 160) },
+      }))
+    }
     return { ok: true, payload: response.data }
   } catch (error) {
     if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {

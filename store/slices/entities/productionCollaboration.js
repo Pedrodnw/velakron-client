@@ -136,7 +136,7 @@ export const loadProductionSummary = (params = {}) => async dispatch => {
     requestKey: 'production-summary',
   }))
   if (result?.ok) dispatch(summaryReceived(result.payload.data))
-  else dispatch(summaryFailed(result?.error || { message: 'Dashboard summary could not be loaded.' }))
+  else if (!result?.cancelled) dispatch(summaryFailed(result?.error || { message: 'Dashboard summary could not be loaded.' }))
   return result
 }
 

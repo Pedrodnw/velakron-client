@@ -14,6 +14,7 @@ const initialState = {
   switchingExperience: false,
   switchingToExperience: null,
   error: null,
+  salesDemoPresenter: null,
   contextVersion: 0,
 }
 
@@ -51,6 +52,7 @@ const applyContext = (state, payload) => {
   state.switchingExperience = false
   state.switchingToExperience = null
   state.error = null
+  state.salesDemoPresenter = context.sales_demo_presenter || null
   state.contextVersion += 1
 }
 
@@ -185,5 +187,6 @@ export const getSwitchingToOrganizationId = state => state.appContext.switchingT
 export const getHasPermission = permission => state => (
   state.appContext.permissions.includes(permission)
 )
+export const getSalesDemoPresenter = state => state.appContext.salesDemoPresenter
 
 export default slice.reducer

@@ -10,6 +10,7 @@ import {
   ListTodo,
   BriefcaseBusiness,
   QrCode,
+  MonitorPlay,
   MapPin,
   ScrollText,
   UserRound,
@@ -39,6 +40,7 @@ const icons = {
   tasks: ListTodo,
   dynamic: QrCode,
   crm: BriefcaseBusiness,
+  salesDemo: MonitorPlay,
 }
 
 const AppNavigation = ({ onNavigate }) => {

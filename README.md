@@ -28,6 +28,8 @@ role-specific dashboards, URL-preserved production filters, desktop tables and
 mobile cards, breadcrumbs, audited Velakron directories, company support
 detail, audit/security activity, and privacy-safe product instrumentation.
 
+The founder workspace also includes **Sales Demo** at `/app/sales-demo`: live prospect monitoring, controlled synthetic interactions, no-logout OEM/Supplier previews, a visual versioned baseline editor, campaign links, and downloadable QR codes. `/sales-demo/:campaign` is the generalized guest entry while `/imts-demo` remains compatible.
+
 ## Local development
 
 ```bash

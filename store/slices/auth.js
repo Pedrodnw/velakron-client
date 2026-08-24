@@ -72,8 +72,9 @@ const authenticatedRequest = (url, method, data) => apiCallBegan({
   onError: authRequestFailed.type,
 })
 
-export const loadSession = () => apiCallBegan({
+export const loadSession = headers => apiCallBegan({
   url: '/auth/session',
+  headers,
   onStart: sessionRequested.type,
   onSuccess: sessionReceived.type,
   onError: sessionFailed.type,

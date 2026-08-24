@@ -146,6 +146,30 @@
   }
 }
 
+.tradeShowRoleChoice--fixed {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba($primary, 0.35);
+  border-radius: 8px;
+  background: rgba($primary, 0.08);
+
+  > svg {
+    width: 28px;
+    height: 28px;
+    color: $primary;
+  }
+
+  > span {
+    display: grid;
+    gap: 4px;
+  }
+
+  strong { color: var(--vk-workspace-text); }
+  small { color: var(--vk-workspace-text-muted); line-height: 1.45; }
+}
+
 .tradeShowHoneypot {
   position: absolute !important;
   left: -10000px !important;

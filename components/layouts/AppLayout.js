@@ -9,9 +9,12 @@ import ExperienceSwitcher from '../app/ExperienceSwitcher'
 import AppAccessBoundary from '../app/AppAccessBoundary'
 import { useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { getAuthUser, logoutAccount } from '../../store/slices/auth'
+import { getAuthUser, loadSession, logoutAccount } from '../../store/slices/auth'
 import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
 import UserAvatar from '../UserAvatar'
+import SalesDemoSessionTracker from '../app/SalesDemoSessionTracker'
+import { getSalesDemoPresenter } from '../../store/slices/appContext'
+import { apiCallBegan } from '../../store/api'
 
 const roleLabels = {
   velakron_admin: 'Velakron administrator',
@@ -31,19 +34,27 @@ const AppLayout = ({ children, wide = false }) => {
   const user = useSelector(getAuthUser)
   const membership = useSelector(getActiveMembership)
   const organization = useSelector(getActiveOrganization)
+  const presenter = useSelector(getSalesDemoPresenter)
   const closeNavigation = () => setNavigationOpen(false)
   const finishDemo = async () => {
     if (finishingDemo) return
     setFinishingDemo(true)
     setFinishError('')
-    const result = await dispatch(logoutAccount())
+    const result = presenter
+      ? await dispatch(apiCallBegan({ url: '/sales-demos/presenter-grants/revoke', method: 'post' }))
+      : await dispatch(logoutAccount())
     if (!result?.ok) {
       setFinishingDemo(false)
       setFinishError(result?.error?.message || 'The experience could not be finished. Please try again.')
       return
     }
     closeNavigation()
-    await router.replace('/imts-demo')
+    if (presenter) {
+      window.sessionStorage.removeItem('velakron_sales_demo_presenter')
+      await dispatch(loadSession())
+      window.close()
+      if (!window.closed) await router.replace('/app/sales-demo')
+    } else await router.replace('/imts-demo')
   }
 
   return <div className='appLayout'>
@@ -57,7 +68,7 @@ const AppLayout = ({ children, wide = false }) => {
       <AppNavigation onNavigate={closeNavigation} />
       <div className='appSidebar__footer'>
         <span>Velakron workspace</span>
-        <small>{organization?.demo_workspace ? 'Private IMTS workspace' : 'Organization access is enforced'}</small>
+        <small>{organization?.demo_workspace ? (presenter ? 'Founder preview workspace' : 'Private Sales Demo workspace') : 'Organization access is enforced'}</small>
         {organization?.demo_workspace && <>
           <button className='appSidebar__finishDemo' type='button' onClick={finishDemo} disabled={finishingDemo}>
             {finishingDemo ? <LoaderCircle className='spin' aria-hidden='true' /> : <LogOut aria-hidden='true' />}
@@ -84,7 +95,8 @@ const AppLayout = ({ children, wide = false }) => {
         </div>
       </header>
       <main id='app-main-content' className={`appMain${wide ? ' appMain--wide' : ''}`}><AppAccessBoundary>
-        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>Private IMTS demo</strong><span>This workspace is isolated from every other guest and expires automatically.</span></div></div>}
+        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>{presenter ? 'Founder preview' : 'Private Sales Demo'}</strong><span>{presenter ? 'You are exploring a synthetic customer experience without leaving your founder account.' : 'This workspace is isolated from every other guest and expires automatically.'}</span></div></div>}
+        <SalesDemoSessionTracker />
         <AppBreadcrumbs />{children}
       </AppAccessBoundary></main>
     </div>

@@ -26,7 +26,7 @@ const items = [
   { href: '/app/crm/organizations', label: 'Organizations', icon: Building2 },
   { href: '/app/crm/contacts', label: 'Contacts', icon: ContactRound },
   { href: '/app/crm/opportunities', label: 'Opportunities', icon: Target },
-  { href: '/app/crm/leads', label: 'IMTS leads', icon: QrCode },
+  { href: '/app/crm/leads', label: 'Sales Demo leads', icon: QrCode },
   { href: '/app/crm/onboarding', label: 'Onboarding', icon: ListChecks },
   { href: '/app/crm/activity', label: 'Activity', icon: Activity },
   { href: '/app/crm/inbox', label: 'Inbox', icon: Inbox },

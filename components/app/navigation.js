@@ -22,6 +22,7 @@ const itemsByOrganizationType = {
     { href: '/admin/action-center', label: 'Action center', icon: 'actions', permission: 'platform.support' },
     { href: '/app/crm', label: 'CRM', icon: 'crm', permission: 'crm.dashboard.read' },
     { href: '/app/tasks', label: 'Tasks & priorities', icon: 'tasks', permission: 'internal_task.read' },
+    { href: '/app/sales-demo', label: 'Sales Demo', icon: 'salesDemo', permission: 'sales_demo.read' },
     { href: '/app/dynamic-endpoint', label: 'Dynamic Endpoint', icon: 'dynamic', permission: 'dynamic_endpoint.manage' },
     { href: '/app/team', label: 'Internal team', icon: 'team', permission: 'membership.read' },
     { href: '/admin/organizations', label: 'Organizations', icon: 'organization', permission: 'platform.support' },

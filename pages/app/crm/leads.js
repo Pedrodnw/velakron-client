@@ -47,7 +47,7 @@ const TradeShowLeads = () => {
     if (allowed) dispatch(loadTradeShowLeads({ page: 1, page_size: 50 }))
   }, [allowed, dispatch])
 
-  if (!allowed) return <PermissionDenied description='IMTS acquisition is available only to Velakron founders.' />
+  if (!allowed) return <PermissionDenied description='Sales Demo acquisition is available only to Velakron founders.' />
 
   const confirmDelete = async () => {
     setDeleting(true)
@@ -76,15 +76,15 @@ const TradeShowLeads = () => {
   ]
 
   return <>
-    <Seo title='CRM IMTS leads' description='Velakron IMTS lead acquisition and CRM conversion.' path='/app/crm/leads' noIndex />
+    <Seo title='CRM Sales Demo leads' description='Velakron Sales Demo lead acquisition and CRM conversion.' path='/app/crm/leads' noIndex />
     <AppPageHeader
-      eyebrow='Event acquisition'
-      title='IMTS leads'
-      description='Every QR submission is converted automatically into the appropriate CRM organization, contact, and—when the guest selects OEM—sales opportunity.'
-      actions={<Button href='/imts-demo/qr' target='_blank' rel='noreferrer'>Open printable QR</Button>}
+      eyebrow='Sales Demo acquisition'
+      title='Sales Demo leads'
+      description='Every public Sales Demo submission is converted automatically into the appropriate CRM organization, contact, and—when the guest selects OEM—sales opportunity.'
+      actions={<Button href='/app/sales-demo?tab=campaigns'>Manage links & QR</Button>}
     />
     <section className='metricGrid metricGrid--priority' aria-label='IMTS lead totals'>
-      <MetricCard label='Total guests' value={counts?.total ?? '—'} detail='Captured through the QR experience' icon={UsersRound} />
+      <MetricCard label='Total guests' value={counts?.total ?? '—'} detail='Captured through Sales Demo links' icon={UsersRound} />
       <MetricCard label='OEM views' value={counts?.oem ?? '—'} detail='Guests added to the OEM pipeline' icon={Building2} />
       <MetricCard label='Supplier views' value={counts?.supplier ?? '—'} detail='Guests added as supplier prospects' icon={Factory} />
       <MetricCard label='Active demos' value={counts?.active_demos ?? '—'} detail='Temporary workspaces still available' icon={Clock3} />
@@ -93,14 +93,14 @@ const TradeShowLeads = () => {
       <label><span>Search leads</span><input value={filters.search} onChange={event => setFilters(value => ({ ...value, search: event.target.value }))} placeholder='Name, company, or email' maxLength={160} /></label>
       <label><span>Experience</span><select value={filters.experience} onChange={event => setFilters(value => ({ ...value, experience: event.target.value }))}><option value=''>Both experiences</option><option value='oem'>OEM</option><option value='supplier'>Supplier</option></select></label>
     </FilterBar>
-    {error && <ErrorState title='IMTS leads could not be loaded' description={error.message} onRetry={() => load()} />}
+    {error && <ErrorState title='Sales Demo leads could not be loaded' description={error.message} onRetry={() => load()} />}
     <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
     <section className='appPanel appPanel--table'>
       {loading && !leads.length
         ? <AppSkeleton lines={8} />
-        : <DataTable columns={columns} rows={leads} caption='IMTS guest leads' emptyTitle='No IMTS leads yet' emptyDescription='New QR submissions will appear here and enter the CRM automatically.' />}
+        : <DataTable columns={columns} rows={leads} caption='Sales Demo guest leads' emptyTitle='No Sales Demo leads yet' emptyDescription='New link and QR submissions will appear here and enter the CRM automatically.' />}
     </section>
-    <Pagination meta={pagination} onPageChange={load} label='IMTS lead pages' />
+    <Pagination meta={pagination} onPageChange={load} label='Sales Demo lead pages' />
     <ConfirmationDialog
       open={Boolean(deleteTarget)}
       title={`Delete ${deleteTarget?.full_name || 'this lead'}?`}

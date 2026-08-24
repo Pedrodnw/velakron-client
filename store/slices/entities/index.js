@@ -19,6 +19,7 @@ import confidentiality from './confidentiality'
 import internalTasks from './internalTasks'
 import tradeShowLeads from './tradeShowLeads'
 import dynamicEndpoint from './dynamicEndpoint'
+import salesDemos from './salesDemos'
 
 export default combineReducers({
   auditEvents,
@@ -41,4 +42,5 @@ export default combineReducers({
   internalTasks,
   tradeShowLeads,
   dynamicEndpoint,
+  salesDemos,
 })

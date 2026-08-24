@@ -17,6 +17,7 @@ const routeTrails = [
   { match: '/app/facilities', items: [[null, 'Facilities']] },
   { match: '/app/certifications', items: [[null, 'Certifications']] },
   { match: '/app/dynamic-endpoint', items: [[null, 'Dynamic Endpoint']] },
+  { match: '/app/sales-demo', items: [[null, 'Sales Demo']] },
   { match: '/admin/action-center', items: [[null, 'Action center']] },
   { match: '/admin/organizations/[id]', items: [['/admin/organizations', 'Organizations'], [null, 'Company details']] },
   { match: '/admin/organizations', items: [[null, 'Organizations']] },
