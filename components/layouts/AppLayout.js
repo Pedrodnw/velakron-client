@@ -1,4 +1,4 @@
-import { Clock3, LoaderCircle, LogOut, Menu, UserRound, X } from 'lucide-react'
+import { Clock3, ExternalLink, LoaderCircle, LogOut, Menu, RotateCcw, UserRound, X } from 'lucide-react'
 import { useRouter } from 'next/router'
 import LinkWrap from '../LinkWrap'
 import { VelakronLogo } from '../design-system'
@@ -7,7 +7,7 @@ import AppBreadcrumbs from '../app/AppBreadcrumbs'
 import OrganizationSwitcher from '../app/OrganizationSwitcher'
 import ExperienceSwitcher from '../app/ExperienceSwitcher'
 import AppAccessBoundary from '../app/AppAccessBoundary'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { getAuthUser, loadSession, logoutAccount } from '../../store/slices/auth'
 import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
@@ -30,18 +30,34 @@ const AppLayout = ({ children, wide = false }) => {
   const dispatch = useDispatch()
   const [navigationOpen, setNavigationOpen] = useState(false)
   const [finishingDemo, setFinishingDemo] = useState(false)
+  const [resettingDemo, setResettingDemo] = useState(false)
   const [finishError, setFinishError] = useState('')
+  const [clock, setClock] = useState(Date.now())
   const user = useSelector(getAuthUser)
   const membership = useSelector(getActiveMembership)
   const organization = useSelector(getActiveOrganization)
   const presenter = useSelector(getSalesDemoPresenter)
+  const demoExpiresAt = presenter?.expires_at || organization?.demo_expires_at
+  const remainingMinutes = demoExpiresAt
+    ? Math.max(0, Math.ceil((new Date(demoExpiresAt).getTime() - clock) / 60_000))
+    : null
+  const remainingLabel = remainingMinutes === null
+    ? ''
+    : remainingMinutes >= 60
+      ? `${Math.floor(remainingMinutes / 60)}h ${remainingMinutes % 60}m remaining`
+      : `${remainingMinutes}m remaining`
+  useEffect(() => {
+    if (!organization?.demo_workspace) return undefined
+    const timer = window.setInterval(() => setClock(Date.now()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [organization?.demo_workspace])
   const closeNavigation = () => setNavigationOpen(false)
   const finishDemo = async () => {
     if (finishingDemo) return
     setFinishingDemo(true)
     setFinishError('')
     const result = presenter
-      ? await dispatch(apiCallBegan({ url: '/sales-demos/presenter-grants/revoke', method: 'post' }))
+      ? await dispatch(apiCallBegan({ url: '/sales-demos/current/end', method: 'post', data: { reason: 'Founder finished the private preview' } }))
       : await dispatch(logoutAccount())
     if (!result?.ok) {
       setFinishingDemo(false)
@@ -55,6 +71,26 @@ const AppLayout = ({ children, wide = false }) => {
       window.close()
       if (!window.closed) await router.replace('/app/sales-demo')
     } else await router.replace('/imts-demo')
+  }
+  const resetDemo = async () => {
+    if (!presenter || resettingDemo || !window.confirm('Reset this preview to its published baseline? All synthetic changes in this preview will be removed.')) return
+    setResettingDemo(true)
+    setFinishError('')
+    const state = await dispatch(apiCallBegan({ url: '/sales-demos/current/state' }))
+    const result = state?.ok
+      ? await dispatch(apiCallBegan({
+        url: '/sales-demos/current/reset',
+        method: 'post',
+        data: { expected_revision: state.payload?.data?.revision },
+      }))
+      : state
+    if (!result?.ok) {
+      setResettingDemo(false)
+      setFinishError(result?.error?.message || 'The preview could not be reset. Please try again.')
+      return
+    }
+    await router.replace('/app')
+    router.reload()
   }
 
   return <div className='appLayout'>
@@ -70,6 +106,15 @@ const AppLayout = ({ children, wide = false }) => {
         <span>Velakron workspace</span>
         <small>{organization?.demo_workspace ? (presenter ? 'Founder preview workspace' : 'Private Sales Demo workspace') : 'Organization access is enforced'}</small>
         {organization?.demo_workspace && <>
+          {presenter && <div className='appSidebar__demoControls'>
+            <button type='button' onClick={resetDemo} disabled={resettingDemo || finishingDemo}>
+              {resettingDemo ? <LoaderCircle className='spin' aria-hidden='true' /> : <RotateCcw aria-hidden='true' />}
+              {resettingDemo ? 'Resetting…' : 'Reset preview'}
+            </button>
+            <LinkWrap href='/app/sales-demo' target='_blank' rel='noopener noreferrer'>
+              <ExternalLink aria-hidden='true' /> Founder controls
+            </LinkWrap>
+          </div>}
           <button className='appSidebar__finishDemo' type='button' onClick={finishDemo} disabled={finishingDemo}>
             {finishingDemo ? <LoaderCircle className='spin' aria-hidden='true' /> : <LogOut aria-hidden='true' />}
             {finishingDemo ? 'Finishing…' : 'Finish experience'}
@@ -95,7 +140,7 @@ const AppLayout = ({ children, wide = false }) => {
         </div>
       </header>
       <main id='app-main-content' className={`appMain${wide ? ' appMain--wide' : ''}`}><AppAccessBoundary>
-        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>{presenter ? 'Founder preview' : 'Private Sales Demo'}</strong><span>{presenter ? 'You are exploring a synthetic customer experience without leaving your founder account.' : 'This workspace is isolated from every other guest and expires automatically.'}</span></div></div>}
+        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>{presenter ? 'Founder preview' : 'Private Sales Demo'}{remainingLabel ? ` · ${remainingLabel}` : ''}</strong><span>{presenter ? 'Synthetic customer workspace. A Velakron presenter may introduce updates while you explore; open Founder controls to switch roles.' : 'Synthetic, isolated workspace. A Velakron presenter may introduce updates while you explore, and access expires automatically.'}</span></div></div>}
         <SalesDemoSessionTracker />
         <AppBreadcrumbs />{children}
       </AppAccessBoundary></main>

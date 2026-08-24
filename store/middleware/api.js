@@ -3,6 +3,14 @@ import { apiCallBegan, apiCallCancelled, apiCallFailed, apiCallSuccess } from '.
 
 const activeRequests = new Map()
 
+export const salesDemoPresenterHeaders = ({ url, pathname = '', presenterToken = '' }) => {
+  const previewExchangeRequest = pathname === '/sales-demo/preview'
+    && ['/auth/session', '/sales-demos/presenter-grants/exchange'].includes(String(url))
+  return presenterToken && !previewExchangeRequest
+    ? { 'X-Velakron-Demo-Presenter': presenterToken }
+    : {}
+}
+
 const api = ({ dispatch, getState }) => next => async action => {
   if (action.type !== apiCallBegan.type) return next(action)
 
@@ -28,12 +36,14 @@ const api = ({ dispatch, getState }) => next => async action => {
   next(action)
 
   try {
-    const previewExchangeRequest = typeof window !== 'undefined'
-      && window.location.pathname === '/sales-demo/preview'
-      && ['/auth/session', '/sales-demos/presenter-grants/exchange'].includes(String(url))
-    const presenterToken = typeof window !== 'undefined' && !previewExchangeRequest
+    const presenterToken = typeof window !== 'undefined'
       ? window.sessionStorage.getItem('velakron_sales_demo_presenter')
       : null
+    const presenterHeaders = salesDemoPresenterHeaders({
+      url,
+      pathname: typeof window !== 'undefined' ? window.location.pathname : '',
+      presenterToken,
+    })
     const response = await axios.request({
       baseURL: process.env.NEXT_PUBLIC_API_URL,
       url,
@@ -41,7 +51,7 @@ const api = ({ dispatch, getState }) => next => async action => {
       data,
       params,
       headers: {
-        ...(presenterToken ? { 'X-Velakron-Demo-Presenter': presenterToken } : {}),
+        ...presenterHeaders,
         ...headers,
       },
       withCredentials: true,

@@ -5,6 +5,8 @@ import {
   loadSalesDemoSessions,
   salesDemoRequest,
 } from '../store/slices/entities/salesDemos'
+import salesDemoReducer from '../store/slices/entities/salesDemos'
+import { salesDemoPresenterHeaders } from '../store/middleware/api'
 
 describe('founder Sales Demo workspace', () => {
   it('shows the dashboard only when the founder Sales Demo permission is present', () => {
@@ -37,5 +39,25 @@ describe('founder Sales Demo workspace', () => {
     expect(salesDemoRouteMap('/app/machines/[id]')).toEqual({ route_key: 'machines', journey_step: 'machines' })
     expect(salesDemoActionKey('patch', '/production-records/64ff00/private-part')).toBe('production.patch')
     expect(salesDemoActionKey('post', '/relationships/64ff00/accept')).toBe('relationship.post')
+  })
+
+  it('stores Sales Demo request outcomes and resets loading after success or failure', () => {
+    const requested = salesDemoReducer(undefined, { type: 'salesDemos/requested' })
+    expect(requested.loading).toBe(true)
+    const succeeded = salesDemoReducer(requested, { type: 'salesDemos/summaryReceived', payload: { data: { counts: { active_prospects: 2 } } } })
+    expect(succeeded.loading).toBe(false)
+    expect(succeeded.summary.counts.active_prospects).toBe(2)
+    const failed = salesDemoReducer(requested, { type: 'salesDemos/failed', payload: { error: { code: 'VERSION_CONFLICT', message: 'Refresh first' } } })
+    expect(failed.loading).toBe(false)
+    expect(failed.error.code).toBe('VERSION_CONFLICT')
+  })
+
+  it('adds a tab-local presenter grant to product calls but never to the one-time exchange', () => {
+    expect(salesDemoPresenterHeaders({ url: '/production-records', pathname: '/app', presenterToken: 'opaque-preview-token' }))
+      .toEqual({ 'X-Velakron-Demo-Presenter': 'opaque-preview-token' })
+    expect(salesDemoPresenterHeaders({ url: '/auth/session', pathname: '/sales-demo/preview', presenterToken: 'stale-token' }))
+      .toEqual({})
+    expect(salesDemoPresenterHeaders({ url: '/sales-demos/presenter-grants/exchange', pathname: '/sales-demo/preview', presenterToken: 'stale-token' }))
+      .toEqual({})
   })
 })

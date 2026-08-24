@@ -1,6 +1,7 @@
 import QRCode from 'qrcode'
 import {
   Activity,
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Building2,
@@ -62,6 +63,58 @@ const toneForStatus = status => ({ active: 'success', ended: 'neutral', expired:
 const idOf = value => String(value?.id || value?._id || value || '')
 const clone = value => JSON.parse(JSON.stringify(value))
 const safeMessage = result => result?.error?.message || 'The Sales Demo request could not be completed.'
+const attentionCategoryDefaults = {
+  non_conformance: { severity: 'high', health: 'at_risk' },
+  production_block: { severity: 'high', health: 'at_risk' },
+  issue: { severity: 'medium', health: 'needs_attention' },
+  information_flag: { severity: 'low', health: 'on_schedule' },
+}
+const commandConsequences = {
+  'relationship.request': 'The Supplier guest will receive a new synthetic OEM relationship request.',
+  'relationship.accept': 'The OEM guest will see the pending supplier relationship become active.',
+  'relationship.decline': 'The OEM guest will see the pending supplier relationship declined.',
+  'production.assign': 'A new synthetic assignment will appear in the Supplier action queue.',
+  'production.accept_assignment': 'The OEM guest will see the supplier accept this assignment and commit an initial ship date.',
+  'production.assign_machine': 'The OEM guest will see a synthetic supplier machine assigned to this part.',
+  'production.note': 'A shared synthetic production update will appear in the selected record timeline.',
+  'production.expected_ship': 'The OEM guest will see a revised supplier ship commitment and recalculated schedule health.',
+  'production.advance_stage': 'The OEM guest will see the supplier move this part to the selected valid production stage.',
+  'production.attention': 'The guest will receive a shared categorized attention flag with the approved risk level.',
+  'production.attention_acknowledge': 'The guest will see that the counterpart acknowledged an active attention flag.',
+  'production.attention_resolve': 'The guest will see a counterpart-owned attention flag resolved with a reason.',
+  'production.receive': 'The Supplier guest will see shipment receipt confirmed and quality review opened.',
+  'production.quality_issue': 'The Supplier guest will receive a high-priority receiving quality issue and requested response.',
+  'production.quality_approve': 'The Supplier guest will see the received parts approved and the record completed.',
+}
+
+const templateChangeSummary = (draft, published) => {
+  if (!draft || !published) return []
+  const changes = []
+  if (draft.name !== published.name) changes.push(`Baseline renamed to “${draft.name}”`)
+  const draftExperiences = draft.supported_experiences || ['oem', 'supplier']
+  const publishedExperiences = published.supported_experiences || ['oem', 'supplier']
+  if (JSON.stringify([...draftExperiences].sort()) !== JSON.stringify([...publishedExperiences].sort())) {
+    changes.push(`Experiences changed to ${draftExperiences.map(formatLabel).join(' and ')}`)
+  }
+  for (const side of ['oem', 'supplier']) {
+    const before = published.companies?.[side] || {}
+    const after = draft.companies?.[side] || {}
+    if (JSON.stringify(before) !== JSON.stringify(after)) changes.push(`${side.toUpperCase()} company or contact updated`)
+  }
+  if (JSON.stringify(draft.relationship) !== JSON.stringify(published.relationship)) changes.push('Starting relationship scenario updated')
+  if (JSON.stringify(draft.supplier_profile) !== JSON.stringify(published.supplier_profile)) changes.push('Supplier capabilities or profile updated')
+  if (JSON.stringify(draft.facility) !== JSON.stringify(published.facility)) changes.push('Primary facility updated')
+  if (JSON.stringify(draft.machines) !== JSON.stringify(published.machines)) changes.push(`Machine list updated (${draft.machines?.length || 0} total)`)
+  if (JSON.stringify(draft.certifications) !== JSON.stringify(published.certifications)) changes.push(`Certification list updated (${draft.certifications?.length || 0} total)`)
+  const beforeRecords = new Map((published.production_records || []).map(record => [record.key, record]))
+  const afterRecords = new Map((draft.production_records || []).map(record => [record.key, record]))
+  const added = [...afterRecords.keys()].filter(key => !beforeRecords.has(key)).length
+  const removed = [...beforeRecords.keys()].filter(key => !afterRecords.has(key)).length
+  const changed = [...afterRecords.entries()].filter(([key, record]) => beforeRecords.has(key) && JSON.stringify(record) !== JSON.stringify(beforeRecords.get(key))).length
+  if (added || removed || changed) changes.push(`Production stories: ${added} added, ${changed} changed, ${removed} removed`)
+  if (JSON.stringify(draft.journey_steps) !== JSON.stringify(published.journey_steps)) changes.push('Presenter journey guidance updated')
+  return changes
+}
 
 const SessionCard = ({ session, onOpen }) => <button className='salesDemoSessionCard' type='button' onClick={() => onOpen(session)}>
   <span className={`salesDemoPresence salesDemoPresence--${session.presence}`} aria-hidden='true' />
@@ -85,6 +138,7 @@ const CommandPanel = ({ session, onChanged }) => {
   const [date, setDate] = useState('')
   const [stage, setStage] = useState('in_production')
   const [category, setCategory] = useState('issue')
+  const [requestedAction, setRequestedAction] = useState('supplier_response')
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const currentAction = actions.find(item => item.key === actionType)
@@ -98,6 +152,10 @@ const CommandPanel = ({ session, onChanged }) => {
     if (!actions.some(item => item.key === actionType && item.enabled)) setActionType(actions.find(item => item.enabled)?.key || '')
     if (!eligibleRecords.some(item => idOf(item) === recordId)) setRecordId(idOf(eligibleRecords[0]))
   }, [actionType, actions, eligibleRecords, recordId])
+  const allowedStages = useMemo(() => currentAction?.allowed_values_by_record?.[recordId] || [], [currentAction, recordId])
+  useEffect(() => {
+    if (actionType === 'production.advance_stage' && !allowedStages.some(item => item.value === stage)) setStage(allowedStages[0]?.value || '')
+  }, [actionType, allowedStages, stage])
 
   const send = async event => {
     event.preventDefault()
@@ -105,6 +163,9 @@ const CommandPanel = ({ session, onChanged }) => {
     if (currentAction?.requires_record) payload.production_record_id = recordId
     if (actionType === 'production.note') payload.body = text
     if (actionType === 'production.attention') Object.assign(payload, { category, explanation: text })
+    if (actionType === 'production.attention_resolve') payload.reason = text
+    if (actionType === 'relationship.decline') payload.reason = text
+    if (actionType === 'production.quality_issue') Object.assign(payload, { explanation: text, requested_action: requestedAction })
     if (actionType === 'production.expected_ship') payload.expected_ship_date = date
     if (actionType === 'production.advance_stage') Object.assign(payload, { stage, reason: 'Synthetic presenter update' })
     if (actionType === 'production.assign') Object.assign(payload, { part_number: 'VK-DEMO-NEW', part_name: 'Priority flight component [Synthetic]', quantity: 12, required_offset: 14 })
@@ -133,10 +194,12 @@ const CommandPanel = ({ session, onChanged }) => {
     <form onSubmit={send}>
       <label><span>Interaction</span><select value={actionType} onChange={event => setActionType(event.target.value)}>{actions.map(item => <option key={item.key} value={item.key} disabled={!item.enabled}>{item.label}</option>)}</select></label>
       {currentAction?.requires_record && <label><span>Production record</span><select required value={recordId} onChange={event => setRecordId(event.target.value)}>{eligibleRecords.map(record => <option key={idOf(record)} value={idOf(record)}>{record.part_number} · {record.part_name}</option>)}</select></label>}
-      {['production.note', 'production.attention'].includes(actionType) && <label className='salesDemoControlPanel__wide'><span>{actionType === 'production.attention' ? 'What needs attention?' : 'Update message'}</span><textarea rows={3} maxLength={1000} value={text} onChange={event => setText(event.target.value)} required /></label>}
-      {actionType === 'production.attention' && <label><span>Flag category</span><select value={category} onChange={event => setCategory(event.target.value)}><option value='non_conformance'>Non-conformance · high risk</option><option value='production_block'>Production block · high risk</option><option value='issue'>Issue · medium risk</option><option value='information'>Information · no schedule risk</option></select></label>}
+      {['production.note', 'production.attention', 'production.attention_resolve', 'relationship.decline', 'production.quality_issue'].includes(actionType) && <label className='salesDemoControlPanel__wide'><span>{actionType === 'production.attention' ? 'What needs attention?' : actionType === 'production.attention_resolve' ? 'Resolution' : actionType === 'relationship.decline' ? 'Decline reason' : actionType === 'production.quality_issue' ? 'Quality finding' : 'Update message'}</span><textarea rows={3} maxLength={1000} value={text} onChange={event => setText(event.target.value)} required /></label>}
+      {actionType === 'production.attention' && <label><span>Flag category</span><select value={category} onChange={event => setCategory(event.target.value)}><option value='non_conformance'>Non-conformance · high risk</option><option value='production_block'>Production block · high risk</option><option value='issue'>Issue · medium risk</option><option value='information_flag'>Information · no schedule risk</option></select></label>}
+      {actionType === 'production.quality_issue' && <label><span>Requested supplier action</span><select value={requestedAction} onChange={event => setRequestedAction(event.target.value)}><option value='supplier_response'>Supplier response</option><option value='return_to_supplier'>Return to supplier</option><option value='replacement'>Replacement parts</option><option value='rework'>Rework plan</option></select></label>}
       {actionType === 'production.expected_ship' && <label><span>Expected ship date</span><input type='date' value={date} onChange={event => setDate(event.target.value)} required /></label>}
-      {actionType === 'production.advance_stage' && <label><span>New supplier stage</span><select value={stage} onChange={event => setStage(event.target.value)}><option value='programming'>Programming</option><option value='in_production'>In production</option><option value='inspection'>Inspection</option><option value='ready_to_ship'>Ready to ship</option><option value='shipped'>Shipped</option></select></label>}
+      {actionType === 'production.advance_stage' && <label><span>New supplier stage</span><select value={stage} onChange={event => setStage(event.target.value)}>{allowedStages.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>}
+      {actionType && <aside className='salesDemoControlPanel__consequence'><strong>What the guest will see</strong><span>{commandConsequences[actionType]}</span></aside>}
       <Button type='submit' disabled={pending || !actionType || (currentAction?.requires_record && !recordId)}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Send aria-hidden='true' />} {pending ? 'Sending…' : 'Send interaction'}</Button>
     </form>
   </section>
@@ -248,6 +311,7 @@ const TemplateEditor = ({ templates, onRefresh }) => {
     const editable = next?.draft_version || next?.published_version
     setTemplate(next)
     const nextPayload = editable?.payload ? clone(editable.payload) : null
+    if (nextPayload && !nextPayload.supported_experiences) nextPayload.supported_experiences = next.supported_experiences?.length ? [...next.supported_experiences] : ['oem', 'supplier']
     savedPayload.current = nextPayload ? JSON.stringify(nextPayload) : ''
     setPayload(nextPayload)
     setDraftVersion(next?.draft_version || null)
@@ -277,7 +341,18 @@ const TemplateEditor = ({ templates, onRefresh }) => {
   const updateCompany = (side, field, value) => setPayload(current => ({ ...current, companies: { ...current.companies, [side]: { ...current.companies[side], [field]: value } } }))
   const updateContact = (side, field, value) => setPayload(current => ({ ...current, companies: { ...current.companies, [side]: { ...current.companies[side], contact: { ...current.companies[side].contact, [field]: value } } } }))
   const updateRecord = (index, field, value) => setPayload(current => ({ ...current, production_records: current.production_records.map((record, row) => row === index ? { ...record, [field]: value } : record) }))
-  const updateRecordAttention = (index, field, value) => setPayload(current => ({ ...current, production_records: current.production_records.map((record, row) => row === index ? { ...record, attention: { ...(record.attention || { category: 'issue', code: 'DEMO_ATTENTION', severity: 'medium', health: 'needs_attention', explanation: '' }), [field]: value } } : record) }))
+  const updateRecordAttention = (index, field, value) => setPayload(current => ({
+    ...current,
+    production_records: current.production_records.map((record, row) => {
+      if (row !== index) return record
+      const attention = {
+        ...(record.attention || { category: 'issue', code: 'DEMO_ATTENTION', severity: 'medium', health: 'needs_attention', explanation: '' }),
+        [field]: value,
+      }
+      if (field === 'category' && attentionCategoryDefaults[value]) Object.assign(attention, attentionCategoryDefaults[value])
+      return { ...record, attention }
+    }),
+  }))
   const updateFacility = (field, value) => setPayload(current => ({ ...current, facility: { ...current.facility, [field]: value } }))
   const updateFacilityAddress = (field, value) => setPayload(current => ({ ...current, facility: { ...current.facility, address: { ...current.facility.address, [field]: value } } }))
   const updateSupplierProfile = (field, value) => setPayload(current => ({ ...current, supplier_profile: { ...current.supplier_profile, [field]: value } }))
@@ -364,6 +439,7 @@ const TemplateEditor = ({ templates, onRefresh }) => {
   if (!templates.length) return <EmptyState title='No Sales Demo baselines' description='Create a template to begin.' />
   if (!payload) return <AppSkeleton lines={10} />
   const validation = draftVersion?.validation
+  const changeSummary = templateChangeSummary(payload, template?.published_version?.payload)
   return <div className='salesDemoTemplateWorkspace'>
     <aside><p className='technicalLabel'>Baselines</p>{templates.map(item => <button type='button' className={idOf(item) === selectedId ? 'is-active' : ''} key={idOf(item)} onClick={() => selectTemplate(idOf(item))}><strong>{item.name}</strong><small>Published v{item.published_version?.version_number || '—'}{item.draft_version ? ' · draft open' : ''}</small></button>)}<button type='button' className='salesDemoTemplateWorkspace__new' onClick={() => setShowCreate(value => !value)}><Plus aria-hidden='true' /> New baseline</button>{showCreate && <form className='salesDemoTemplateCreate' onSubmit={createTemplate}><label><span>Name</span><input required minLength={2} value={newTemplate.name} onChange={event => setNewTemplate(value => ({ ...value, name: event.target.value, key: value.key || event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))} /></label><label><span>URL-safe key</span><input required pattern='[a-z0-9]+(?:-[a-z0-9]+)*' value={newTemplate.key} onChange={event => setNewTemplate(value => ({ ...value, key: event.target.value.toLowerCase() }))} /></label><label><span>Purpose</span><textarea rows={2} value={newTemplate.description} onChange={event => setNewTemplate(value => ({ ...value, description: event.target.value }))} /></label><Button type='submit' disabled={working}>Create from current</Button></form>}</aside>
     <section>
@@ -375,6 +451,7 @@ const TemplateEditor = ({ templates, onRefresh }) => {
           <legend>Presentation identity</legend>
           <label className='salesDemoTemplateForm__wide'><span>Baseline name</span><input value={payload.name || ''} maxLength={180} onChange={event => setPayload(current => ({ ...current, name: event.target.value }))} /></label>
           <label className='salesDemoTemplateForm__wide'><span>Presenter description</span><textarea rows={3} value={payload.description || ''} maxLength={1000} onChange={event => setPayload(current => ({ ...current, description: event.target.value }))} /></label>
+          <div className='salesDemoExperienceChoices salesDemoTemplateForm__wide'><span>Available guest experiences</span>{['oem', 'supplier'].map(experience => <label key={experience}><input type='checkbox' checked={(payload.supported_experiences || ['oem', 'supplier']).includes(experience)} onChange={event => setPayload(current => ({ ...current, supported_experiences: event.target.checked ? [...new Set([...(current.supported_experiences || ['oem', 'supplier']), experience])] : (current.supported_experiences || ['oem', 'supplier']).filter(item => item !== experience) }))} /> {formatLabel(experience)}</label>)}</div>
         </fieldset>
         <fieldset disabled={!draftVersion || working}>
           <legend>Presenter journey</legend>
@@ -449,16 +526,16 @@ const TemplateEditor = ({ templates, onRefresh }) => {
             </div>
             <section className='salesDemoAttentionEditor'>
               <label><input type='checkbox' checked={Boolean(record.attention)} onChange={event => updateRecord(index, 'attention', event.target.checked ? { category: 'issue', code: 'DEMO_ATTENTION', severity: 'medium', health: 'needs_attention', explanation: 'Synthetic attention scenario for the presentation.' } : null)} /> Include attention flag</label>
-              {record.attention && <div><label><span>Category</span><select value={record.attention.category || 'issue'} onChange={event => updateRecordAttention(index, 'category', event.target.value)}><option value='non_conformance'>Non-conformance</option><option value='production_block'>Production block</option><option value='issue'>Issue</option><option value='information'>Information</option></select></label><label><span>Severity</span><select value={record.attention.severity || 'medium'} onChange={event => updateRecordAttention(index, 'severity', event.target.value)}><option value='low'>Low</option><option value='medium'>Medium</option><option value='high'>High</option></select></label><label><span>Attention code</span><input value={record.attention.code || ''} onChange={event => updateRecordAttention(index, 'code', event.target.value)} /></label><label><span>Resulting health</span><select value={record.attention.health || 'needs_attention'} onChange={event => updateRecordAttention(index, 'health', event.target.value)}><option value='on_schedule'>On schedule</option><option value='needs_attention'>Needs attention</option><option value='at_risk'>At risk</option><option value='delayed'>Delayed</option></select></label><label className='salesDemoTemplateForm__wide'><span>Explanation</span><textarea rows={2} maxLength={1000} value={record.attention.explanation || ''} onChange={event => updateRecordAttention(index, 'explanation', event.target.value)} /></label></div>}
+              {record.attention && <div><label><span>Category</span><select value={record.attention.category || 'issue'} onChange={event => updateRecordAttention(index, 'category', event.target.value)}><option value='non_conformance'>Non-conformance</option><option value='production_block'>Production block</option><option value='issue'>Issue</option><option value='information_flag'>Information</option></select></label><label><span>Severity</span><select value={record.attention.severity || 'medium'} onChange={event => updateRecordAttention(index, 'severity', event.target.value)}><option value='low'>Low</option><option value='medium'>Medium</option><option value='high'>High</option></select></label><label><span>Attention code</span><input value={record.attention.code || ''} onChange={event => updateRecordAttention(index, 'code', event.target.value)} /></label><label><span>Resulting health</span><select value={record.attention.health || 'needs_attention'} onChange={event => updateRecordAttention(index, 'health', event.target.value)}><option value='on_schedule'>On schedule</option><option value='needs_attention'>Needs attention</option><option value='at_risk'>At risk</option><option value='delayed'>Delayed</option></select></label><label className='salesDemoTemplateForm__wide'><span>Explanation</span><textarea rows={2} maxLength={1000} value={record.attention.explanation || ''} onChange={event => updateRecordAttention(index, 'explanation', event.target.value)} /></label></div>}
             </section>
           </article>)}</div>
         </fieldset>
         {draftVersion && <footer>
-          <div>{validation?.valid ? <StatusBadge tone='success'>Saved draft valid</StatusBadge> : <StatusBadge tone='warning'>{validation?.errors?.length || 0} validation items</StatusBadge>}{(validation?.errors || []).map(item => <small className='is-error' key={`${item.field}-${item.message}`}>{item.field}: {item.message}</small>)}{(validation?.warnings || []).map(item => <small key={`${item.field}-${item.message}`}>{item.message}</small>)}</div>
+          <div>{validation?.valid ? <StatusBadge tone='success'>Saved draft valid</StatusBadge> : <StatusBadge tone='warning'>{validation?.errors?.length || 0} validation items</StatusBadge>}{(validation?.errors || []).map(item => <small className='is-error' key={`${item.field}-${item.message}`}>{item.field}: {item.message}</small>)}{(validation?.warnings || []).map(item => <small key={`${item.field}-${item.message}`}>{item.message}</small>)}{validation?.generated_counts && <div className='salesDemoValidationPreview'><strong>Saved draft will generate</strong><span>{validation.generated_counts.production_records} production records · {validation.generated_counts.machines} machines · {validation.generated_counts.certifications} certifications</span><span>OEM dashboard: {validation.expected_dashboards?.oem?.action_required || 0} action required · {validation.expected_dashboards?.oem?.awaiting_acceptance || 0} awaiting acceptance</span><span>Supplier dashboard: {validation.expected_dashboards?.supplier?.active_records || 0} active records · {validation.expected_dashboards?.supplier?.action_required || 0} action required</span></div>}</div>
           <div><Button type='button' variant='secondary' onClick={validateDraft} disabled={working}>Validate saved draft</Button><Button type='submit' disabled={working}>{working ? <LoaderCircle className='spin' aria-hidden='true' /> : <PencilLine aria-hidden='true' />} Save draft</Button></div>
         </footer>}
       </form>
-      {draftVersion && <div className='salesDemoPublishBar'><label><span>What changed?</span><input value={publicationNote} minLength={3} maxLength={1000} onChange={event => setPublicationNote(event.target.value)} /></label><Button onClick={publish} disabled={working || !validation?.valid || publicationNote.trim().length < 3}><CheckCircle2 aria-hidden='true' /> Publish for future demos</Button></div>}
+      {draftVersion && <div className='salesDemoPublishBar'><div className='salesDemoPublishDiff'><strong>Compared with the published version</strong>{changeSummary.length ? <ul>{changeSummary.map(item => <li key={item}>{item}</li>)}</ul> : <p>No content differences yet.</p>}</div><label><span>Publication note</span><input value={publicationNote} minLength={3} maxLength={1000} onChange={event => setPublicationNote(event.target.value)} /></label><Button onClick={publish} disabled={working || !validation?.valid || publicationNote.trim().length < 3}><CheckCircle2 aria-hidden='true' /> Publish for future demos</Button></div>}
       {draftVersion && <div className='salesDemoDraftPreview'><div><strong>Review before publishing</strong><p>Open the draft as either role without changing your founder session or creating a CRM lead.</p></div><Button variant='secondary' onClick={() => previewDraft('oem')} disabled={Boolean(previewing)}><Building2 aria-hidden='true' /> Preview OEM draft</Button><Button variant='secondary' onClick={() => previewDraft('supplier')} disabled={Boolean(previewing)}><Factory aria-hidden='true' /> Preview Supplier draft</Button></div>}
       {!draftVersion && versions.length > 1 && <section className='salesDemoVersionHistory'><header><p className='technicalLabel'>Immutable history</p><h3>Published versions</h3></header>{versions.filter(version => version.state === 'published').map(version => <article key={idOf(version)}><div><strong>Version {version.version_number}</strong><small>{formatDateTime(version.published_at || version.updated_at)} · {version.content_hash?.slice(0, 12)}</small></div>{idOf(version) !== idOf(template?.published_version) && <Button type='button' variant='secondary' onClick={() => restoreVersion(idOf(version))} disabled={working}>Restore as new draft</Button>}</article>)}</section>}
     </section>
@@ -482,7 +559,12 @@ const CampaignsPanel = ({ campaigns, templates, onRefresh }) => {
   const [form, setForm] = useState({ name: '', slug: '', template_id: idOf(templates[0]), fixed_experience: '', source: 'sales_demo', medium: 'link', campaign: '', expires_at: '' })
   const [working, setWorking] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const selectedTemplate = templates.find(item => idOf(item) === form.template_id)
+  const supportedExperiences = selectedTemplate?.supported_experiences || ['oem', 'supplier']
   useEffect(() => { if (!form.template_id && templates[0]) setForm(value => ({ ...value, template_id: idOf(templates[0]) })) }, [form.template_id, templates])
+  useEffect(() => {
+    if (form.fixed_experience && !supportedExperiences.includes(form.fixed_experience)) setForm(value => ({ ...value, fixed_experience: '' }))
+  }, [form.fixed_experience, supportedExperiences])
   const create = async event => {
     event.preventDefault(); setWorking(true); setFeedback(null)
     const result = await dispatch(salesDemoRequest({ url: '/campaigns', method: 'post', data: { ...form, fixed_experience: form.fixed_experience || null }, requestKey: 'sales-demo-create-campaign' }))
@@ -498,7 +580,7 @@ const CampaignsPanel = ({ campaigns, templates, onRefresh }) => {
     setFeedback({ type: 'success', message: campaign.status === 'active' ? 'New sessions are paused. Existing demos remain available.' : 'Campaign reactivated.' }); onRefresh()
   }
   return <div className='salesDemoCampaigns'>
-    <form className='appPanel salesDemoCampaignCreate' onSubmit={create}><header><p className='technicalLabel'>Reusable acquisition link</p><h2>Create a Sales Demo campaign</h2><p>Each link can use a chosen baseline and may let the guest choose a role or open a fixed experience.</p></header><FormMessage type={feedback?.type}>{feedback?.message}</FormMessage><div><label><span>Campaign name</span><input required minLength={2} maxLength={180} value={form.name} onChange={event => setForm(value => ({ ...value, name: event.target.value, slug: value.slug || event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), campaign: value.campaign || event.target.value }))} /></label><label><span>URL name</span><input required pattern='[a-z0-9]+(?:-[a-z0-9]+)*' value={form.slug} onChange={event => setForm(value => ({ ...value, slug: event.target.value.toLowerCase() }))} /></label><label><span>Baseline</span><select required value={form.template_id} onChange={event => setForm(value => ({ ...value, template_id: event.target.value }))}>{templates.filter(item => item.published_version).map(item => <option key={idOf(item)} value={idOf(item)}>{item.name}</option>)}</select></label><label><span>Experience</span><select value={form.fixed_experience} onChange={event => setForm(value => ({ ...value, fixed_experience: event.target.value }))}><option value=''>Guest chooses</option><option value='oem'>OEM only</option><option value='supplier'>Supplier only</option></select></label><label><span>Source</span><input value={form.source} maxLength={100} onChange={event => setForm(value => ({ ...value, source: event.target.value }))} /></label><label><span>Medium</span><input value={form.medium} maxLength={100} onChange={event => setForm(value => ({ ...value, medium: event.target.value }))} /></label><label><span>Attribution label</span><input value={form.campaign} maxLength={160} onChange={event => setForm(value => ({ ...value, campaign: event.target.value }))} /></label><label><span>Stop accepting new demos after</span><input type='datetime-local' value={form.expires_at} onChange={event => setForm(value => ({ ...value, expires_at: event.target.value }))} /></label></div><Button type='submit' disabled={working || !form.template_id}>{working ? <LoaderCircle className='spin' aria-hidden='true' /> : <Plus aria-hidden='true' />} Create campaign</Button></form>
+    <form className='appPanel salesDemoCampaignCreate' onSubmit={create}><header><p className='technicalLabel'>Reusable acquisition link</p><h2>Create a Sales Demo campaign</h2><p>Each link can use a chosen baseline and may let the guest choose a role or open a fixed experience.</p></header><FormMessage type={feedback?.type}>{feedback?.message}</FormMessage><div><label><span>Campaign name</span><input required minLength={2} maxLength={180} value={form.name} onChange={event => setForm(value => ({ ...value, name: event.target.value, slug: value.slug || event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), campaign: value.campaign || event.target.value }))} /></label><label><span>URL name</span><input required pattern='[a-z0-9]+(?:-[a-z0-9]+)*' value={form.slug} onChange={event => setForm(value => ({ ...value, slug: event.target.value.toLowerCase() }))} /></label><label><span>Baseline</span><select required value={form.template_id} onChange={event => setForm(value => ({ ...value, template_id: event.target.value }))}>{templates.filter(item => item.published_version).map(item => <option key={idOf(item)} value={idOf(item)}>{item.name}</option>)}</select></label><label><span>Experience</span><select value={form.fixed_experience} onChange={event => setForm(value => ({ ...value, fixed_experience: event.target.value }))}><option value=''>Guest chooses</option>{supportedExperiences.includes('oem') && <option value='oem'>OEM only</option>}{supportedExperiences.includes('supplier') && <option value='supplier'>Supplier only</option>}</select></label><label><span>Source</span><input value={form.source} maxLength={100} onChange={event => setForm(value => ({ ...value, source: event.target.value }))} /></label><label><span>Medium</span><input value={form.medium} maxLength={100} onChange={event => setForm(value => ({ ...value, medium: event.target.value }))} /></label><label><span>Attribution label</span><input value={form.campaign} maxLength={160} onChange={event => setForm(value => ({ ...value, campaign: event.target.value }))} /></label><label><span>Stop accepting new demos after</span><input type='datetime-local' value={form.expires_at} onChange={event => setForm(value => ({ ...value, expires_at: event.target.value }))} /></label></div><Button type='submit' disabled={working || !form.template_id}>{working ? <LoaderCircle className='spin' aria-hidden='true' /> : <Plus aria-hidden='true' />} Create campaign</Button></form>
     <section className='salesDemoCampaignList'>{campaigns.map(campaign => <CampaignCard campaign={campaign} onToggle={toggle} key={idOf(campaign)} />)}</section>
   </div>
 }
@@ -573,8 +655,10 @@ const SalesDemoDashboard = () => {
     {error && <ErrorState title='Sales Demo controls could not be loaded' description={error.message} onRetry={refresh} />}
     {loading && !summary ? <section className='appPanel'><AppSkeleton lines={10} /></section> : <>
       {tab === 'overview' && <div className='salesDemoOverview'>
-        <section className='metricGrid metricGrid--priority'><MetricCard label='Live prospects' value={summary?.counts?.active_prospects || 0} detail='Temporary guest experiences' icon={UsersRound} tone={summary?.counts?.active_prospects ? 'success' : 'default'} /><MetricCard label='Founder previews' value={summary?.counts?.active_previews || 0} detail='Open role explorations' icon={MonitorPlay} /><MetricCard label='Started today' value={summary?.counts?.started_today || 0} detail='Prospects and previews' icon={Activity} /><MetricCard label='Idle sessions' value={idleCount} detail='Active, but no recent heartbeat' icon={Clock3} tone={idleCount ? 'warning' : 'default'} /></section>
-        <div className='salesDemoOverview__grid'><section className='appPanel salesDemoQuickStart'><header><p className='technicalLabel'>Explore without logging out</p><h2>Start a founder preview</h2><p>Open either side in a separate tab. Your founder session remains active here.</p></header><div><Button onClick={() => startPreview('oem')} disabled={Boolean(previewing)}>{previewing === 'oem' ? <LoaderCircle className='spin' aria-hidden='true' /> : <Building2 aria-hidden='true' />} Explore OEM</Button><Button onClick={() => startPreview('supplier')} disabled={Boolean(previewing)} variant='secondary'>{previewing === 'supplier' ? <LoaderCircle className='spin' aria-hidden='true' /> : <Factory aria-hidden='true' />} Explore Supplier</Button></div></section><section className='appPanel'><header className='appPanel__header'><div><p className='technicalLabel'>Live now</p><h2>Prospect activity</h2></div><Button variant='secondary' onClick={() => setTab('sessions')}>Open all</Button></header>{liveSessions.length ? <div className='salesDemoSessionList'>{liveSessions.slice(0, 5).map(item => <SessionCard session={item} onOpen={openSession} key={idOf(item)} />)}</div> : <EmptyState compact title='No live prospects' description='New Sales Demo visitors and founder previews will appear here automatically.' />}</section></div>
+        <section className='metricGrid metricGrid--priority'><MetricCard label='Live prospects' value={summary?.counts?.active_prospects || 0} detail='Temporary guest experiences' icon={UsersRound} tone={summary?.counts?.active_prospects ? 'success' : 'default'} /><MetricCard label='Founder previews' value={summary?.counts?.active_previews || 0} detail='Open role explorations' icon={MonitorPlay} /><MetricCard label='Started today' value={summary?.counts?.started_today || 0} detail={`${summary?.counts?.started_last_7_days || 0} in the last 7 days`} icon={Activity} /><MetricCard label='Idle sessions' value={idleCount} detail='Active, but no recent heartbeat' icon={Clock3} tone={idleCount ? 'warning' : 'default'} /></section>
+        {Boolean(summary?.operations?.alerts?.length) && <section className='salesDemoOperationalAlerts' aria-label='Sales Demo operational alerts'>{summary.operations.alerts.map(alert => <article className={`is-${alert.tone}`} key={alert.code}><AlertTriangle aria-hidden='true' /><div><strong>{formatLabel(alert.code)}</strong><span>{alert.message}</span></div></article>)}</section>}
+        <div className='salesDemoOverview__grid'><section className='appPanel salesDemoQuickStart'><header><p className='technicalLabel'>Explore without logging out</p><h2>Start a founder preview</h2><p>Open either side in a separate tab. Your founder session remains active here.</p></header><div><Button onClick={() => startPreview('oem')} disabled={Boolean(previewing)}>{previewing === 'oem' ? <LoaderCircle className='spin' aria-hidden='true' /> : <Building2 aria-hidden='true' />} Explore OEM</Button><Button onClick={() => startPreview('supplier')} disabled={Boolean(previewing)} variant='secondary'>{previewing === 'supplier' ? <LoaderCircle className='spin' aria-hidden='true' /> : <Factory aria-hidden='true' />} Explore Supplier</Button><Button onClick={() => setTab('templates')} variant='secondary'><PencilLine aria-hidden='true' /> Edit baseline</Button><Button onClick={() => setTab('campaigns')} variant='secondary'><Plus aria-hidden='true' /> Create link</Button></div></section><section className='appPanel'><header className='appPanel__header'><div><p className='technicalLabel'>Live now</p><h2>Prospect activity</h2></div><Button variant='secondary' onClick={() => setTab('sessions')}>Open all</Button></header>{liveSessions.length ? <div className='salesDemoSessionList'>{liveSessions.slice(0, 5).map(item => <SessionCard session={item} onOpen={openSession} key={idOf(item)} />)}</div> : <EmptyState compact title='No live prospects' description='New Sales Demo visitors and founder previews will appear here automatically.' />}</section></div>
+        <section className='appPanel salesDemoPublishedBaselines'><header className='appPanel__header'><div><p className='technicalLabel'>Published stories</p><h2>Current baselines</h2></div><Button variant='secondary' onClick={() => setTab('templates')}>Manage baselines</Button></header><div>{templates.map(template => <article key={idOf(template)}><div><strong>{template.name}</strong><span>{template.description || 'Reusable synthetic product story'}</span></div><StatusBadge tone={template.draft_version ? 'warning' : 'success'}>Published v{template.published_version?.version_number || '—'}{template.draft_version ? ' · draft open' : ''}</StatusBadge></article>)}</div></section>
         <section className='appPanel salesDemoMix'><header className='appPanel__header'><div><p className='technicalLabel'>Experience mix</p><h2>How prospects explore</h2></div></header><div><article><Building2 aria-hidden='true' /><strong>{summary?.counts?.oem || 0}</strong><span>OEM sessions</span></article><article><Factory aria-hidden='true' /><strong>{summary?.counts?.supplier || 0}</strong><span>Supplier sessions</span></article><article><CheckCircle2 aria-hidden='true' /><strong>{summary?.counts?.ended || 0}</strong><span>Ended or expired</span></article></div></section>
       </div>}
       {tab === 'sessions' && (sessionId ? <SessionDetail sessionId={sessionId} onClose={closeSession} /> : <section className='appPanel salesDemoSessions'><header className='appPanel__header'><div><p className='technicalLabel'>Near-live monitoring</p><h2>Active Sales Demo sessions</h2><p>Presence and journey position refresh while this page stays open.</p></div></header>{liveSessions.length ? <div className='salesDemoSessionList'>{liveSessions.map(item => <SessionCard session={item} onOpen={openSession} key={idOf(item)} />)}</div> : <EmptyState icon={MonitorPlay} title='No active sessions' description='Start a founder preview or share a campaign link.' />}</section>)}
