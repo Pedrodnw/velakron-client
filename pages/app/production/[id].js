@@ -120,30 +120,35 @@ const MachineForm = ({ record, machines, pending, feedback, onSubmit }) => {
   </form>
 }
 
-const validStageTargets = (workflow, currentStage) => {
+const validStageTargets = (workflow, record, actorType) => {
   const stages = workflow?.stages || []
-  const current = stages.findIndex(item => item.key === currentStage)
+  const current = record.current_workflow_step_id
+    ? stages.findIndex(item => item.id === record.current_workflow_step_id)
+    : stages.findIndex(item => item.key === record.current_stage)
   return stages.filter((stage, index) => {
-    if (stage.owner !== 'supplier' || stage.key === currentStage || stage.key === 'accepted') return false
+    if (stage.owner !== actorType || index === current || ['accepted', 'delivered', 'quality_review', 'approved'].includes(stage.key)) return false
     if (index < current) return index > 1
     return stages.slice(current + 1, index).every(item => item.skippable)
   })
 }
 
-const StageForm = ({ record, workflow, pending, feedback, onSubmit }) => {
-  const targets = validStageTargets(workflow, record.current_stage)
-  const [stage, setStage] = useState(targets[0]?.key || '')
+const StageForm = ({ record, workflow, actorType, pending, feedback, onSubmit }) => {
+  const targets = validStageTargets(workflow, record, actorType)
+  const [stepId, setStepId] = useState(targets[0]?.id || '')
   const [reason, setReason] = useState('')
   const [note, setNote] = useState('')
   const [shipmentDate, setShipmentDate] = useState('')
-  const currentIndex = workflow?.stages?.findIndex(item => item.key === record.current_stage) ?? -1
-  const targetIndex = workflow?.stages?.findIndex(item => item.key === stage) ?? -1
+  const target = targets.find(item => item.id === stepId)
+  const currentIndex = record.current_workflow_step_id
+    ? workflow?.stages?.findIndex(item => item.id === record.current_workflow_step_id) ?? -1
+    : workflow?.stages?.findIndex(item => item.key === record.current_stage) ?? -1
+  const targetIndex = workflow?.stages?.findIndex(item => item.id === stepId) ?? -1
   const reasonNeeded = targetIndex < currentIndex || targetIndex > currentIndex + 1
-  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit({ stage, reason, note, shipment_date: stage === 'shipped' ? shipmentDate : undefined, version: record.version, idempotency_key: requestKey('stage') }) }}>
-    <p>Optional stages may be skipped with an explanation. Moving backward also requires a reason.</p>
+  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit({ stage: target?.key, workflow_step_id: target?.id, reason, note, shipment_date: target?.key === 'shipped' ? shipmentDate : undefined, version: record.version, idempotency_key: requestKey('stage') }) }}>
+    <p>This record follows the route selected by the OEM. Required stages cannot be skipped; moving backward requires a reason.</p>
     <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-    <label className='selectField' htmlFor='next-stage'><span>New production stage</span><select id='next-stage' value={stage} onChange={event => setStage(event.target.value)} required>{targets.map(item => <option key={item.key} value={item.key}>{item.label}{item.skippable ? ' (optional)' : ''}</option>)}</select></label>
-    {stage === 'shipped' && <FormField id='shipment-date' label='Shipment date' type='date' value={shipmentDate} onInput={event => setShipmentDate(event.target.value)} onBlur={event => setShipmentDate(event.target.value)} required />}
+    <label className='selectField' htmlFor='next-stage'><span>New production stage</span><select id='next-stage' value={stepId} onChange={event => setStepId(event.target.value)} required>{targets.map(item => <option key={item.id} value={item.id}>{item.label}{item.skippable ? ' (optional)' : ''}</option>)}</select></label>
+    {target?.key === 'shipped' && <FormField id='shipment-date' label='Shipment date' type='date' value={shipmentDate} onInput={event => setShipmentDate(event.target.value)} onBlur={event => setShipmentDate(event.target.value)} required />}
     <label className='textAreaField' htmlFor='stage-reason'><span>{reasonNeeded ? 'Required explanation' : 'Optional reason'}</span><textarea id='stage-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={reasonNeeded ? 8 : undefined} maxLength={1000} required={reasonNeeded} /></label>
     <label className='textAreaField' htmlFor='stage-note'><span>Optional shared note</span><textarea id='stage-note' value={note} onChange={event => setNote(event.target.value)} maxLength={2000} /></label>
     <FormActions pending={pending} submitLabel='Update production stage' icon={RefreshCw} />
@@ -324,7 +329,9 @@ const ProductionRecordDetail = () => {
   if (!record) return <ErrorState title='Production record unavailable' description={error?.message && error.message !== 'Production record not found' ? error.message : 'This record is not available in the active company workspace.'} action={<Button href={returnPath} variant='secondary'><ArrowLeft aria-hidden='true' /> Return to production</Button>} />
 
   const closeDrawer = () => { setDrawer(null); setFeedback(null); setActionTarget(null) }
-  const currentStageLabel = workflow?.stages?.find(item => item.key === record.current_stage)?.label || formatLabel(record.current_stage || 'Not assigned')
+  const currentStageLabel = workflow?.stages?.find(item => (
+    record.current_workflow_step_id ? item.id === record.current_workflow_step_id : item.key === record.current_stage
+  ))?.label || formatLabel(record.current_stage || 'Not assigned')
   const qualityStatus = record.quality_review_status === 'not_ready' && record.current_stage === 'delivered' && record.lifecycle_state === 'completed'
     ? 'legacy_completed'
     : record.quality_review_status
@@ -422,7 +429,7 @@ const ProductionRecordDetail = () => {
       </section>
       <section className='appPanel productionProgress'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Current workflow</p><h2>Production progress</h2></div></header>
-        <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} lifecycleState={record.lifecycle_state} />
+        <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} currentStepId={record.current_workflow_step_id} lifecycleState={record.lifecycle_state} />
       </section>
       {record.oem_internal_note && <section className='appPanel productionInternalNote'><header className='appPanel__header'><div><p className='technicalLabel'>OEM only</p><h2>Internal note</h2></div></header><p>{record.oem_internal_note}</p></section>}
       <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
@@ -433,7 +440,7 @@ const ProductionRecordDetail = () => {
       {drawer === 'decline' && <ReasonForm pending={pending} feedback={feedback} danger description='Declining returns the decision to the OEM. A reason is required and remains in history.' submitLabel='Decline assignment' onSubmit={reason => run(() => dispatch(declineProductionRecord(record.id, { reason, version: record.version, idempotency_key: requestKey('decline') })), 'Assignment declined.')} />}
       {drawer === 'assign' && <AssignmentForm record={record} relationships={relationships} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionRecord(record.id, payload)), 'Supplier assignment saved.')} />}
       {drawer === 'machine' && <MachineForm record={record} machines={activeMachines} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionMachine(record.id, payload)), 'Primary machine saved.')} />}
-      {drawer === 'stage' && <StageForm record={record} workflow={workflow} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(transitionProductionRecord(record.id, payload)), 'Production stage updated.')} />}
+      {drawer === 'stage' && <StageForm record={record} workflow={workflow} actorType={organization.type} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(transitionProductionRecord(record.id, payload)), 'Production stage updated.')} />}
       {drawer === 'forecast' && <ForecastForm record={record} pending={collaboration?.mutating} feedback={feedback} onSubmit={async payload => {
         const { report_issue: reportIssue, issue, attention_category: attentionCategory, ...forecast } = payload
         const updated = await runInline(() => dispatch(updateProductionForecast(record.id, forecast)), 'Shipping forecast updated.')

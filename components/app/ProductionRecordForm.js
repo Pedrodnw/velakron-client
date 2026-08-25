@@ -1,9 +1,10 @@
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Package, Save, Send, Settings2, ShieldAlert, UsersRound } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, FileText, GripVertical, Package, Plus, Save, Send, Settings2, ShieldAlert, Trash2, UsersRound } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
 import { Button } from '../design-system'
 import { formatDate, formatLabel } from './formatters'
+import { buildWorkflowPreview, fallbackWorkflowBuilder, workflowConfiguration } from './productionWorkflowBuilder'
 
 export const productionUnits = [
   ['each', 'Each / pieces'],
@@ -35,6 +36,7 @@ export const blankProductionRecord = {
   oem_internal_note: '',
   supplier_organization_id: '',
   export_control: 'none',
+  workflow_configuration: workflowConfiguration(),
 }
 
 const steps = [
@@ -47,13 +49,45 @@ const steps = [
 
 const supplierFromRelationship = relationship => relationship.supplier_organization
 
-const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], pending, feedback, itarCapability, onSubmit }) => {
-  const [form, setForm] = useState({ ...blankProductionRecord, ...initial })
+const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], pending, feedback, workflow, itarCapability, onSubmit }) => {
+  const builder = workflow?.builder || fallbackWorkflowBuilder
+  const [form, setForm] = useState(() => ({
+    ...blankProductionRecord,
+    ...initial,
+    workflow_configuration: workflowConfiguration(initial.workflow_configuration, builder),
+  }))
   const [step, setStep] = useState(0)
+  const [draggedStage, setDraggedStage] = useState(null)
   const activeRelationships = useMemo(() => relationships.filter(item => (
     item.status === 'active' && supplierFromRelationship(item)?.id
   )), [relationships])
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }))
+  const setWorkflow = (key, value) => setForm(current => ({
+    ...current,
+    workflow_configuration: {
+      ...current.workflow_configuration,
+      [key]: value,
+      ...(key === 'material_source' && value !== 'oem' ? { supplier_material_quantity_confirmation: false } : {}),
+    },
+  }))
+  const customStages = form.workflow_configuration.custom_process_stages
+  const addCustomStage = key => {
+    if (customStages.length >= builder.maximum_custom_stages) return
+    setWorkflow('custom_process_stages', [...customStages, key])
+  }
+  const removeCustomStage = index => setWorkflow('custom_process_stages', customStages.filter((_, itemIndex) => itemIndex !== index))
+  const moveCustomStage = (from, to) => {
+    if (to < 0 || to >= customStages.length || from === to) return
+    const reordered = [...customStages]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    setWorkflow('custom_process_stages', reordered)
+  }
+  const routePreview = useMemo(() => buildWorkflowPreview({
+    configuration: form.workflow_configuration,
+    firstArticleRequired: form.first_article_required,
+    builder,
+  }), [builder, form.first_article_required, form.workflow_configuration])
 
   const save = action => onSubmit({
     ...form,
@@ -100,8 +134,34 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
           <FormField id='production-required-date' label='Required arrival date' type='date' value={form.required_delivery_date} onInput={event => set('required_delivery_date', event.target.value)} onBlur={event => set('required_delivery_date', event.target.value)} required />
           <FormField id='production-transit' label='Estimated transit days' type='number' min='0' max='365' step='1' value={form.transit_days} onChange={event => set('transit_days', event.target.value)} hint='Optional. Used to compare the supplier forecast with arrival.' />
         </div>
-        <label className='productionCheck'><input type='checkbox' checked={form.first_article_required} onChange={event => set('first_article_required', event.target.checked)} /><span><strong>First article required</strong><small>This records the requirement but does not create a separate approval workflow.</small></span></label>
-        {form.first_article_required && <label className='textAreaField' htmlFor='production-first-article'><span>First article instructions</span><textarea id='production-first-article' value={form.first_article_note} onChange={event => set('first_article_note', event.target.value)} maxLength={2000} /></label>}
+        <div className='workflowBuilder'>
+          <header><p className='technicalLabel'>Job-specific route</p><h3>Choose how this part will move through production</h3><p>The current Velakron workflow is preselected. Change only the stages this job needs.</p></header>
+          <fieldset className='workflowChoiceGroup'>
+            <legend>Who provides the raw material?</legend>
+            <div className='workflowChoiceGrid'>{builder.material_sources.map(source => <label key={source.key} className={form.workflow_configuration.material_source === source.key ? 'is-selected' : ''}><input type='radio' name='material-source' value={source.key} checked={form.workflow_configuration.material_source === source.key} onChange={() => setWorkflow('material_source', source.key)} /><span><strong>{source.label}</strong><small>{source.key === 'supplier' ? 'Supplier orders and receives material.' : 'OEM orders material; supplier confirms receipt.'}</small></span></label>)}</div>
+          </fieldset>
+          {form.workflow_configuration.material_source === 'oem' && <label className='productionCheck'><input type='checkbox' checked={form.workflow_configuration.supplier_material_quantity_confirmation} onChange={event => setWorkflow('supplier_material_quantity_confirmation', event.target.checked)} /><span><strong>Supplier must confirm the received material quantity</strong><small>Adds a required confirmation between the OEM material order and material receipt.</small></span></label>}
+          <div className='workflowToggleGrid'>
+            <label className='productionCheck'><input type='checkbox' checked={form.workflow_configuration.include_programming} onChange={event => setWorkflow('include_programming', event.target.checked)} /><span><strong>Programming</strong><small>Include programming before first article or production.</small></span></label>
+            <label className='productionCheck'><input type='checkbox' checked={form.first_article_required} onChange={event => set('first_article_required', event.target.checked)} /><span><strong>First article approval</strong><small>Add supplier inspection and explicit OEM approval before production.</small></span></label>
+            <label className='productionCheck'><input type='checkbox' checked={form.workflow_configuration.include_quality_review} onChange={event => setWorkflow('include_quality_review', event.target.checked)} /><span><strong>Receiving quality review</strong><small>Add an OEM quality-review stage after the shipment is received.</small></span></label>
+          </div>
+          {form.first_article_required && <label className='textAreaField' htmlFor='production-first-article'><span>First article instructions</span><textarea id='production-first-article' value={form.first_article_note} onChange={event => set('first_article_note', event.target.value)} maxLength={2000} /></label>}
+          <section className='customRouteBuilder' aria-labelledby='custom-route-title'>
+            <div><h4 id='custom-route-title'>Custom process route</h4><p>Add stages in the order the supplier will perform them. A stage can be used more than once.</p></div>
+            <div className='customStageCatalog'>{builder.custom_stage_catalog.map(stage => <button type='button' key={stage.key} onClick={() => addCustomStage(stage.key)} disabled={customStages.length >= builder.maximum_custom_stages}><Plus aria-hidden='true' /> {stage.label}</button>)}</div>
+            {customStages.length ? <ol className='customStageList'>{customStages.map((key, index) => {
+              const stage = builder.custom_stage_catalog.find(item => item.key === key)
+              return <li key={`${key}-${index}`} draggable onDragStart={() => setDraggedStage(index)} onDragOver={event => event.preventDefault()} onDrop={() => { moveCustomStage(draggedStage, index); setDraggedStage(null) }}>
+                <GripVertical aria-hidden='true' /><span><small>Stage {index + 1}</small><strong>{stage?.label || formatLabel(key)}</strong></span>
+                <button type='button' aria-label={`Move ${stage?.label || key} up`} onClick={() => moveCustomStage(index, index - 1)} disabled={index === 0}><ArrowUp aria-hidden='true' /></button>
+                <button type='button' aria-label={`Move ${stage?.label || key} down`} onClick={() => moveCustomStage(index, index + 1)} disabled={index === customStages.length - 1}><ArrowDown aria-hidden='true' /></button>
+                <button type='button' aria-label={`Remove ${stage?.label || key}`} onClick={() => removeCustomStage(index)}><Trash2 aria-hidden='true' /></button>
+              </li>
+            })}</ol> : <p className='customStageEmpty'>No custom process stages. The route moves from In production to Final inspection.</p>}
+          </section>
+          <section className='workflowPreview' aria-labelledby='workflow-preview-title'><div><h4 id='workflow-preview-title'>Workflow preview</h4><p>{routePreview.length} stages · frozen for this production record</p></div><ol>{routePreview.map((routeStep, index) => <li key={`${routeStep.key}-${index}`}><span>{index + 1}</span><strong>{routeStep.label}</strong><small>{routeStep.owner === 'oem' ? 'OEM action' : routeStep.owner === 'supplier' ? 'Supplier action' : 'Automatic'}</small></li>)}</ol></section>
+        </div>
       </div>}
       {step === 3 && <div className='productionFormSection'>
         <header><p className='technicalLabel'>Step 4 of 5</p><h2>Choose the supplier</h2><p>Only active, connected supplier companies can receive the assignment.</p></header>
@@ -121,6 +181,8 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
           <div><dt>Document protection</dt><dd>Velakron Platform Confidentiality Terms</dd></div>
           <div><dt>Export control</dt><dd>{form.export_control === 'itar' ? 'ITAR controlled' : 'Not marked ITAR'}</dd></div>
           <div><dt>First article</dt><dd>{form.first_article_required ? 'Required' : 'Not required'}</dd></div>
+          <div><dt>Material</dt><dd>{form.workflow_configuration.material_source === 'oem' ? 'OEM provided' : 'Supplier provided'}</dd></div>
+          <div><dt>Production route</dt><dd>{routePreview.map(item => item.label).join(' → ')}</dd></div>
         </dl>
       </div>}
     </div>

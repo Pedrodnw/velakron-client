@@ -2822,6 +2822,159 @@
   small { margin-top: 4px; color: var(--app-text-muted); font-size: 12px; }
 }
 
+.workflowBuilder {
+  display: grid;
+  gap: 20px;
+  padding-top: 6px;
+
+  > header {
+    padding-top: 22px;
+    border-top: 1px solid var(--app-border);
+    h3 { margin: 4px 0 7px; color: var(--app-text); font-size: 19px; }
+    p:last-child { margin: 0; color: var(--app-text-muted); font-size: 12px; }
+  }
+}
+
+.workflowChoiceGroup {
+  margin: 0;
+  padding: 0;
+  border: 0;
+
+  legend { margin-bottom: 9px; color: var(--app-text); font-size: 13px; font-weight: 700; }
+}
+
+.workflowChoiceGrid,
+.workflowToggleGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflowChoiceGrid label {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  padding: 15px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: $radius;
+  background: var(--app-surface);
+  cursor: pointer;
+
+  &.is-selected { border-color: var(--vk-info); background: var(--vk-info-soft); box-shadow: 0 0 0 2px var(--vk-focus-ring); }
+  input { width: 17px; height: 17px; accent-color: $primary; }
+  strong,
+  small { display: block; }
+  strong { color: var(--app-text); font-size: 12px; }
+  small { margin-top: 4px; color: var(--app-text-muted); font-size: 11px; line-height: 1.45; }
+}
+
+.workflowToggleGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.workflowToggleGrid .productionCheck { align-content: start; background: var(--app-surface); }
+
+.customRouteBuilder,
+.workflowPreview {
+  display: grid;
+  gap: 13px;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-subtle);
+
+  h4 { margin: 0 0 4px; color: var(--app-text); font-size: 14px; }
+  p { margin: 0; color: var(--app-text-muted); font-size: 11px; line-height: 1.5; }
+}
+
+.customStageCatalog {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+
+  button {
+    @include flex-row(center, center, 6px);
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 7px;
+    background: var(--app-surface);
+    color: var(--app-text-secondary);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 650;
+    &:hover:not(:disabled) { border-color: var(--vk-info); color: var(--vk-info); }
+    &:disabled { cursor: not-allowed; opacity: 0.45; }
+    svg { width: 13px; height: 13px; }
+  }
+}
+
+.customStageList {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 30px 30px 30px;
+    gap: 6px;
+    align-items: center;
+    min-height: 48px;
+    padding: 7px 9px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--app-surface);
+    > svg { width: 15px; color: var(--app-text-muted); cursor: grab; }
+    small,
+    strong { display: block; }
+    small { color: var(--app-text-muted); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
+    strong { margin-top: 2px; color: var(--app-text); font-size: 11px; }
+    button {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      place-items: center;
+      border: 1px solid var(--app-border);
+      border-radius: 6px;
+      background: var(--app-surface);
+      color: var(--app-text-muted);
+      cursor: pointer;
+      &:hover:not(:disabled) { color: var(--vk-info); border-color: var(--vk-info); }
+      &:disabled { cursor: not-allowed; opacity: 0.35; }
+      svg { width: 13px; height: 13px; }
+    }
+  }
+}
+
+.customStageEmpty { padding: 14px; border: 1px dashed var(--app-border-strong); border-radius: 8px; text-align: center; }
+
+.workflowPreview {
+  background: rgba($primary, 0.025);
+
+  ol {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    margin: 0;
+    padding: 2px 0 8px;
+    list-style: none;
+  }
+
+  li {
+    display: grid;
+    min-width: 128px;
+    gap: 5px;
+    padding: 10px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    background: var(--app-surface);
+    > span { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: var(--vk-info-soft); color: var(--vk-info); font-size: 9px; font-weight: 800; }
+    strong { color: var(--app-text); font-size: 10px; line-height: 1.35; }
+    small { color: var(--app-text-muted); font-size: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+  }
+}
+
 .itarClassificationControl,
 .itarUploadAcknowledgement {
   grid-template-columns: 20px 20px minmax(0, 1fr);
@@ -3105,6 +3258,12 @@
   }
 
   .productionFormBody { min-height: 420px; padding: 24px 16px; }
+
+  .workflowChoiceGrid,
+  .workflowToggleGrid { grid-template-columns: 1fr; }
+
+  .customRouteBuilder,
+  .workflowPreview { padding: 14px; }
 
   .itarAccessDialog__actions { align-items: stretch; flex-direction: column-reverse; .vk-button { width: 100%; } }
 

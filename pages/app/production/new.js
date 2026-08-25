@@ -46,7 +46,7 @@ const NewProductionRecord = () => {
     <Seo title='New production record' description='Create an awarded manufacturing commitment.' path='/app/production/new' noIndex />
     <Button href='/app/production' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Production</Button>
     <AppPageHeader eyebrow='Awarded work' title='New production record' description='Capture one awarded PO-line commitment, save it privately as a draft, or assign it to an active connected supplier.' />
-    <ProductionRecordForm relationships={relationships} pending={pending} feedback={feedback} itarCapability={workflow?.compliance?.itar} onSubmit={submit} />
+    <ProductionRecordForm relationships={relationships} pending={pending} feedback={feedback} workflow={workflow} itarCapability={workflow?.compliance?.itar} onSubmit={submit} />
   </>
 }
 

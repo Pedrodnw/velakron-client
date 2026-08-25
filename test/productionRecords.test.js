@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ATTENTION_CATEGORIES, attentionCategoryFor } from '../components/app/attentionCategories'
+import { buildWorkflowPreview, fallbackWorkflowBuilder } from '../components/app/productionWorkflowBuilder'
 import reducer from '../store/reducer'
 import { organizationSwitchRequested } from '../store/slices/appContext'
 import { machineAssignmentsReceived } from '../store/slices/entities/machineAssignments'
@@ -36,6 +37,40 @@ const detailPayload = {
 }
 
 describe('production record state', () => {
+  it('previews OEM-selected production stages in the configured order', () => {
+    const stages = buildWorkflowPreview({
+      builder: fallbackWorkflowBuilder,
+      firstArticleRequired: true,
+      configuration: {
+        material_source: 'oem',
+        supplier_material_quantity_confirmation: true,
+        include_programming: false,
+        include_quality_review: true,
+        custom_process_stages: ['paint', 'secondary_inspection', 'paint'],
+      },
+    })
+
+    expect(stages.map(stage => stage.label)).toEqual([
+      'Assigned',
+      'Accepted',
+      'OEM orders material',
+      'Supplier confirms material quantity',
+      'Material received',
+      'First article inspection',
+      'OEM first article approval',
+      'In production',
+      'Paint',
+      'Secondary inspection',
+      'Paint',
+      'Final inspection',
+      'Ready to ship',
+      'Shipped',
+      'Received / awaiting inspection',
+      'Quality review',
+      'OEM approved',
+    ])
+  })
+
   it('selects the first non-empty supplier view without probing the empty current view again', async () => {
     const totals = { active: 0, action_required: 0, completed: 4 }
     const dispatch = vi.fn(action => Promise.resolve({
