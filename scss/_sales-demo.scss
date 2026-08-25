@@ -737,7 +737,7 @@
   > span { display: grid; gap: 2px; }
   small { color: var(--app-text-muted); }
   button { min-height: 36px; border: 1px solid var(--app-border-strong); border-radius: 7px; background: var(--app-surface); color: var(--app-text); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
-  button:not(&__dismiss) { display: flex; align-items: center; gap: 6px; padding: 0 10px; }
+  > button:not(.salesDemoUpdateNotice__dismiss) { display: flex; align-items: center; gap: 6px; padding: 0 10px; }
   button svg { width: 14px; }
   &__dismiss { width: 32px; border: 0 !important; color: var(--app-text-muted) !important; font-size: 20px !important; }
 }
