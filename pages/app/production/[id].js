@@ -1,8 +1,8 @@
-import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, LoaderCircle, LockKeyhole, PackageCheck, RefreshCw, RotateCcw, Send, ShieldCheck, Truck, UserRoundCheck, X } from 'lucide-react'
+import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, Truck, UserRoundCheck, X } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppPageHeader, AppSkeleton, ATTENTION_CATEGORIES, ConfidentialityPanel, ErrorState, PermissionDenied, ProductionAttentionPanel, ProductionCollaborationPanel, ProductionStageStepper, ResponsiveDrawer, ScheduleHealthBadge, StatusBadge } from '../../../components/app'
+import { AppPageHeader, AppSkeleton, ATTENTION_CATEGORIES, ErrorState, PermissionDenied, ProductionAttentionPanel, ProductionCollaborationPanel, ProductionStageStepper, ResponsiveDrawer, ScheduleHealthBadge, StatusBadge } from '../../../components/app'
 import { formatDate, formatLabel, statusTone } from '../../../components/app/formatters'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
 import Seo from '../../../components/Seo'
@@ -47,13 +47,6 @@ import {
   uploadProductionAttachment,
 } from '../../../store/slices/entities/productionCollaboration'
 import { trackProductEvent } from '../../../store/slices/entities/platformAdministration'
-import {
-  acceptProductionConfidentiality,
-  confidentialitySelectors,
-  configureProductionConfidentiality,
-  loadProductionConfidentiality,
-  updateProductionConfidentialityRoster,
-} from '../../../store/slices/entities/confidentiality'
 
 const inputDate = value => value ? String(value).slice(0, 10) : ''
 const requestKey = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -102,21 +95,13 @@ const ReasonForm = ({ pending, feedback, description, submitLabel, onSubmit, dan
 
 const AssignmentForm = ({ record, relationships, pending, feedback, onSubmit }) => {
   const [supplierId, setSupplierId] = useState('')
-  const [confidentialityLevel, setConfidentialityLevel] = useState(record.confidentiality_level || 'confidential')
   const [reason, setReason] = useState('')
   const reassigning = Boolean(record.supplier_organization)
   const active = relationships.filter(item => item.status === 'active' && relatedSupplier(item)?.id)
-  const selectedRelationship = active.find(item => relatedSupplier(item)?.id === supplierId)
-  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit({ supplier_organization_id: supplierId, confidentiality_level: confidentialityLevel, reason, version: record.version }) }}>
+  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit({ supplier_organization_id: supplierId, reason, version: record.version }) }}>
     <p>{reassigning ? 'The former supplier immediately loses access. Its prior contributions remain in OEM history.' : 'Assignment sends this record to the supplier’s action-required queue.'}</p>
     <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-    <label className='selectField' htmlFor='assignment-supplier'><span>Connected supplier</span><select id='assignment-supplier' value={supplierId} onChange={event => {
-      const id = event.target.value
-      const relationship = active.find(item => relatedSupplier(item)?.id === id)
-      setSupplierId(id)
-      setConfidentialityLevel(relationship?.confidentiality_default || record.confidentiality_level || 'confidential')
-    }} required><option value=''>Select supplier</option>{active.map(relationship => { const supplier = relatedSupplier(relationship); return <option key={supplier.id} value={supplier.id}>{supplier.name}</option> })}</select></label>
-    <label className='selectField' htmlFor='assignment-confidentiality'><span>Design confidentiality</span><select id='assignment-confidentiality' value={confidentialityLevel} onChange={event => setConfidentialityLevel(event.target.value)}><option value='confidential' disabled={selectedRelationship?.confidentiality_default === 'restricted'}>Confidential — supplier team</option><option value='restricted'>Restricted — named supplier users only</option></select><small>{selectedRelationship?.confidentiality_default === 'restricted' ? 'The relationship default requires Restricted. An OEM administrator can document an exception after assignment.' : 'Restricted limits the record to named supplier users after acceptance.'}</small></label>
+    <label className='selectField' htmlFor='assignment-supplier'><span>Connected supplier</span><select id='assignment-supplier' value={supplierId} onChange={event => setSupplierId(event.target.value)} required><option value=''>Select supplier</option>{active.map(relationship => { const supplier = relatedSupplier(relationship); return <option key={supplier.id} value={supplier.id}>{supplier.name}</option> })}</select><small>All active members of the connected supplier can collaborate under the Platform Confidentiality Terms.</small></label>
     {reassigning && <label className='textAreaField' htmlFor='reassignment-reason'><span>Reason for reassignment</span><textarea id='reassignment-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={8} maxLength={1000} required /></label>}
     <FormActions pending={pending} submitLabel={reassigning ? 'Reassign supplier' : 'Assign supplier'} icon={UserRoundCheck} />
   </form>
@@ -288,7 +273,6 @@ const ProductionRecordDetail = () => {
   const machines = useSelector(machineSelectors.getEntities)
   const relationships = useSelector(relationshipSelectors.getEntities)
   const collaboration = useSelector(state => router.query.id ? productionCollaborationSelectors.getRecord(router.query.id)(state) : null)
-  const confidentialityEntry = useSelector(state => router.query.id ? confidentialitySelectors.getProduction(router.query.id)(state) : null)
   const canArchiveNote = useSelector(getHasPermission('note.archive'))
   const canArchiveAttachment = useSelector(getHasPermission('attachment.archive'))
   const canReportAttention = useSelector(getHasPermission('attention.report'))
@@ -302,18 +286,13 @@ const ProductionRecordDetail = () => {
   useEffect(() => {
     if (allowed && router.isReady) {
       dispatch(loadProductionRecord(router.query.id))
-      dispatch(loadProductionConfidentiality(router.query.id))
+      dispatch(loadProductionCollaboration(router.query.id))
       if (trackedRecordId.current !== router.query.id) {
         trackedRecordId.current = router.query.id
         dispatch(trackProductEvent('production.detail_viewed', 'production_detail'))
       }
     }
   }, [allowed, dispatch, router.isReady, router.query.id])
-  useEffect(() => {
-    if (allowed && router.isReady && confidentialityEntry?.data && !confidentialityEntry.data.locked) {
-      dispatch(loadProductionCollaboration(router.query.id))
-    }
-  }, [allowed, confidentialityEntry?.data?.locked, dispatch, router.isReady, router.query.id])
   useEffect(() => {
     if (!organization?.id) return
     if (organization.type === 'supplier') dispatch(loadMachines({ status: 'active', page_size: 100 }))
@@ -324,8 +303,7 @@ const ProductionRecordDetail = () => {
     const refresh = () => {
       if (document.visibilityState !== 'hidden') {
         dispatch(loadProductionRecord(router.query.id))
-        dispatch(loadProductionConfidentiality(router.query.id))
-        if (!confidentialityEntry?.data?.locked) dispatch(loadProductionCollaboration(router.query.id))
+        dispatch(loadProductionCollaboration(router.query.id))
       }
     }
     const interval = window.setInterval(refresh, 45_000)
@@ -336,7 +314,7 @@ const ProductionRecordDetail = () => {
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', refresh)
     }
-  }, [allowed, confidentialityEntry?.data?.locked, dispatch, router.isReady, router.query.id])
+  }, [allowed, dispatch, router.isReady, router.query.id])
 
   const activeMachines = useMemo(() => machines.filter(machine => machine.status === 'active'), [machines])
   const returnPath = typeof router.query.return_to === 'string' && router.query.return_to.startsWith('/app/production?') ? router.query.return_to : '/app/production'
@@ -345,8 +323,6 @@ const ProductionRecordDetail = () => {
   if (!record) return <ErrorState title='Production record unavailable' description={error?.message && error.message !== 'Production record not found' ? error.message : 'This record is not available in the active company workspace.'} action={<Button href={returnPath} variant='secondary'><ArrowLeft aria-hidden='true' /> Return to production</Button>} />
 
   const closeDrawer = () => { setDrawer(null); setFeedback(null); setActionTarget(null) }
-  const confidentiality = confidentialityEntry?.data || detail?.confidentiality || null
-  const confidentialityLocked = Boolean(confidentiality?.locked || record.confidentiality_locked)
   const currentStageLabel = workflow?.stages?.find(item => item.key === record.current_stage)?.label || formatLabel(record.current_stage || 'Not assigned')
   const qualityStatus = record.quality_review_status === 'not_ready' && record.current_stage === 'delivered' && record.lifecycle_state === 'completed'
     ? 'legacy_completed'
@@ -362,7 +338,6 @@ const ProductionRecordDetail = () => {
     setFeedback({ type: 'success', message: successMessage })
     await Promise.all([
       dispatch(loadProductionRecord(record.id)),
-      dispatch(loadProductionConfidentiality(record.id)),
       dispatch(loadProductionCollaboration(record.id)),
       dispatch(loadProductionSummary()),
     ])
@@ -380,13 +355,11 @@ const ProductionRecordDetail = () => {
       return false
     }
     setFeedback({ type: 'success', message: successMessage })
-    const nextConfidentiality = result.payload?.data?.confidentiality
     const refreshes = [
       dispatch(loadProductionRecord(record.id)),
-      dispatch(loadProductionConfidentiality(record.id)),
+      dispatch(loadProductionCollaboration(record.id)),
       dispatch(loadProductionSummary()),
     ]
-    if (!nextConfidentiality?.locked) refreshes.push(dispatch(loadProductionCollaboration(record.id)))
     await Promise.all(refreshes)
     dispatch(trackProductEvent('production.update_completed', 'production_update'))
     return true
@@ -402,32 +375,17 @@ const ProductionRecordDetail = () => {
     {detail?.actions?.edit && <Button variant='secondary' onClick={() => setDrawer('edit')}><Edit3 aria-hidden='true' /> Edit</Button>}
     {detail?.actions?.assign && organization.type === 'oem' && <Button variant='secondary' onClick={() => setDrawer('assign')}><UserRoundCheck aria-hidden='true' /> {record.supplier_organization ? 'Reassign' : 'Assign'}</Button>}
     {detail?.actions?.assign_machine && <Button variant='secondary' onClick={() => setDrawer('machine')}><Cog aria-hidden='true' /> Machine</Button>}
-    {!confidentialityLocked && (confidentiality?.can_configure || confidentiality?.can_manage_roster) && <Button variant='secondary' onClick={() => setDrawer('confidentiality')}><ShieldCheck aria-hidden='true' /> Confidentiality</Button>}
-    {canReportAttention && !confidentialityLocked && <Button variant='secondary' onClick={() => setDrawer('attention')}><AlertTriangle aria-hidden='true' /> Flag attention</Button>}
+    {canReportAttention && <Button variant='secondary' onClick={() => setDrawer('attention')}><AlertTriangle aria-hidden='true' /> Flag attention</Button>}
   </>
 
   const projectedLate = record.projected_arrival_date && record.required_delivery_date
     && new Date(record.projected_arrival_date) > new Date(record.required_delivery_date)
-  const confidentialityPanel = <ConfidentialityPanel
-    confidentiality={confidentiality}
-    loading={confidentialityEntry?.loading}
-    pending={confidentialityEntry?.mutating}
-    feedback={confidentialityEntry?.error ? { type: 'error', message: confidentialityEntry.error.message } : feedback}
-    organizationType={organization.type}
-    onConfigure={payload => runInline(() => dispatch(configureProductionConfidentiality(record.id, payload)), 'Confidentiality requirement updated. A new supplier signature is required.')}
-    onSign={payload => runInline(() => dispatch(acceptProductionConfidentiality(record.id, payload)), 'Confidentiality requirements signed. Protected production access is now active.')}
-    onRosterSave={payload => runInline(() => dispatch(updateProductionConfidentialityRoster(record.id, payload)), 'Restricted access roster updated.')}
-  />
-
   return <>
     <Seo title={`${record.public_reference} production record`} description='Production commitment detail.' path={`/app/production/${record.id}`} noIndex />
     <Button href={returnPath} variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Production</Button>
-    <AppPageHeader eyebrow={record.public_reference} title={confidentialityLocked ? 'Protected production assignment' : record.part_number || 'Draft production record'} description={confidentialityLocked ? 'Production details remain hidden until the confidentiality requirement grants you access.' : record.part_name || 'Complete the draft before assigning it to a supplier.'} actions={actionButtons} />
+    <AppPageHeader eyebrow={record.public_reference} title={record.part_number || 'Draft production record'} description={record.part_name || 'Complete the draft before assigning it to a supplier.'} actions={actionButtons} />
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     {error && <ErrorState description={error.message} onRetry={() => dispatch(loadProductionRecord(record.id))} />}
-    {confidentialityLocked && confidentialityPanel}
-    {confidentialityLocked ? null : <>
-    {confidentiality?.level === 'restricted' && <div className='productionRestrictionBanner'><LockKeyhole aria-hidden='true' /><div><strong>Restricted production access</strong><span>Only specifically authorized supplier users can open this record.</span></div></div>}
     <div className='productionStatusStrip'>
       <div><span>Lifecycle</span><StatusBadge tone={statusTone(record.lifecycle_state)}>{formatLabel(record.lifecycle_state)}</StatusBadge></div>
       <div><span>Stage</span><StatusBadge tone='neutral'>{currentStageLabel}</StatusBadge></div>
@@ -466,8 +424,7 @@ const ProductionRecordDetail = () => {
       <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={file => dispatch(requestAttachmentDownload(record.id, file.id))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
       {organization.type === 'oem' && (detail?.actions?.cancel || detail?.actions?.reopen || detail?.actions?.archive) && <section className='appPanel productionLifecycleActions'><header className='appPanel__header'><div><p className='technicalLabel'>Record controls</p><h2>Lifecycle</h2></div></header><div>{detail.actions.cancel && <Button variant='secondary' onClick={() => setDrawer('cancel')}><X aria-hidden='true' /> Cancel record</Button>}{detail.actions.reopen && <Button variant='secondary' onClick={() => setDrawer('reopen')}><RotateCcw aria-hidden='true' /> Reopen record</Button>}{detail.actions.archive && <Button variant='secondary' onClick={() => setDrawer('archive')}><Archive aria-hidden='true' /> Archive record</Button>}</div></section>}
     </div>
-    </>}
-    <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', confidentiality: 'Production confidentiality', attention: 'Flag for attention', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>
+    <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>
       {drawer === 'accept' && <AcceptanceForm record={record} machines={activeMachines} pending={pending} feedback={feedback} onDecline={() => { setFeedback(null); setDrawer('decline') }} onSubmit={payload => run(() => dispatch(acceptProductionRecord(record.id, payload)), 'Assignment accepted.')} />}
       {drawer === 'decline' && <ReasonForm pending={pending} feedback={feedback} danger description='Declining returns the decision to the OEM. A reason is required and remains in history.' submitLabel='Decline assignment' onSubmit={reason => run(() => dispatch(declineProductionRecord(record.id, { reason, version: record.version, idempotency_key: requestKey('decline') })), 'Assignment declined.')} />}
       {drawer === 'assign' && <AssignmentForm record={record} relationships={relationships} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionRecord(record.id, payload)), 'Supplier assignment saved.')} />}
@@ -481,7 +438,6 @@ const ProductionRecordDetail = () => {
         setDrawer(null)
         return true
       }} />}
-      {drawer === 'confidentiality' && confidentialityPanel}
       {drawer === 'attention' && <AttentionForm organizationType={organization.type} pending={collaboration?.mutating} feedback={feedback} onSubmit={payload => run(() => dispatch(reportProductionAttention(record.id, payload)), 'Attention flag added.')} />}
       {drawer === 'quality-issue' && <QualityIssueForm record={record} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(reportProductionQualityIssue(record.id, payload)), 'Shared quality issue opened for the supplier.')} />}
       {drawer === 'quality-approval' && <QualityApprovalForm record={record} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(approveProductionQuality(record.id, payload)), 'Parts approved and production record completed.')} />}

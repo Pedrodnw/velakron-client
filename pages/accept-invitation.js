@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux'
 import AuthPageShell from '../components/auth/AuthPageShell'
 import FormField from '../components/auth/FormField'
 import FormMessage from '../components/auth/FormMessage'
+import PlatformTermsAcceptance from '../components/auth/PlatformTermsAcceptance'
 import { resultError } from '../components/auth/utils'
 import { Button } from '../components/design-system'
 import Seo from '../components/Seo'
@@ -17,8 +18,10 @@ const AcceptInvitation = () => {
   const [state, setState] = useState('checking')
   const [invitation, setInvitation] = useState(null)
   const [existing, setExisting] = useState(false)
+  const [platformTerms, setPlatformTerms] = useState(null)
+  const [platformTermsRequired, setPlatformTermsRequired] = useState(false)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ first_name: '', last_name: '', password: '', confirm_password: '' })
+  const [form, setForm] = useState({ first_name: '', last_name: '', password: '', confirm_password: '', platform_terms_accepted: false, platform_terms_version: '' })
 
   useEffect(() => {
     if (!router.isReady) return
@@ -28,7 +31,14 @@ const AcceptInvitation = () => {
       const data = result.payload?.data
       setInvitation(data.invitation)
       setExisting(data.existing_account)
-      setForm(current => ({ ...current, first_name: data.invitation.first_name || '', last_name: data.invitation.last_name || '' }))
+      setPlatformTerms(data.platform_terms)
+      setPlatformTermsRequired(Boolean(data.platform_terms_required))
+      setForm(current => ({
+        ...current,
+        first_name: data.invitation.first_name || '',
+        last_name: data.invitation.last_name || '',
+        platform_terms_version: data.platform_terms?.version || '',
+      }))
       setState('ready')
     })
   }, [dispatch, router.isReady, token])
@@ -60,6 +70,11 @@ const AcceptInvitation = () => {
         </div>}
         <FormField id='invite-password' label={existing ? 'Current password' : 'Create password'} name='password' type='password' value={form.password} onChange={update} autoComplete={existing ? 'current-password' : 'new-password'} minLength={existing ? undefined : 12} maxLength={128} hint={existing ? 'Confirm that this invitation belongs to your account.' : 'Use 12–128 characters.'} required />
         {!existing && <FormField id='invite-confirm-password' label='Confirm password' name='confirm_password' type='password' value={form.confirm_password} onChange={update} autoComplete='new-password' required />}
+        {platformTermsRequired && <PlatformTermsAcceptance
+          terms={platformTerms}
+          checked={form.platform_terms_accepted}
+          onChange={checked => setForm(current => ({ ...current, platform_terms_accepted: checked }))}
+        />}
         <Button className='authForm__submit' type='submit' disabled={state === 'submitting'}>{state === 'submitting' ? <><LoaderCircle className='spin' aria-hidden='true' /> Accepting…</> : <>Accept Invitation <ArrowRight aria-hidden='true' /></>}</Button>
       </form>}
     </AuthPageShell>

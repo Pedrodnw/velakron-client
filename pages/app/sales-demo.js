@@ -473,7 +473,6 @@ const TemplateEditor = ({ templates, onRefresh }) => {
           <div className='salesDemoCompanyEditor'>
             <h3>Starting relationship</h3>
             <label><span>Status</span><select value={payload.relationship?.status || 'active'} onChange={event => setPayload(current => ({ ...current, relationship: { ...current.relationship, status: event.target.value } }))}><option value='active'>Active</option><option value='pending_supplier'>Awaiting supplier acceptance</option></select></label>
-            <label><span>Confidentiality</span><select value={payload.relationship?.confidentiality_default || 'confidential'} onChange={event => setPayload(current => ({ ...current, relationship: { ...current.relationship, confidentiality_default: event.target.value } }))}><option value='confidential'>Confidential</option><option value='restricted'>Restricted</option></select></label>
             <label><span>Supplier code prefix</span><input value={payload.relationship?.supplier_code_prefix || ''} maxLength={20} onChange={event => setPayload(current => ({ ...current, relationship: { ...current.relationship, supplier_code_prefix: event.target.value } }))} /></label>
           </div>
         </fieldset>

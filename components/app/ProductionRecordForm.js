@@ -34,7 +34,6 @@ export const blankProductionRecord = {
   external_erp_reference: '',
   oem_internal_note: '',
   supplier_organization_id: '',
-  confidentiality_level: 'confidential',
 }
 
 const steps = [
@@ -53,9 +52,6 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
   const activeRelationships = useMemo(() => relationships.filter(item => (
     item.status === 'active' && supplierFromRelationship(item)?.id
   )), [relationships])
-  const selectedRelationship = activeRelationships.find(item => (
-    supplierFromRelationship(item)?.id === form.supplier_organization_id
-  ))
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }))
 
   const save = action => onSubmit({
@@ -105,16 +101,7 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
       </div>}
       {step === 3 && <div className='productionFormSection'>
         <header><p className='technicalLabel'>Step 4 of 5</p><h2>Choose the supplier</h2><p>Only active, connected supplier companies can receive the assignment.</p></header>
-        <label className='selectField' htmlFor='production-supplier'><span>Connected supplier</span><select id='production-supplier' value={form.supplier_organization_id} onChange={event => {
-          const supplierId = event.target.value
-          const relationship = activeRelationships.find(item => supplierFromRelationship(item)?.id === supplierId)
-          setForm(current => ({
-            ...current,
-            supplier_organization_id: supplierId,
-            confidentiality_level: relationship?.confidentiality_default || current.confidentiality_level || 'confidential',
-          }))
-        }}><option value=''>Select supplier</option>{activeRelationships.map(relationship => { const supplier = supplierFromRelationship(relationship); return <option key={supplier.id} value={supplier.id}>{supplier.name}</option> })}</select><small>You can still save this record as a private draft without choosing a supplier.</small></label>
-        <label className='selectField' htmlFor='production-confidentiality'><span>Design confidentiality</span><select id='production-confidentiality' value={form.confidentiality_level} onChange={event => set('confidentiality_level', event.target.value)}><option value='confidential' disabled={selectedRelationship?.confidentiality_default === 'restricted'}>Confidential — supplier team</option><option value='restricted'>Restricted — named supplier users only</option></select><small>{selectedRelationship?.confidentiality_default === 'restricted' ? 'This supplier relationship defaults to Restricted. After assignment, an OEM administrator can approve a lower level with a documented reason.' : 'Restricted requires the supplier administrator to name the specific users who may open this record.'}</small></label>
+        <label className='selectField' htmlFor='production-supplier'><span>Connected supplier</span><select id='production-supplier' value={form.supplier_organization_id} onChange={event => set('supplier_organization_id', event.target.value)}><option value=''>Select supplier</option>{activeRelationships.map(relationship => { const supplier = supplierFromRelationship(relationship); return <option key={supplier.id} value={supplier.id}>{supplier.name}</option> })}</select><small>You can still save this record as a private draft without choosing a supplier. Once assigned, active members of both companies collaborate under the Platform Confidentiality Terms.</small></label>
         <div className='regulatedDataNotice regulatedDataNotice--form'><FileText aria-hidden='true' /><p><strong>Do not upload regulated data.</strong> ITAR, EAR-controlled, CUI, classified, and similar technical data are not supported in the prototype.</p></div>
         <label className='textAreaField' htmlFor='production-internal-note'><span>OEM-internal note</span><textarea id='production-internal-note' value={form.oem_internal_note} onChange={event => set('oem_internal_note', event.target.value)} maxLength={3000} /><small>Never visible to the supplier.</small></label>
       </div>}
@@ -127,7 +114,7 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
           <div><dt>Quantity</dt><dd>{form.quantity || 'Missing'} {productionUnits.find(([key]) => key === form.unit)?.[1] || formatLabel(form.unit)}</dd></div>
           <div><dt>Required arrival</dt><dd>{formatDate(form.required_delivery_date)}</dd></div>
           <div><dt>Supplier</dt><dd>{activeRelationships.find(item => supplierFromRelationship(item)?.id === form.supplier_organization_id)?.supplier_organization?.name || 'Not selected'}</dd></div>
-          <div><dt>Confidentiality</dt><dd>{form.confidentiality_level === 'restricted' ? 'Restricted — named supplier users only' : 'Confidential — supplier team'}</dd></div>
+          <div><dt>Document protection</dt><dd>Velakron Platform Confidentiality Terms</dd></div>
           <div><dt>First article</dt><dd>{form.first_article_required ? 'Required' : 'Not required'}</dd></div>
         </dl>
       </div>}

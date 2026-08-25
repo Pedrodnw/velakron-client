@@ -4,7 +4,7 @@ import { uploadFileToIntent } from '../../fileTransfer'
 import { organizationContextCleared, organizationSwitchRequested } from '../appContext'
 
 const emptyEntry = () => ({ data: null, loading: false, mutating: false, upload: null, error: null })
-const initialState = { production: {}, relationships: {} }
+const initialState = { relationships: {} }
 const ensure = (state, scope, id) => {
   const key = String(id)
   if (!state[scope][key]) state[scope][key] = emptyEntry()
@@ -53,55 +53,13 @@ const slice = createSlice({
 
 const { failed, mutationRequested, received, requested, uploadChanged } = slice.actions
 const call = options => dispatch => dispatch(apiCallBegan({ organizationScoped: true, ...options }))
-const scopeUrl = (scope, id) => scope === 'production'
-  ? `/confidentiality/production-records/${id}`
-  : `/confidentiality/relationships/${id}`
-
-export const loadProductionConfidentiality = id => async dispatch => {
-  dispatch(requested({ scope: 'production', id }))
-  const result = await dispatch(call({ url: scopeUrl('production', id), requestKey: `production-confidentiality-${id}` }))
-  if (result?.ok) dispatch(received({ scope: 'production', id, data: result.payload.data.confidentiality }))
-  else dispatch(failed({ scope: 'production', id, error: result?.error || { message: 'Confidentiality requirements could not be loaded.' } }))
-  return result
-}
-
-export const configureProductionConfidentiality = (id, data) => async dispatch => {
-  dispatch(mutationRequested({ scope: 'production', id }))
-  const result = await dispatch(call({ url: scopeUrl('production', id), method: 'patch', data }))
-  if (result?.ok) dispatch(received({ scope: 'production', id, data: result.payload.data.confidentiality }))
-  else dispatch(failed({ scope: 'production', id, error: result?.error || { message: 'Confidentiality settings could not be saved.' } }))
-  return result
-}
-
-export const acceptProductionConfidentiality = (id, data) => async dispatch => {
-  dispatch(mutationRequested({ scope: 'production', id }))
-  const result = await dispatch(call({ url: `${scopeUrl('production', id)}/accept`, method: 'post', data }))
-  if (result?.ok) dispatch(received({ scope: 'production', id, data: result.payload.data.confidentiality }))
-  else dispatch(failed({ scope: 'production', id, error: result?.error || { message: 'The confidentiality requirement could not be signed.' } }))
-  return result
-}
-
-export const updateProductionConfidentialityRoster = (id, data) => async dispatch => {
-  dispatch(mutationRequested({ scope: 'production', id }))
-  const result = await dispatch(call({ url: `${scopeUrl('production', id)}/roster`, method: 'patch', data }))
-  if (result?.ok) dispatch(received({ scope: 'production', id, data: result.payload.data.confidentiality }))
-  else dispatch(failed({ scope: 'production', id, error: result?.error || { message: 'The Restricted roster could not be saved.' } }))
-  return result
-}
+const relationshipUrl = id => `/confidentiality/relationships/${id}`
 
 export const loadRelationshipConfidentiality = id => async dispatch => {
   dispatch(requested({ scope: 'relationships', id }))
-  const result = await dispatch(call({ url: scopeUrl('relationship', id), requestKey: `relationship-confidentiality-${id}` }))
+  const result = await dispatch(call({ url: relationshipUrl(id), requestKey: `relationship-confidentiality-${id}` }))
   if (result?.ok) dispatch(received({ scope: 'relationships', id, data: result.payload.data.confidentiality }))
   else dispatch(failed({ scope: 'relationships', id, error: result?.error || { message: 'Relationship confidentiality could not be loaded.' } }))
-  return result
-}
-
-export const configureRelationshipConfidentiality = (id, data) => async dispatch => {
-  dispatch(mutationRequested({ scope: 'relationships', id }))
-  const result = await dispatch(call({ url: scopeUrl('relationship', id), method: 'patch', data }))
-  if (result?.ok) dispatch(received({ scope: 'relationships', id, data: result.payload.data.confidentiality }))
-  else dispatch(failed({ scope: 'relationships', id, error: result?.error || { message: 'Relationship confidentiality could not be saved.' } }))
   return result
 }
 
@@ -114,7 +72,7 @@ export const uploadRelationshipNda = (id, {
   const stateScope = 'relationships'
   dispatch(mutationRequested({ scope: stateScope, id }))
   dispatch(uploadChanged({ scope: stateScope, id, upload: { filename: file.name, progress: 0, state: 'preparing' } }))
-  const base = `${scopeUrl('relationship', id)}/nda`
+  const base = `${relationshipUrl(id)}/nda`
   const intent = await dispatch(call({
     url: `${base}/intents`,
     method: 'post',
@@ -158,7 +116,7 @@ export const uploadRelationshipNda = (id, {
 export const updateRelationshipNdaDates = (id, data) => async dispatch => {
   dispatch(mutationRequested({ scope: 'relationships', id }))
   const result = await dispatch(call({
-    url: `${scopeUrl('relationship', id)}/nda/dates`,
+    url: `${relationshipUrl(id)}/nda/dates`,
     method: 'patch',
     data,
   }))
@@ -171,26 +129,9 @@ export const updateRelationshipNdaDates = (id, data) => async dispatch => {
   return result
 }
 
-export const acceptRelationshipNda = (id, data) => async dispatch => {
-  dispatch(mutationRequested({ scope: 'relationships', id }))
-  const result = await dispatch(call({
-    url: `${scopeUrl('relationship', id)}/accept`,
-    method: 'post',
-    data,
-  }))
-  if (result?.ok) dispatch(received({ scope: 'relationships', id, data: result.payload.data.confidentiality }))
-  else dispatch(failed({
-    scope: 'relationships',
-    id,
-    error: result?.error || { message: 'The NDA could not be signed.' },
-  }))
-  return result
-}
-
 const stateFor = state => state.entities.confidentiality
 const EMPTY = Object.freeze(emptyEntry())
 export const confidentialitySelectors = {
-  getProduction: id => state => stateFor(state).production[String(id)] || EMPTY,
   getRelationship: id => state => stateFor(state).relationships[String(id)] || EMPTY,
 }
 

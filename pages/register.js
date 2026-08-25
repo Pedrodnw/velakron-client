@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import AuthPageShell from '../components/auth/AuthPageShell'
 import FormField from '../components/auth/FormField'
 import FormMessage from '../components/auth/FormMessage'
+import PlatformTermsAcceptance from '../components/auth/PlatformTermsAcceptance'
 import { resultError } from '../components/auth/utils'
 import { Button } from '../components/design-system'
 import LinkWrap from '../components/LinkWrap'
@@ -14,6 +15,7 @@ import {
   getAuthUser,
   registerAccount,
 } from '../store/slices/auth'
+import { loadPlatformTerms } from '../store/slices/identity'
 
 const Register = () => {
   const dispatch = useDispatch()
@@ -26,13 +28,26 @@ const Register = () => {
     email: '',
     password: '',
     confirm_password: '',
+    platform_terms_accepted: false,
+    platform_terms_version: '',
   })
+  const [platformTerms, setPlatformTerms] = useState(null)
+  const [platformTermsError, setPlatformTermsError] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (initialized && user) router.replace('/app')
   }, [initialized, router, user])
+
+  useEffect(() => {
+    dispatch(loadPlatformTerms()).then(result => {
+      const terms = result?.payload?.data?.platform_terms || null
+      setPlatformTerms(terms)
+      if (terms) setForm(current => ({ ...current, platform_terms_version: terms.version }))
+      else setPlatformTermsError('The current confidentiality terms could not be loaded. Refresh this page before creating an account.')
+    })
+  }, [dispatch])
 
   const update = event => setForm(current => ({
     ...current,
@@ -54,6 +69,8 @@ const Register = () => {
       last_name: form.last_name,
       email: form.email,
       password: form.password,
+      platform_terms_accepted: form.platform_terms_accepted,
+      platform_terms_version: form.platform_terms_version,
     }))
     setPending(false)
 
@@ -80,6 +97,7 @@ const Register = () => {
     >
       <form className='authForm' onSubmit={submit}>
         <FormMessage>{error}</FormMessage>
+        <FormMessage>{platformTermsError}</FormMessage>
         <div className='authForm__row'>
           <FormField
             id='register-first-name'
@@ -133,7 +151,12 @@ const Register = () => {
           autoComplete='new-password'
           required
         />
-        <Button className='authForm__submit' type='submit' disabled={pending}>
+        <PlatformTermsAcceptance
+          terms={platformTerms}
+          checked={form.platform_terms_accepted}
+          onChange={checked => setForm(current => ({ ...current, platform_terms_accepted: checked }))}
+        />
+        <Button className='authForm__submit' type='submit' disabled={pending || !platformTerms}>
           {pending ? <><LoaderCircle className='spin' aria-hidden='true' /> Creating account…</> : <>Create Account <ArrowRight aria-hidden='true' /></>}
         </Button>
         <p className='authForm__alternate'>

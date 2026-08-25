@@ -13,9 +13,7 @@ import { getActiveOrganization, getHasPermission } from '../../../store/slices/a
 import { loadSupplierProfileDetail, supplierProfileSelectors } from '../../../store/slices/entities/supplierProfiles'
 import { loadRelationships, relationshipSelectors, updateRelationship } from '../../../store/slices/entities/relationships'
 import {
-  acceptRelationshipNda,
   confidentialitySelectors,
-  configureRelationshipConfidentiality,
   loadRelationshipConfidentiality,
   updateRelationshipNdaDates,
   uploadRelationshipNda,
@@ -78,7 +76,7 @@ const SupplierProfileDetail = () => {
     setFeedback(null)
     const result = await action()
     if (!result?.ok) {
-      setFeedback({ type: 'error', message: resultError(result, 'The relationship confidentiality settings could not be saved.') })
+      setFeedback({ type: 'error', message: resultError(result, 'The relationship NDA changes could not be saved.') })
       return false
     }
     setFeedback({ type: 'success', message: successMessage })
@@ -91,10 +89,8 @@ const SupplierProfileDetail = () => {
     pending={confidentialityEntry?.mutating}
     upload={confidentialityEntry?.upload}
     feedback={confidentialityEntry?.error ? { type: 'error', message: confidentialityEntry.error.message } : feedback}
-    onConfigure={payload => runConfidentiality(() => dispatch(configureRelationshipConfidentiality(relationship.id, payload)), 'Relationship confidentiality default saved.')}
-    onUploadNda={payload => runConfidentiality(() => dispatch(uploadRelationshipNda(relationship.id, payload)), 'Supplier NDA uploaded. Current production access now requires a new signature.')}
-    onUpdateNdaDates={payload => runConfidentiality(() => dispatch(updateRelationshipNdaDates(relationship.id, payload)), 'Supplier NDA dates updated. Current production access now requires a new signature.')}
-    onAcceptNda={payload => runConfidentiality(() => dispatch(acceptRelationshipNda(relationship.id, payload)), 'NDA signed and returned to the customer. The OEM has been notified.')}
+    onUploadNda={payload => runConfidentiality(() => dispatch(uploadRelationshipNda(relationship.id, payload)), 'Signed NDA stored. Production access is unchanged.')}
+    onUpdateNdaDates={payload => runConfidentiality(() => dispatch(updateRelationshipNdaDates(relationship.id, payload)), 'NDA dates updated. Production access is unchanged.')}
   />
   const endRelationship = async () => {
     if (!relationship) return
@@ -128,13 +124,13 @@ const SupplierProfileDetail = () => {
       <AppPageHeader
         eyebrow='Customer relationship'
         title={customer.name || 'Customer'}
-        description='Company contacts, relationship history, and the current supplier-wide NDA in one place.'
+        description='Company contacts, relationship history, and any optional signed NDA in one place.'
         actions={<div className='customerRelationshipHeaderActions'><StatusBadge tone={statusTone(relationship.status)}>{formatLabel(relationship.status)}</StatusBadge>{canManageRelationship && relationship.status === 'active' && <Button variant='secondary' onClick={() => { setEndReason(''); setEndDialogOpen(true) }}><Link2Off aria-hidden='true' /> End relationship</Button>}</div>}
       />
       {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
       <section className='customerRelationshipSummary'>
         <article className='appPanel'><CalendarDays aria-hidden='true' /><span>Relationship established</span><strong>{formatDate(establishedAt)}</strong><small>{relationshipAge(establishedAt)} working together</small></article>
-        <article className='appPanel'><FileSignature aria-hidden='true' /><span>Supplier-wide NDA</span><strong>{relationship.nda?.status === 'not_required' ? 'Not required' : formatLabel(relationship.nda?.status)}</strong><small>{relationship.nda?.expires_on ? `Through ${formatDate(relationship.nda.expires_on)}` : 'No active agreement dates'}</small></article>
+        <article className='appPanel'><FileSignature aria-hidden='true' /><span>Optional relationship NDA</span><strong>{relationship.nda?.status === 'not_required' ? 'None on file' : formatLabel(relationship.nda?.status)}</strong><small>{relationship.nda?.expires_on ? `Through ${formatDate(relationship.nda.expires_on)}` : 'Platform access is unaffected'}</small></article>
         <article className='appPanel'><Building2 aria-hidden='true' /><span>Customer supplier code</span><strong>{relationship.oem_supplier_code || 'Not assigned'}</strong><small>Provided by the OEM for this relationship</small></article>
       </section>
       <div className='appDashboardGrid customerCompanyGrid'>
@@ -173,7 +169,7 @@ const SupplierProfileDetail = () => {
     return <>
       <Seo title={supplierName} description='Supplier relationship and NDA management.' path={`/app/suppliers/${router.query.id}`} noIndex />
       <Button href='/app/suppliers' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Suppliers</Button>
-      <AppPageHeader eyebrow='Connected supplier' title={supplierName} description='Manage supplier-wide NDA dates and confidentiality even before the capability profile is available.' actions={relationship && <StatusBadge tone='success'>Active relationship</StatusBadge>} />
+      <AppPageHeader eyebrow='Connected supplier' title={supplierName} description='View company details and manage any optional signed NDA even before the capability profile is available.' actions={relationship && <StatusBadge tone='success'>Active relationship</StatusBadge>} />
       {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
       {confidentialityPanel}
       <ErrorState title='Supplier profile unavailable' description={error?.message || 'This supplier has not activated a customer-facing profile yet.'} />

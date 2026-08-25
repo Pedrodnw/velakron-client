@@ -51,6 +51,9 @@ export const resetPassword = (token, data) => request({
 export const previewInvitation = token => request({
   url: `/identity/invitations/${encodeURIComponent(token)}`, requestKey: 'invitation-preview',
 })
+export const loadPlatformTerms = () => request({
+  url: '/identity/platform-terms/current', requestKey: 'platform-terms-current',
+})
 export const acceptInvitation = (token, data) => request({
   url: `/identity/invitations/${encodeURIComponent(token)}/accept`, method: 'post', data, requestKey: 'invitation-accept',
 })

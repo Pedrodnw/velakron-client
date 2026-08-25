@@ -33,8 +33,8 @@ import {
 const relatedOrganization = (relationship, activeType) => (
   activeType === 'supplier' ? relationship.oem_organization : relationship.supplier_organization
 )
-const ndaTone = status => ({ active: 'success', scheduled: 'info', renewal_due: 'warning', expired: 'danger', dates_missing: 'warning' }[status] || 'neutral')
-const ndaLabel = status => ({ not_required: 'No NDA', dates_missing: 'Dates needed', renewal_due: 'Renewal due' }[status] || formatLabel(status))
+const ndaTone = status => ({ active: 'success', scheduled: 'info', renewal_due: 'warning', expired: 'danger', no_expiration: 'info' }[status] || 'neutral')
+const ndaLabel = status => ({ not_required: 'No NDA', no_expiration: 'No expiration', renewal_due: 'Renewal due' }[status] || formatLabel(status))
 
 const Suppliers = () => {
   const dispatch = useDispatch()
@@ -73,7 +73,7 @@ const Suppliers = () => {
     } },
     { key: 'status', label: 'Relationship', render: item => <StatusBadge tone={statusTone(item.status)}>{relationshipStatusLabel({ organizationType: organization.type, status: item.status }) || formatLabel(item.status)}</StatusBadge> },
     { key: 'oem_supplier_code', label: 'Supplier code', render: item => item.oem_supplier_code || '—' },
-    { key: 'nda', label: 'NDA', render: item => <div className='tablePrimary'><StatusBadge tone={ndaTone(item.nda?.status)}>{ndaLabel(item.nda?.status || 'not_required')}</StatusBadge><span>{item.nda?.expires_on ? `Through ${formatDate(item.nda.expires_on)}` : 'Supplier-wide agreement'}</span></div> },
+    { key: 'nda', label: 'Optional NDA', render: item => <div className='tablePrimary'><StatusBadge tone={ndaTone(item.nda?.status)}>{ndaLabel(item.nda?.status || 'not_required')}</StatusBadge><span>{item.nda?.expires_on ? `Through ${formatDate(item.nda.expires_on)}` : 'Does not control access'}</span></div> },
     { key: 'updated_at', label: 'Updated', render: item => formatDate(item.updated_at) },
     { key: 'actions', label: '', render: item => {
       const related = relatedOrganization(item, organization.type)
@@ -126,7 +126,7 @@ const Suppliers = () => {
     <AppPageHeader
       eyebrow='Supply network'
       title={organization.type === 'supplier' ? 'Customers' : 'Suppliers'}
-      description={organization.type === 'supplier' ? 'Accept customer invitations and see relationship-wide NDA renewal status.' : 'Invite suppliers, manage supplier-wide NDAs, and open active company capability profiles.'}
+      description={organization.type === 'supplier' ? 'Accept customer invitations and review any optional relationship NDA.' : 'Invite suppliers, store optional relationship NDAs, and open active company capability profiles.'}
       actions={<>{canInvite && organization.type === 'oem' && <Button onClick={() => setDrawerOpen(true)}><MailPlus aria-hidden='true' /> Invite Supplier</Button>}<StatusBadge tone='info'>{visibleRelationships.length} relationship{visibleRelationships.length === 1 ? '' : 's'}</StatusBadge></>}
     />
     {pendingRelationships.length > 0 && <section className='relationshipWorkflowNotice' aria-live='polite'>
