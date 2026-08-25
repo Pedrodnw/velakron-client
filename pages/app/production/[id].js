@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, Truck, UserRoundCheck, X } from 'lucide-react'
+import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, ShieldAlert, Truck, UserRoundCheck, X } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -41,6 +41,7 @@ import {
   productionCollaborationSelectors,
   reportProductionAttention,
   requestAttachmentDownload,
+  requestAttachmentView,
   resolveProductionAttention,
   reviseProductionNote,
   updateProductionForecast,
@@ -392,7 +393,9 @@ const ProductionRecordDetail = () => {
       <div><span>Acceptance</span><StatusBadge tone={statusTone(record.acceptance_status)}>{formatLabel(record.acceptance_status)}</StatusBadge></div>
       <div><span>Quality</span><StatusBadge tone={qualityStatus === 'approved' ? 'success' : qualityStatus === 'issue_open' ? 'danger' : 'neutral'}>{qualityStatusLabel(qualityStatus)}</StatusBadge></div>
       <div><span>Schedule</span><ScheduleHealthBadge value={projectedLate ? 'at_risk' : record.schedule_health} /></div>
+      {record.export_control === 'itar' && <div className='productionStatusStrip__itar'><span>Export control</span><StatusBadge tone='danger'>ITAR controlled</StatusBadge></div>}
     </div>
+    {record.export_control === 'itar' && <div className='itarRecordBanner'><ShieldAlert aria-hidden='true' /><div><p className='technicalLabel'>ITAR-controlled production record</p><strong>Protect every document, drawing, model, and screen view.</strong><p>Only authorized U.S. persons may access this technical data. Every file view or download requires a fresh confirmation and is recorded in the audit trail.</p>{detail?.compliance?.itar?.preview && <small>Preview environment: synthetic files only. Real ITAR data remains blocked.</small>}</div></div>}
     {record.acceptance_status === 'declined' && <div className='supplierStateNotice supplierStateNotice--changes_requested'><X aria-hidden='true' /><div><strong>Supplier declined this assignment</strong><p>Reassign or cancel the record. The supplier’s reason remains in the timeline.</p></div></div>}
     {record.acceptance_status === 'reacceptance_required' && <div className='supplierStateNotice'><RefreshCw aria-hidden='true' /><div><strong>Supplier acceptance is required again</strong><p>An accepted commitment changed. The previous commitment remains in history.</p></div></div>}
     {record.quality_review_status === 'pending' && <div className='supplierStateNotice'><PackageCheck aria-hidden='true' /><div><strong>Parts received — OEM inspection pending</strong><p>Delivery is confirmed, but this record remains active until the OEM accepts the parts.</p></div></div>}
@@ -414,6 +417,7 @@ const ProductionRecordDetail = () => {
           <div><dt>Last supplier update</dt><dd>{updateAge(record.last_supplier_update_at)}</dd></div>
           <div><dt>Primary machine</dt><dd>{record.current_machine ? `${record.current_machine.shop_identifier} — ${record.current_machine.manufacturer} ${record.current_machine.model}` : 'Not assigned'}</dd></div>
           <div><dt>First article</dt><dd>{record.first_article_required ? 'Required' : 'Not required'}</dd></div>
+          <div><dt>Export control</dt><dd>{record.export_control === 'itar' ? 'ITAR controlled' : 'Not marked ITAR'}</dd></div>
         </dl>
       </section>
       <section className='appPanel productionProgress'>
@@ -421,7 +425,7 @@ const ProductionRecordDetail = () => {
         <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} lifecycleState={record.lifecycle_state} />
       </section>
       {record.oem_internal_note && <section className='appPanel productionInternalNote'><header className='appPanel__header'><div><p className='technicalLabel'>OEM only</p><h2>Internal note</h2></div></header><p>{record.oem_internal_note}</p></section>}
-      <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={file => dispatch(requestAttachmentDownload(record.id, file.id))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
+      <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
       {organization.type === 'oem' && (detail?.actions?.cancel || detail?.actions?.reopen || detail?.actions?.archive) && <section className='appPanel productionLifecycleActions'><header className='appPanel__header'><div><p className='technicalLabel'>Record controls</p><h2>Lifecycle</h2></div></header><div>{detail.actions.cancel && <Button variant='secondary' onClick={() => setDrawer('cancel')}><X aria-hidden='true' /> Cancel record</Button>}{detail.actions.reopen && <Button variant='secondary' onClick={() => setDrawer('reopen')}><RotateCcw aria-hidden='true' /> Reopen record</Button>}{detail.actions.archive && <Button variant='secondary' onClick={() => setDrawer('archive')}><Archive aria-hidden='true' /> Archive record</Button>}</div></section>}
     </div>
     <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>

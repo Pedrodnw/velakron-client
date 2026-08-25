@@ -1736,6 +1736,22 @@
   > button svg { width: 13px; height: 13px; }
 }
 
+.itarFileMarker,
+.itarTableMarker {
+  display: inline-flex !important;
+  width: fit-content;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  color: var(--vk-danger) !important;
+  font-size: 9px !important;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  svg { width: 11px; height: 11px; }
+}
+
 .modelViewer {
   display: grid;
   gap: 12px;
@@ -2806,6 +2822,40 @@
   small { margin-top: 4px; color: var(--app-text-muted); font-size: 12px; }
 }
 
+.itarClassificationControl,
+.itarUploadAcknowledgement {
+  grid-template-columns: 20px 20px minmax(0, 1fr);
+  border-color: rgba(#c92f3d, 0.3);
+  background: rgba(#c92f3d, 0.045);
+
+  > svg { width: 18px; height: 18px; color: var(--vk-danger); }
+  &.is-selected { border-color: rgba(#c92f3d, 0.62); box-shadow: 0 0 0 3px rgba(#c92f3d, 0.08); }
+}
+
+.itarAvailabilityNotice,
+.itarRecordBanner,
+.itarAccessDialog__warning,
+.itarAccessDialog__notice {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid rgba(#c92f3d, 0.3);
+  border-radius: 9px;
+  background: rgba(#c92f3d, 0.055);
+
+  > svg { width: 20px; height: 20px; color: var(--vk-danger); }
+  p { margin: 0; color: var(--app-text-secondary); font-size: 12px; line-height: 1.55; }
+  strong { color: var(--app-text); }
+}
+
+.itarAvailabilityNotice--preview {
+  border-color: rgba(#f0ad4e, 0.35);
+  background: rgba(#f0ad4e, 0.07);
+  > svg { color: var(--vk-warning); }
+}
+
 .attentionCategoryField {
   min-width: 0;
   margin: 0;
@@ -2890,6 +2940,36 @@
       text-transform: uppercase;
     }
   }
+}
+
+.productionStatusStrip:has(.productionStatusStrip__itar) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.productionStatusStrip__itar { background: rgba(#c92f3d, 0.055) !important; }
+
+@media (max-width: 1280px) {
+  .productionStatusStrip:has(.productionStatusStrip__itar) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.itarRecordBanner {
+  margin-bottom: 20px;
+  padding: 18px;
+
+  .technicalLabel { margin-bottom: 4px; color: var(--vk-danger); }
+  strong { display: block; margin-bottom: 5px; font-size: 15px; }
+  small { display: block; margin-top: 8px; color: var(--vk-warning); font-size: 11px; font-weight: 650; }
+}
+
+.itarAccessDialog {
+  display: grid;
+  gap: 14px;
+
+  &__warning h3 { margin: 2px 0 5px; color: var(--app-text); font-size: 17px; overflow-wrap: anywhere; }
+  &__check { background: var(--app-surface); }
+  &__notice {
+    border-color: rgba(#f0ad4e, 0.35);
+    background: rgba(#f0ad4e, 0.07);
+    > svg { color: var(--vk-warning); }
+  }
+  &__actions { @include flex-row(flex-end, center, 9px); }
 }
 
 .productionDetailGrid {
@@ -3003,6 +3083,7 @@
   .productionTimelinePanel,
   .productionLifecycleActions { grid-column: auto; }
   .productionStatusStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .productionStatusStrip:has(.productionStatusStrip__itar) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: $phone) {
@@ -3024,6 +3105,8 @@
   }
 
   .productionFormBody { min-height: 420px; padding: 24px 16px; }
+
+  .itarAccessDialog__actions { align-items: stretch; flex-direction: column-reverse; .vk-button { width: 100%; } }
 
   .productionFormFooter {
     align-items: stretch;

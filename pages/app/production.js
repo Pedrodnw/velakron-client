@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   AppPageHeader, AppSkeleton, DataTable, ErrorState, FilterBar, Pagination,
-  PermissionDenied, RecordCard, ScheduleHealthBadge, StageBadge, Tabs,
+  PermissionDenied, RecordCard, ScheduleHealthBadge, StageBadge, StatusBadge, Tabs,
 } from '../../components/app'
 import { formatDate } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
@@ -132,7 +132,7 @@ const Production = () => {
   const company = item => type === 'supplier' ? item.oem_organization?.name : item.supplier_organization?.name || 'Unassigned'
   const recordTitle = item => item.part_number || item.part_name || 'Production record'
   const columns = [
-    { key: 'part', label: 'Part', render: item => <div className='tablePrimary'><strong>{recordTitle(item)}</strong><span>{item.part_name || item.public_reference}</span></div> },
+    { key: 'part', label: 'Part', render: item => <div className='tablePrimary'><strong>{recordTitle(item)}</strong><span>{item.part_name || item.public_reference}</span>{item.export_control === 'itar' && <span className='itarTableMarker'>ITAR controlled</span>}</div> },
     { key: 'company', label: type === 'supplier' ? 'OEM customer' : 'Supplier', render: company },
     { key: 'po', label: 'PO', render: item => <div className='tablePrimary'><strong>{item.po_number || '—'}</strong><span>{item.po_line_number ? `Line ${item.po_line_number}` : item.public_reference}</span></div> },
     { key: 'status', label: 'Stage', render: item => <StageBadge value={item.current_stage || item.acceptance_status} /> },
@@ -159,7 +159,7 @@ const Production = () => {
     </div>
     {error && <ErrorState description={error.message} onRetry={refresh} />}
     <section className='appPanel appPanel--table productionDesktopTable'>{showListSkeleton && !records.length ? <AppSkeleton lines={8} /> : <DataTable caption='Production records' columns={columns} rows={records} emptyTitle='No production records in this view' emptyDescription={type === 'oem' ? 'Create an awarded-work record or adjust the filters.' : 'Assigned work will appear here when an OEM sends it to your company.'} />}</section>
-    <section className='productionMobileCards' aria-label='Production records'>{records.map(item => <RecordCard key={item.id} href={recordHref(item)} eyebrow={item.public_reference} title={recordTitle(item)} description={company(item)} badges={<><StageBadge value={item.current_stage || item.acceptance_status} /><ScheduleHealthBadge value={item.schedule_health} /></>} facts={[{ label: 'PO', value: item.po_number }, { label: 'Required arrival', value: formatDate(item.required_delivery_date) }, { label: 'Expected ship', value: formatDate(item.expected_ship_date) }]} actionLabel='Open' />)}</section>
+    <section className='productionMobileCards' aria-label='Production records'>{records.map(item => <RecordCard key={item.id} href={recordHref(item)} eyebrow={item.public_reference} title={recordTitle(item)} description={company(item)} badges={<>{item.export_control === 'itar' && <StatusBadge tone='danger'>ITAR</StatusBadge>}<StageBadge value={item.current_stage || item.acceptance_status} /><ScheduleHealthBadge value={item.schedule_health} /></>} facts={[{ label: 'PO', value: item.po_number }, { label: 'Required arrival', value: formatDate(item.required_delivery_date) }, { label: 'Expected ship', value: formatDate(item.expected_ship_date) }]} actionLabel='Open' />)}</section>
     <Pagination meta={pagination} onPageChange={page => updateFilters({ page })} label='Production pages' />
   </>
 }

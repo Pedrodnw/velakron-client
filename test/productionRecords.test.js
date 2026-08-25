@@ -24,6 +24,13 @@ const detailPayload = {
     machine_assignments: [{ id: 'machine-assignment-a', status: 'active' }],
     timeline: [{ id: 'event-a', event_type: 'supplier_assignment.accepted' }],
     actions: { transition: true, assign_machine: true },
+    compliance: {
+      itar: {
+        enabled: false,
+        preview: true,
+        statement_version: 'itar-access-v1',
+      },
+    },
     workflow: { version: 'production-v1', stages: [{ key: 'assigned' }, { key: 'accepted' }] },
   },
 }
@@ -75,6 +82,7 @@ describe('production record state', () => {
     })
     expect(productionRecordSelectors.getDetailById('production-a')(state)).toMatchObject({
       actions: { transition: true, assign_machine: true },
+      compliance: { itar: { enabled: false, preview: true } },
       timeline: [{ id: 'event-a', event_type: 'supplier_assignment.accepted' }],
     })
     expect(productionRecordSelectors.getWorkflow(state).version).toBe('production-v1')

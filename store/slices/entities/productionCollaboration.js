@@ -183,6 +183,8 @@ export const uploadProductionAttachment = (id, {
   visibility,
   caption = '',
   regulated_data_acknowledged: regulatedDataAcknowledged,
+  synthetic_data_acknowledged: syntheticDataAcknowledged,
+  itar_upload_authorized: itarUploadAuthorized,
 }) => async dispatch => {
   dispatch(mutationRequested(id))
   dispatch(uploadChanged({ id, upload: { filename: file.name, progress: 0, state: 'preparing' } }))
@@ -197,6 +199,8 @@ export const uploadProductionAttachment = (id, {
       visibility,
       caption,
       regulated_data_acknowledged: regulatedDataAcknowledged === true,
+      synthetic_data_acknowledged: syntheticDataAcknowledged === true,
+      itar_upload_authorized: itarUploadAuthorized === true,
     },
   }))
   if (!intent?.ok) {
@@ -241,11 +245,11 @@ export const uploadProductionAttachment = (id, {
   return finalized
 }
 
-export const requestAttachmentDownload = (id, attachmentId) => async dispatch => {
+export const requestAttachmentDownload = (id, attachmentId, attestation = {}) => async dispatch => {
   const result = await dispatch(call({
     url: `/production-records/${id}/attachments/${attachmentId}/download-intent`,
     method: 'post',
-    data: {},
+    data: attestation,
   }))
   if (result?.ok && typeof window !== 'undefined') {
     const target = result.payload.data.download.target
@@ -253,6 +257,13 @@ export const requestAttachmentDownload = (id, attachmentId) => async dispatch =>
   }
   return result
 }
+
+export const requestAttachmentView = (id, attachmentId, attestation = {}) => dispatch => dispatch(call({
+  url: `/production-records/${id}/attachments/${attachmentId}/view-intent`,
+  method: 'post',
+  data: attestation,
+  requestKey: `production-attachment-view-${attachmentId}`,
+}))
 
 const stateFor = state => state.entities.productionCollaboration
 export const productionCollaborationSelectors = {

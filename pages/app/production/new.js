@@ -10,7 +10,7 @@ import { resultError } from '../../../components/auth/utils'
 import { Button } from '../../../components/design-system'
 import { getActiveOrganization, getHasPermission } from '../../../store/slices/appContext'
 import { relationshipSelectors, loadRelationships } from '../../../store/slices/entities/relationships'
-import { createProductionRecord, productionRecordSelectors } from '../../../store/slices/entities/productionRecords'
+import { createProductionRecord, loadProductionWorkflow, productionRecordSelectors } from '../../../store/slices/entities/productionRecords'
 
 const NewProductionRecord = () => {
   const router = useRouter()
@@ -19,10 +19,14 @@ const NewProductionRecord = () => {
   const allowed = useSelector(getHasPermission('production_record.create'))
   const relationships = useSelector(relationshipSelectors.getEntities)
   const pending = useSelector(productionRecordSelectors.getMutating)
+  const workflow = useSelector(productionRecordSelectors.getWorkflow)
   const [feedback, setFeedback] = useState(null)
 
   useEffect(() => {
-    if (allowed && organization?.type === 'oem') dispatch(loadRelationships(organization.id))
+    if (allowed && organization?.type === 'oem') {
+      dispatch(loadRelationships(organization.id))
+      dispatch(loadProductionWorkflow())
+    }
   }, [allowed, dispatch, organization?.id, organization?.type])
 
   if (!allowed || organization?.type !== 'oem') return <PermissionDenied />
@@ -42,7 +46,7 @@ const NewProductionRecord = () => {
     <Seo title='New production record' description='Create an awarded manufacturing commitment.' path='/app/production/new' noIndex />
     <Button href='/app/production' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Production</Button>
     <AppPageHeader eyebrow='Awarded work' title='New production record' description='Capture one awarded PO-line commitment, save it privately as a draft, or assign it to an active connected supplier.' />
-    <ProductionRecordForm relationships={relationships} pending={pending} feedback={feedback} onSubmit={submit} />
+    <ProductionRecordForm relationships={relationships} pending={pending} feedback={feedback} itarCapability={workflow?.compliance?.itar} onSubmit={submit} />
   </>
 }
 

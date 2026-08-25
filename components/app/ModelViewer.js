@@ -1,8 +1,32 @@
 import { Focus, LoaderCircle, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { resolveFileTransferTarget } from '../../store/fileTransfer'
 import { modelExtension, modelFormatLabel } from '../../store/modelFiles'
 
 let occtRuntimePromise = null
+const modelBytesPromises = new Map()
+
+const loadModelBytes = source => {
+  const target = resolveFileTransferTarget(source)
+  if (!modelBytesPromises.has(target)) {
+    const request = fetch(target, { credentials: 'include' })
+      .then(async response => {
+        if (response.status === 403) {
+          throw new Error('The one-time protected access grant was refused or expired. Close the viewer and confirm access again.')
+        }
+        if (!response.ok) throw new Error('Velakron could not securely load this model.')
+        return response.arrayBuffer()
+      })
+      .catch(error => {
+        modelBytesPromises.delete(target)
+        throw error
+      })
+    modelBytesPromises.set(target, request)
+    request.then(() => setTimeout(() => modelBytesPromises.delete(target), 10_000)).catch(() => {})
+  }
+  return modelBytesPromises.get(target)
+}
+
 const loadOcctRuntime = () => {
   if (!occtRuntimePromise) {
     occtRuntimePromise = import('occt-import-js')
@@ -102,16 +126,13 @@ const ModelViewer = ({ file, source }) => {
         const parserPromise = extension === 'stl'
           ? import('three/addons/loaders/STLLoader.js')
           : loadOcctRuntime()
-        const [THREE, { OrbitControls }, parser, response] = await Promise.all([
+        const [THREE, { OrbitControls }, parser, bytes] = await Promise.all([
           import('three'),
           import('three/addons/controls/OrbitControls.js'),
           parserPromise,
-          fetch(source, { credentials: 'include' }),
+          loadModelBytes(source),
         ])
         if (stopped || !mountRef.current) return
-        if (!response.ok) throw new Error('Velakron could not securely load this model.')
-        const bytes = await response.arrayBuffer()
-        if (stopped) return
 
         const scene = new THREE.Scene()
         scene.background = new THREE.Color(0xf7f9fc)

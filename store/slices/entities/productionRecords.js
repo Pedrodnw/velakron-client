@@ -63,6 +63,7 @@ const slice = createSlice({
         machineAssignments: data.machine_assignments || [],
         timeline: data.timeline || [],
         actions: data.actions || {},
+        compliance: data.compliance || {},
       }
       state.workflow = data.workflow || state.workflow
       state.warnings = data.warnings || []
@@ -84,6 +85,9 @@ const slice = createSlice({
       state.mutating = false
       state.mutationError = action.payload?.error || action.payload
     },
+    workflowReceived: (state, action) => {
+      state.workflow = action.payload?.data?.workflow || action.payload?.workflow || state.workflow
+    },
     filtersSet: (state, action) => {
       state.filters = { ...state.filters, ...(action.payload || {}) }
     },
@@ -102,6 +106,7 @@ const {
   mutationFailed,
   mutationRequested,
   requestFailed,
+  workflowReceived,
 } = slice.actions
 
 const ingestHistory = (dispatch, result) => {
@@ -149,6 +154,14 @@ export const loadProductionRecord = id => async dispatch => ingestHistory(dispat
   requestKey: `production-record-${id}`,
   organizationScoped: true,
 })))
+
+export const loadProductionWorkflow = () => apiCallBegan({
+  url: '/production-records/workflow',
+  onSuccess: workflowReceived.type,
+  onError: requestFailed.type,
+  requestKey: 'production-workflow',
+  organizationScoped: true,
+})
 
 const mutate = (id, path, method, data) => async dispatch => ingestHistory(dispatch, await dispatch(apiCallBegan({
   url: id ? `/production-records/${id}${path}` : '/production-records',

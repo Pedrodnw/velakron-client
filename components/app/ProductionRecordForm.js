@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check, FileText, Package, Save, Send, Settings2, UsersRound } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, FileText, Package, Save, Send, Settings2, ShieldAlert, UsersRound } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
@@ -34,6 +34,7 @@ export const blankProductionRecord = {
   external_erp_reference: '',
   oem_internal_note: '',
   supplier_organization_id: '',
+  export_control: 'none',
 }
 
 const steps = [
@@ -46,7 +47,7 @@ const steps = [
 
 const supplierFromRelationship = relationship => relationship.supplier_organization
 
-const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], pending, feedback, onSubmit }) => {
+const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], pending, feedback, itarCapability, onSubmit }) => {
   const [form, setForm] = useState({ ...blankProductionRecord, ...initial })
   const [step, setStep] = useState(0)
   const activeRelationships = useMemo(() => relationships.filter(item => (
@@ -78,6 +79,9 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
           <FormField id='production-part-name' label='Part name or description' value={form.part_name} onChange={event => set('part_name', event.target.value)} required />
           <FormField id='production-process' label='Process summary' value={form.process_summary} onChange={event => set('process_summary', event.target.value)} hint='Optional, such as five-axis machining and anodizing.' />
         </div>
+        <label className={`productionCheck itarClassificationControl${form.export_control === 'itar' ? ' is-selected' : ''}`}><input type='checkbox' checked={form.export_control === 'itar'} disabled={!itarCapability?.enabled && !itarCapability?.preview} onChange={event => set('export_control', event.target.checked ? 'itar' : 'none')} /><ShieldAlert aria-hidden='true' /><span><strong>This production record contains ITAR-controlled technical data</strong><small>This is a permanent high-security classification. Every file access will require a fresh U.S.-person and ITAR-handling confirmation.</small></span></label>
+        {!itarCapability?.enabled && itarCapability?.preview && <div className='itarAvailabilityNotice itarAvailabilityNotice--preview'><AlertTriangle aria-hidden='true' /><p><strong>Local preview only.</strong> Use synthetic files to review this workflow. Real ITAR data remains blocked until the GovCloud/FIPS environment is enabled.</p></div>}
+        {!itarCapability?.enabled && !itarCapability?.preview && <div className='itarAvailabilityNotice'><ShieldAlert aria-hidden='true' /><p><strong>ITAR storage is not yet enabled.</strong> Records cannot be marked ITAR until Velakron is running in the approved GovCloud/FIPS environment.</p></div>}
       </div>}
       {step === 1 && <div className='productionFormSection'>
         <header><p className='technicalLabel'>Step 2 of 5</p><h2>Add the purchase-order reference</h2><p>This record represents one awarded commitment or PO line. Pricing is intentionally not stored here.</p></header>
@@ -102,7 +106,7 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
       {step === 3 && <div className='productionFormSection'>
         <header><p className='technicalLabel'>Step 4 of 5</p><h2>Choose the supplier</h2><p>Only active, connected supplier companies can receive the assignment.</p></header>
         <label className='selectField' htmlFor='production-supplier'><span>Connected supplier</span><select id='production-supplier' value={form.supplier_organization_id} onChange={event => set('supplier_organization_id', event.target.value)}><option value=''>Select supplier</option>{activeRelationships.map(relationship => { const supplier = supplierFromRelationship(relationship); return <option key={supplier.id} value={supplier.id}>{supplier.name}</option> })}</select><small>You can still save this record as a private draft without choosing a supplier. Once assigned, active members of both companies collaborate under the Platform Confidentiality Terms.</small></label>
-        <div className='regulatedDataNotice regulatedDataNotice--form'><FileText aria-hidden='true' /><p><strong>Do not upload regulated data.</strong> ITAR, EAR-controlled, CUI, classified, and similar technical data are not supported in the prototype.</p></div>
+        <div className='regulatedDataNotice regulatedDataNotice--form'><FileText aria-hidden='true' /><p><strong>{form.export_control === 'itar' ? 'ITAR handling applies.' : 'Do not upload unsupported regulated data.'}</strong> {form.export_control === 'itar' ? 'All files on this record inherit the ITAR classification and protected access workflow.' : 'EAR-controlled, CUI, classified, and similar data are not supported. ITAR data is accepted only on a record explicitly marked ITAR in an enabled environment.'}</p></div>
         <label className='textAreaField' htmlFor='production-internal-note'><span>OEM-internal note</span><textarea id='production-internal-note' value={form.oem_internal_note} onChange={event => set('oem_internal_note', event.target.value)} maxLength={3000} /><small>Never visible to the supplier.</small></label>
       </div>}
       {step === 4 && <div className='productionFormSection productionReview'>
@@ -115,6 +119,7 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
           <div><dt>Required arrival</dt><dd>{formatDate(form.required_delivery_date)}</dd></div>
           <div><dt>Supplier</dt><dd>{activeRelationships.find(item => supplierFromRelationship(item)?.id === form.supplier_organization_id)?.supplier_organization?.name || 'Not selected'}</dd></div>
           <div><dt>Document protection</dt><dd>Velakron Platform Confidentiality Terms</dd></div>
+          <div><dt>Export control</dt><dd>{form.export_control === 'itar' ? 'ITAR controlled' : 'Not marked ITAR'}</dd></div>
           <div><dt>First article</dt><dd>{form.first_article_required ? 'Required' : 'Not required'}</dd></div>
         </dl>
       </div>}

@@ -34,7 +34,7 @@ const ProductionRecordCard = ({ record, organizationType }) => <RecordCard
   eyebrow={record.public_reference}
   title={record.part_number || record.part_name || 'Production record'}
   description={recordCompany(record, organizationType)}
-  badges={<><StageBadge value={record.current_stage} /><ScheduleHealthBadge value={record.schedule_health} /></>}
+  badges={<>{record.export_control === 'itar' && <StatusBadge tone='danger'>ITAR</StatusBadge>}<StageBadge value={record.current_stage} /><ScheduleHealthBadge value={record.schedule_health} /></>}
   facts={[
     { label: 'Required arrival', value: formatDate(record.required_delivery_date) },
     { label: 'Expected ship', value: formatDate(record.expected_ship_date) },
