@@ -170,6 +170,9 @@ export const reportProductionAttention = (id, data) => mutate(id, {
 export const acknowledgeProductionAttention = (id, conditionId) => mutate(id, {
   url: `/production-records/${id}/attention/${conditionId}/acknowledge`, method: 'post', data: {},
 })
+export const applyProductionAttentionWorkflowAction = (id, conditionId, action, note = '') => mutate(id, {
+  url: `/production-records/${id}/attention/${conditionId}/actions`, method: 'post', data: { action, note },
+})
 export const resolveProductionAttention = (id, conditionId, reason) => mutate(id, {
   url: `/production-records/${id}/attention/${conditionId}/resolve`, method: 'post', data: { reason },
 })

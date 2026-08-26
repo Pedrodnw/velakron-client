@@ -33,6 +33,7 @@ import {
 import { productionUnits } from '../../../components/app/ProductionRecordForm'
 import {
   acknowledgeProductionAttention,
+  applyProductionAttentionWorkflowAction,
   archiveProductionAttachment,
   archiveProductionNote,
   createProductionNote,
@@ -264,6 +265,19 @@ const AttentionForm = ({ pending, feedback, organizationType, onSubmit }) => {
   </form>
 }
 
+const AttentionWorkflowActionForm = ({ target, pending, feedback, onSubmit }) => {
+  const [note, setNote] = useState('')
+  const action = target?.action
+  const item = target?.item
+  if (!action || !item) return null
+  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit(note) }}>
+    <p>Current step: <strong>{item.workflow?.state_label}</strong>. This action is recorded in the shared workflow history for both companies.</p>
+    <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
+    <label className='textAreaField' htmlFor='attention-workflow-note'><span>{action.note_label || 'Optional note'}</span><textarea id='attention-workflow-note' value={note} onChange={event => setNote(event.target.value)} minLength={action.requires_note ? 8 : undefined} maxLength={1000} required={action.requires_note} placeholder={action.requires_note ? 'Provide enough detail for the other company to understand the action.' : 'Add context for the audit trail, if useful.'} /></label>
+    <FormActions pending={pending} submitLabel={action.label} icon={action.key.includes('reject') || action.key.includes('escalate') ? AlertTriangle : Check} />
+  </form>
+}
+
 const ProductionRecordDetail = () => {
   const router = useRouter()
   const dispatch = useDispatch()
@@ -373,12 +387,13 @@ const ProductionRecordDetail = () => {
     return true
   }
 
+  const activeProductionBlock = (collaboration?.attention || []).some(item => item.category === 'production_block' && item.active)
   const actionButtons = <>
     {detail?.actions?.accept && <Button onClick={() => setDrawer('accept')}><Check aria-hidden='true' /> Review assignment</Button>}
-    {detail?.actions?.transition && <Button onClick={() => setDrawer('stage')}><RefreshCw aria-hidden='true' /> Update stage</Button>}
+    {detail?.actions?.transition && !activeProductionBlock && <Button onClick={() => setDrawer('stage')}><RefreshCw aria-hidden='true' /> Update stage</Button>}
     {organization.type === 'supplier' && record.acceptance_status === 'accepted' && record.lifecycle_state === 'active' && <Button variant='secondary' onClick={() => setDrawer('forecast')}><CalendarCheck aria-hidden='true' /> Shipping forecast</Button>}
-    {detail?.actions?.confirm_delivery && <Button onClick={() => setDrawer('delivery')}><PackageCheck aria-hidden='true' /> Confirm delivery</Button>}
-    {detail?.actions?.approve_quality && <Button onClick={() => setDrawer('quality-approval')}><Check aria-hidden='true' /> Approve parts</Button>}
+    {detail?.actions?.confirm_delivery && !activeProductionBlock && <Button onClick={() => setDrawer('delivery')}><PackageCheck aria-hidden='true' /> Confirm delivery</Button>}
+    {detail?.actions?.approve_quality && !activeProductionBlock && <Button onClick={() => setDrawer('quality-approval')}><Check aria-hidden='true' /> Approve parts</Button>}
     {detail?.actions?.report_quality_issue && <Button variant='secondary' onClick={() => setDrawer('quality-issue')}><AlertTriangle aria-hidden='true' /> Report quality issue</Button>}
     {detail?.actions?.edit && <Button variant='secondary' onClick={() => setDrawer('edit')}><Edit3 aria-hidden='true' /> Edit</Button>}
     {detail?.actions?.assign && organization.type === 'oem' && <Button variant='secondary' onClick={() => setDrawer('assign')}><UserRoundCheck aria-hidden='true' /> {record.supplier_organization ? 'Reassign' : 'Assign'}</Button>}
@@ -407,8 +422,9 @@ const ProductionRecordDetail = () => {
     {record.acceptance_status === 'reacceptance_required' && <div className='supplierStateNotice'><RefreshCw aria-hidden='true' /><div><strong>Supplier acceptance is required again</strong><p>An accepted commitment changed. The previous commitment remains in history.</p></div></div>}
     {record.quality_review_status === 'pending' && <div className='supplierStateNotice'><PackageCheck aria-hidden='true' /><div><strong>Parts received — OEM inspection pending</strong><p>Delivery is confirmed, but this record remains active until the OEM accepts the parts.</p></div></div>}
     {record.quality_review_status === 'issue_open' && <div className='supplierStateNotice supplierStateNotice--changes_requested'><AlertTriangle aria-hidden='true' /><div><strong>Quality review requires action</strong><p>The shared issue, discussion, photos, and documents remain available to both companies until the OEM resolves it.</p></div></div>}
+    {activeProductionBlock && <div className='supplierStateNotice supplierStateNotice--changes_requested'><AlertTriangle aria-hidden='true' /><div><strong>Production is blocked</strong><p>Stage changes, delivery confirmation, and final approval remain locked until the production-block workflow is approved and the recipient confirms production has been released.</p></div></div>}
     {projectedLate && <div className='supplierStateNotice supplierStateNotice--changes_requested'><CalendarCheck aria-hidden='true' /><div><strong>The current forecast arrives after the required date</strong><p>The forecast remains visible instead of blocking acceptance so both companies can act on the real schedule.</p></div></div>}
-    <ProductionAttentionPanel conditions={collaboration?.attention || []} canAcknowledge={canAcknowledgeAttention} canResolve={item => canResolveAttention && (organization.type !== 'supplier' || item.source === 'supplier')} pending={collaboration?.mutating} onAcknowledge={item => runInline(() => dispatch(acknowledgeProductionAttention(record.id, item.id)), 'Attention reason acknowledged.')} onResolve={item => { setActionTarget(item); setDrawer('resolve-attention') }} />
+    <ProductionAttentionPanel conditions={collaboration?.attention || []} canAcknowledge={canAcknowledgeAttention} canResolve={item => canResolveAttention && (item.workflow?.managed || organization.type !== 'supplier' || item.source === 'supplier')} pending={collaboration?.mutating} onAcknowledge={item => runInline(() => dispatch(acknowledgeProductionAttention(record.id, item.id)), 'Attention reason acknowledged.')} onResolve={item => { setActionTarget(item); setDrawer('resolve-attention') }} onWorkflowAction={(item, action) => { setActionTarget({ item, action }); setDrawer('attention-workflow-action') }} />
     <div className='productionDetailGrid'>
       <section className='appPanel productionFacts'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Commitment</p><h2>Production details</h2></div><Truck aria-hidden='true' /></header>
@@ -435,7 +451,7 @@ const ProductionRecordDetail = () => {
       <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
       {organization.type === 'oem' && (detail?.actions?.cancel || detail?.actions?.reopen || detail?.actions?.archive) && <section className='appPanel productionLifecycleActions'><header className='appPanel__header'><div><p className='technicalLabel'>Record controls</p><h2>Lifecycle</h2></div></header><div>{detail.actions.cancel && <Button variant='secondary' onClick={() => setDrawer('cancel')}><X aria-hidden='true' /> Cancel record</Button>}{detail.actions.reopen && <Button variant='secondary' onClick={() => setDrawer('reopen')}><RotateCcw aria-hidden='true' /> Reopen record</Button>}{detail.actions.archive && <Button variant='secondary' onClick={() => setDrawer('archive')}><Archive aria-hidden='true' /> Archive record</Button>}</div></section>}
     </div>
-    <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>
+    <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'attention-workflow-action': actionTarget?.action?.label || 'Attention workflow action', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>
       {drawer === 'accept' && <AcceptanceForm record={record} machines={activeMachines} pending={pending} feedback={feedback} onDecline={() => { setFeedback(null); setDrawer('decline') }} onSubmit={payload => run(() => dispatch(acceptProductionRecord(record.id, payload)), 'Assignment accepted.')} />}
       {drawer === 'decline' && <ReasonForm pending={pending} feedback={feedback} danger description='Declining returns the decision to the OEM. A reason is required and remains in history.' submitLabel='Decline assignment' onSubmit={reason => run(() => dispatch(declineProductionRecord(record.id, { reason, version: record.version, idempotency_key: requestKey('decline') })), 'Assignment declined.')} />}
       {drawer === 'assign' && <AssignmentForm record={record} relationships={relationships} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionRecord(record.id, payload)), 'Supplier assignment saved.')} />}
@@ -450,6 +466,7 @@ const ProductionRecordDetail = () => {
         return true
       }} />}
       {drawer === 'attention' && <AttentionForm organizationType={organization.type} pending={collaboration?.mutating} feedback={feedback} onSubmit={payload => run(() => dispatch(reportProductionAttention(record.id, payload)), 'Attention flag added.')} />}
+      {drawer === 'attention-workflow-action' && <AttentionWorkflowActionForm target={actionTarget} pending={collaboration?.mutating} feedback={feedback} onSubmit={note => run(() => dispatch(applyProductionAttentionWorkflowAction(record.id, actionTarget.item.id, actionTarget.action.key, note)), `${actionTarget.action.label} completed.`)} />}
       {drawer === 'quality-issue' && <QualityIssueForm record={record} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(reportProductionQualityIssue(record.id, payload)), 'Shared quality issue opened for the supplier.')} />}
       {drawer === 'quality-approval' && <QualityApprovalForm record={record} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(approveProductionQuality(record.id, payload)), 'Parts approved and production record completed.')} />}
       {drawer === 'resolve-attention' && <ReasonForm pending={collaboration?.mutating} feedback={feedback} description={`Resolving “${formatLabel(actionTarget?.code)}” keeps the full history and records your reason.`} submitLabel='Resolve attention reason' onSubmit={reason => run(() => dispatch(resolveProductionAttention(record.id, actionTarget.id, reason)), 'Attention reason resolved.')} />}

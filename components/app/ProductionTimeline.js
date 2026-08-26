@@ -27,19 +27,25 @@ const presentation = {
   'attachment.archived': { title: 'File archived', icon: Archive },
   'attention.reported': { title: 'Attention reason reported', icon: AlertTriangle },
   'attention.resolved': { title: 'Attention reason resolved', icon: CheckCircle2 },
+  'attention.workflow_action': { title: 'Attention workflow updated', icon: CircleDot },
   'production_record.quality_issue_reported': { title: 'Quality issue opened', icon: AlertTriangle },
   'production_record.quality_approved': { title: 'Parts approved by OEM', icon: CheckCircle2 },
 }
 
 const describe = event => {
   const actor = event.actor?.display_name || event.actor?.organization_name || 'Authorized user'
+  const workflowChange = event.event_type === 'attention.workflow_action'
+    && event.after?.previous_state
+    && event.after?.next_state
+    ? `Workflow moved from ${formatLabel(event.after.previous_state)} to ${formatLabel(event.after.next_state)}.`
+    : ''
   const stage = event.new_stage && event.previous_stage !== event.new_stage
     ? `Moved from ${formatLabel(event.previous_stage)} to ${formatLabel(event.new_stage)}.`
     : ''
   const dateChange = event.expected_ship_before && event.expected_ship_after
     ? `Expected ship moved from ${formatDateTime(event.expected_ship_before)} to ${formatDateTime(event.expected_ship_after)}.`
     : ''
-  const message = event.note_reference?.body || event.note || event.reason || dateChange || stage
+  const message = event.note_reference?.body || event.note || event.reason || workflowChange || dateChange || stage
   const attachments = event.attachment_references?.length
     ? ` ${event.attachment_references.map(item => item.display_filename || item.original_filename).join(', ')}.`
     : ''
@@ -53,7 +59,9 @@ const ProductionTimeline = ({ events = [] }) => <div className='productionTimeli
       icon: CircleDot,
     }
     const category = attentionCategoryFor(event.after?.category)
-    const title = category && event.event_type === 'attention.reported'
+    const title = event.event_type === 'attention.workflow_action' && event.after?.action
+      ? `${formatLabel(event.after.action)} — ${category?.label || 'attention flag'}`
+      : category && event.event_type === 'attention.reported'
       ? `${category.label} flagged`
       : category && event.event_type === 'attention.resolved'
         ? `${category.label} resolved`
