@@ -172,7 +172,7 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
       window.removeEventListener('resize', measureViewport)
       observer?.disconnect()
     }
-  }, [inspectionMode, pageRailOpen, pdfDocument])
+  }, [documentState.loading, inspectionMode, pageRailOpen, pdfDocument])
 
   useEffect(() => {
     if (!selectedAnchor) return
