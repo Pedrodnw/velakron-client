@@ -154,14 +154,21 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
     }
     const measureViewport = () => updateViewportSize(viewport.getBoundingClientRect())
     measureViewport()
-    const frame = window.requestAnimationFrame(measureViewport)
+    const frames = []
+    frames.push(window.requestAnimationFrame(() => {
+      measureViewport()
+      frames.push(window.requestAnimationFrame(measureViewport))
+    }))
+    const timers = [50, 150, 400, 1000, 2000]
+      .map(delay => window.setTimeout(measureViewport, delay))
     const observer = typeof ResizeObserver === 'undefined'
       ? null
       : new ResizeObserver(entries => updateViewportSize(entries[0]?.contentRect))
     observer?.observe(viewport)
     window.addEventListener('resize', measureViewport)
     return () => {
-      window.cancelAnimationFrame(frame)
+      frames.forEach(frame => window.cancelAnimationFrame(frame))
+      timers.forEach(timer => window.clearTimeout(timer))
       window.removeEventListener('resize', measureViewport)
       observer?.disconnect()
     }
