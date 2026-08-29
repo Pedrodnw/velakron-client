@@ -1,4 +1,4 @@
-import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, ShieldAlert, Truck, UserRoundCheck, X } from 'lucide-react'
+import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, GitCompareArrows, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, ShieldAlert, Truck, UserRoundCheck, X } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -24,12 +24,17 @@ import {
   confirmProductionDelivery,
   declineProductionRecord,
   editProductionRecord,
+  actOnProductionRevisionChange,
   loadProductionRecord,
+  loadProductionRevisionChanges,
+  loadProductionRevisionImpact,
+  proposeProductionRevisionChange,
   productionRecordSelectors,
   reopenProductionRecord,
   reportProductionQualityIssue,
   transitionProductionRecord,
 } from '../../../store/slices/entities/productionRecords'
+import { loadPart, partSelectors } from '../../../store/slices/entities/parts'
 import { productionUnits } from '../../../components/app/ProductionRecordForm'
 import {
   acknowledgeProductionAttention,
@@ -92,6 +97,35 @@ const ReasonForm = ({ pending, feedback, description, submitLabel, onSubmit, dan
     <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
     <label className='textAreaField' htmlFor='production-action-reason'><span>Reason</span><textarea id='production-action-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={8} maxLength={1000} required /></label>
     <Button className={danger ? 'vk-button--danger' : ''} type='submit' disabled={pending}>{pending ? <><LoaderCircle className='spin' aria-hidden='true' /> Saving…</> : submitLabel}</Button>
+  </form>
+}
+
+const RevisionChangeForm = ({ record, revisions, impact, pending, feedback, onPreview, onSubmit }) => {
+  const [target, setTarget] = useState('')
+  const [reason, setReason] = useState('')
+  const choices = revisions.filter(item => item.lifecycle_state === 'released' && String(item.id || item._id) !== String(record.part_revision?.id || record.part_revision?._id || record.part_revision))
+  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit({ to_revision_id: target, reason, idempotency_key: requestKey('revision-change') }) }}>
+    <p>A revision change never rewrites history. The supplier reviews schedule and feasibility impact first; applying an approved change freezes a new snapshot and may require reacceptance.</p>
+    <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
+    <label className='selectField' htmlFor='revision-change-target'><span>Target released revision</span><select id='revision-change-target' required value={target} onChange={event => { setTarget(event.target.value); if (event.target.value) onPreview(event.target.value) }}><option value=''>Choose revision</option>{choices.map(item => <option key={item.id || item._id} value={item.id || item._id}>Revision {item.revision}</option>)}</select></label>
+    {impact && <dl className='revisionImpactPreview'><div><dt>Manifest changed</dt><dd>{impact.manifest_changed ? 'Yes' : 'No'}</dd></div><div><dt>Supplier reacceptance</dt><dd>{impact.supplier_reacceptance_required ? 'Required' : 'Not expected'}</dd></div><div><dt>Open linked cases</dt><dd>{impact.open_revision_scoped_collaboration_items}</dd></div><div><dt>Classification changed</dt><dd>{impact.export_control_changed ? 'Yes' : 'No'}</dd></div></dl>}
+    <label className='textAreaField' htmlFor='revision-change-reason'><span>Reason for revision change</span><textarea id='revision-change-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={8} required /></label>
+    <FormActions pending={pending} submitLabel='Propose revision change' icon={GitCompareArrows} />
+  </form>
+}
+
+const RevisionChangeActionForm = ({ change, organizationType, pending, feedback, onSubmit }) => {
+  const [note, setNote] = useState('')
+  const actions = organizationType === 'supplier' && change.state === 'supplier_review'
+    ? [['submit_impact', 'Submit impact'], ['request_changes', 'Request discussion']]
+    : organizationType === 'oem' && ['proposed', 'changes_requested'].includes(change.state)
+      ? [['approve', 'Approve adoption'], ['reject', 'Reject'], ['cancel', 'Cancel proposal']]
+      : organizationType === 'oem' && change.state === 'approved' ? [['apply', 'Apply revision']] : []
+  return <form className='drawerForm'>
+    <p>Revision {change.from_revision?.revision} → {change.to_revision?.revision}. Current state: <strong>{formatLabel(change.state)}</strong>.</p>
+    <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
+    <label className='textAreaField' htmlFor='revision-change-action-note'><span>{organizationType === 'supplier' ? 'Schedule, cost, and feasibility impact' : 'Decision note'}</span><textarea id='revision-change-action-note' value={note} onChange={event => setNote(event.target.value)} /></label>
+    <div className='drawerForm__actions'>{actions.map(([key, label]) => <Button key={key} variant={['reject', 'cancel'].includes(key) ? 'secondary' : 'primary'} disabled={pending || (key !== 'apply' && key !== 'approve' && note.trim().length < 3)} onClick={() => onSubmit(key, note)}>{label}</Button>)}</div>
   </form>
 }
 
@@ -293,6 +327,10 @@ const ProductionRecordDetail = () => {
   const machines = useSelector(machineSelectors.getEntities)
   const relationships = useSelector(relationshipSelectors.getEntities)
   const collaboration = useSelector(state => router.query.id ? productionCollaborationSelectors.getRecord(router.query.id)(state) : null)
+  const revisionChanges = useSelector(state => router.query.id ? productionRecordSelectors.getRevisionChanges(router.query.id)(state) : [])
+  const revisionImpact = useSelector(state => router.query.id ? productionRecordSelectors.getRevisionImpact(router.query.id)(state) : null)
+  const partId = String(record?.part?.id || record?.part?._id || record?.part || '')
+  const linkedPartDetail = useSelector(partSelectors.getDetailById(partId))
   const canArchiveNote = useSelector(getHasPermission('note.archive'))
   const canArchiveAttachment = useSelector(getHasPermission('attachment.archive'))
   const canReportAttention = useSelector(getHasPermission('attention.report'))
@@ -307,12 +345,16 @@ const ProductionRecordDetail = () => {
     if (allowed && router.isReady) {
       dispatch(loadProductionRecord(router.query.id))
       dispatch(loadProductionCollaboration(router.query.id))
+      dispatch(loadProductionRevisionChanges(router.query.id))
       if (trackedRecordId.current !== router.query.id) {
         trackedRecordId.current = router.query.id
         dispatch(trackProductEvent('production.detail_viewed', 'production_detail'))
       }
     }
   }, [allowed, dispatch, router.isReady, router.query.id])
+  useEffect(() => {
+    if (partId) dispatch(loadPart(partId))
+  }, [dispatch, partId])
   useEffect(() => {
     if (!organization?.id) return
     if (organization.type === 'supplier') dispatch(loadMachines({ status: 'active', page_size: 100 }))
@@ -324,6 +366,7 @@ const ProductionRecordDetail = () => {
       if (document.visibilityState !== 'hidden') {
         dispatch(loadProductionRecord(router.query.id))
         dispatch(loadProductionCollaboration(router.query.id))
+        dispatch(loadProductionRevisionChanges(router.query.id))
       }
     }
     const interval = window.setInterval(refresh, 45_000)
@@ -362,6 +405,7 @@ const ProductionRecordDetail = () => {
       dispatch(loadProductionRecord(record.id)),
       dispatch(loadProductionCollaboration(record.id)),
       dispatch(loadProductionSummary()),
+      dispatch(loadProductionRevisionChanges(record.id)),
     ])
     dispatch(trackProductEvent('production.update_completed', 'production_update'))
     setDrawer(null)
@@ -425,6 +469,10 @@ const ProductionRecordDetail = () => {
     {activeProductionBlock && <div className='supplierStateNotice supplierStateNotice--changes_requested'><AlertTriangle aria-hidden='true' /><div><strong>Production is blocked</strong><p>Stage changes, delivery confirmation, and final approval remain locked until the production-block workflow is approved and the recipient confirms production has been released.</p></div></div>}
     {projectedLate && <div className='supplierStateNotice supplierStateNotice--changes_requested'><CalendarCheck aria-hidden='true' /><div><strong>The current forecast arrives after the required date</strong><p>The forecast remains visible instead of blocking acceptance so both companies can act on the real schedule.</p></div></div>}
     <ProductionAttentionPanel conditions={collaboration?.attention || []} canAcknowledge={canAcknowledgeAttention} canResolve={item => canResolveAttention && (item.workflow?.managed || organization.type !== 'supplier' || item.source === 'supplier')} pending={collaboration?.mutating} onAcknowledge={item => runInline(() => dispatch(acknowledgeProductionAttention(record.id, item.id)), 'Attention reason acknowledged.')} onResolve={item => { setActionTarget(item); setDrawer('resolve-attention') }} onWorkflowAction={(item, action) => { setActionTarget({ item, action }); setDrawer('attention-workflow-action') }} />
+    {partId && <section className='partProductionLink'>
+      <div><GitCompareArrows aria-hidden='true' /><span><p className='technicalLabel'>Controlled technical baseline</p><strong>{record.part_revision_snapshot?.part_number || record.part_number} · Revision {record.part_revision_snapshot?.revision || record.drawing_revision}</strong><small>Manifest {record.part_revision_snapshot?.manifest_hash ? `${record.part_revision_snapshot.manifest_hash.slice(0, 12)}…` : 'not recorded'}</small></span></div>
+      <div><Button href={`/app/parts/${partId}`} variant='secondary'>Open Part Workspace</Button>{organization.type === 'oem' && record.lifecycle_state === 'active' && linkedPartDetail?.revisions?.some(item => item.lifecycle_state === 'released' && String(item.id || item._id) !== String(record.part_revision?.id || record.part_revision?._id || record.part_revision)) && <Button variant='secondary' onClick={() => setDrawer('revision-change')}><GitCompareArrows aria-hidden='true' /> Propose revision change</Button>}</div>
+    </section>}
     <div className='productionDetailGrid'>
       <section className='appPanel productionFacts'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Commitment</p><h2>Production details</h2></div><Truck aria-hidden='true' /></header>
@@ -447,11 +495,12 @@ const ProductionRecordDetail = () => {
         <header className='appPanel__header'><div><p className='technicalLabel'>Current workflow</p><h2>Production progress</h2></div></header>
         <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} currentStepId={record.current_workflow_step_id} lifecycleState={record.lifecycle_state} />
       </section>
+      {partId && <section className='appPanel productionRevisionChanges'><header className='appPanel__header'><div><p className='technicalLabel'>Part revision control</p><h2>Revision-change record</h2></div><GitCompareArrows aria-hidden='true' /></header>{revisionChanges.length ? <div className='productionRevisionChangeList'>{revisionChanges.map(change => <article key={change.id || change._id}><div><strong>Rev {change.from_revision?.revision} → Rev {change.to_revision?.revision}</strong><span>{change.reason}</span><small>{formatDate(change.created_at)}</small></div><div><StatusBadge tone={statusTone(change.state)}>{formatLabel(change.state)}</StatusBadge>{((organization.type === 'supplier' && change.state === 'supplier_review') || (organization.type === 'oem' && ['proposed', 'changes_requested', 'approved'].includes(change.state))) && <Button variant='secondary' onClick={() => { setActionTarget(change); setDrawer('revision-change-action') }}>Review</Button>}</div></article>)}</div> : <p className='productionRevisionChanges__empty'>This production record has not changed its frozen Part Workspace revision.</p>}</section>}
       {record.oem_internal_note && <section className='appPanel productionInternalNote'><header className='appPanel__header'><div><p className='technicalLabel'>OEM only</p><h2>Internal note</h2></div></header><p>{record.oem_internal_note}</p></section>}
       <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
       {organization.type === 'oem' && (detail?.actions?.cancel || detail?.actions?.reopen || detail?.actions?.archive) && <section className='appPanel productionLifecycleActions'><header className='appPanel__header'><div><p className='technicalLabel'>Record controls</p><h2>Lifecycle</h2></div></header><div>{detail.actions.cancel && <Button variant='secondary' onClick={() => setDrawer('cancel')}><X aria-hidden='true' /> Cancel record</Button>}{detail.actions.reopen && <Button variant='secondary' onClick={() => setDrawer('reopen')}><RotateCcw aria-hidden='true' /> Reopen record</Button>}{detail.actions.archive && <Button variant='secondary' onClick={() => setDrawer('archive')}><Archive aria-hidden='true' /> Archive record</Button>}</div></section>}
     </div>
-    <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'attention-workflow-action': actionTarget?.action?.label || 'Attention workflow action', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>
+    <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'attention-workflow-action': actionTarget?.action?.label || 'Attention workflow action', 'revision-change': 'Propose production revision change', 'revision-change-action': 'Review production revision change', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>
       {drawer === 'accept' && <AcceptanceForm record={record} machines={activeMachines} pending={pending} feedback={feedback} onDecline={() => { setFeedback(null); setDrawer('decline') }} onSubmit={payload => run(() => dispatch(acceptProductionRecord(record.id, payload)), 'Assignment accepted.')} />}
       {drawer === 'decline' && <ReasonForm pending={pending} feedback={feedback} danger description='Declining returns the decision to the OEM. A reason is required and remains in history.' submitLabel='Decline assignment' onSubmit={reason => run(() => dispatch(declineProductionRecord(record.id, { reason, version: record.version, idempotency_key: requestKey('decline') })), 'Assignment declined.')} />}
       {drawer === 'assign' && <AssignmentForm record={record} relationships={relationships} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionRecord(record.id, payload)), 'Supplier assignment saved.')} />}
@@ -467,6 +516,8 @@ const ProductionRecordDetail = () => {
       }} />}
       {drawer === 'attention' && <AttentionForm organizationType={organization.type} pending={collaboration?.mutating} feedback={feedback} onSubmit={payload => run(() => dispatch(reportProductionAttention(record.id, payload)), 'Attention flag added.')} />}
       {drawer === 'attention-workflow-action' && <AttentionWorkflowActionForm target={actionTarget} pending={collaboration?.mutating} feedback={feedback} onSubmit={note => run(() => dispatch(applyProductionAttentionWorkflowAction(record.id, actionTarget.item.id, actionTarget.action.key, note)), `${actionTarget.action.label} completed.`)} />}
+      {drawer === 'revision-change' && <RevisionChangeForm record={record} revisions={linkedPartDetail?.revisions || []} impact={revisionImpact} pending={pending} feedback={feedback} onPreview={revisionId => dispatch(loadProductionRevisionImpact(record.id, revisionId))} onSubmit={payload => run(() => dispatch(proposeProductionRevisionChange(record.id, payload)), 'Revision change proposed for supplier review.')} />}
+      {drawer === 'revision-change-action' && <RevisionChangeActionForm change={actionTarget} organizationType={organization.type} pending={pending} feedback={feedback} onSubmit={(action, note) => run(() => dispatch(actOnProductionRevisionChange(record.id, actionTarget.id, { action, note, version: actionTarget.version })), action === 'apply' ? 'Revision applied and frozen into production history.' : 'Revision-change workflow updated.')} />}
       {drawer === 'quality-issue' && <QualityIssueForm record={record} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(reportProductionQualityIssue(record.id, payload)), 'Shared quality issue opened for the supplier.')} />}
       {drawer === 'quality-approval' && <QualityApprovalForm record={record} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(approveProductionQuality(record.id, payload)), 'Parts approved and production record completed.')} />}
       {drawer === 'resolve-attention' && <ReasonForm pending={collaboration?.mutating} feedback={feedback} description={`Resolving “${formatLabel(actionTarget?.code)}” keeps the full history and records your reason.`} submitLabel='Resolve attention reason' onSubmit={reason => run(() => dispatch(resolveProductionAttention(record.id, actionTarget.id, reason)), 'Attention reason resolved.')} />}

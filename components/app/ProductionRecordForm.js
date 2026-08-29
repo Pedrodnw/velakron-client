@@ -1,5 +1,5 @@
-import { AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, FileText, GripVertical, Package, Plus, Save, Send, Settings2, ShieldAlert, Trash2, UsersRound } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { AlertTriangle, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Box, Check, FileText, GripVertical, Package, Plus, Save, Send, Settings2, ShieldAlert, Trash2, UsersRound } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
 import { Button } from '../design-system'
@@ -19,6 +19,7 @@ export const productionUnits = [
 ]
 
 export const blankProductionRecord = {
+  part_revision_id: '',
   part_number: '',
   part_name: '',
   drawing_revision: '',
@@ -49,7 +50,7 @@ const steps = [
 
 const supplierFromRelationship = relationship => relationship.supplier_organization
 
-const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], pending, feedback, workflow, itarCapability, onSubmit }) => {
+const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], partWorkspaces = [], initialPartRevisionId = '', pending, feedback, workflow, itarCapability, onSubmit }) => {
   const builder = workflow?.builder || fallbackWorkflowBuilder
   const [form, setForm] = useState(() => ({
     ...blankProductionRecord,
@@ -58,10 +59,28 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
   }))
   const [step, setStep] = useState(0)
   const [draggedStage, setDraggedStage] = useState(null)
+  const releasedParts = useMemo(() => partWorkspaces.filter(item => item.current_released_revision?.id || item.current_released_revision?._id), [partWorkspaces])
   const activeRelationships = useMemo(() => relationships.filter(item => (
     item.status === 'active' && supplierFromRelationship(item)?.id
   )), [relationships])
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }))
+  const selectPartRevision = value => {
+    const selected = releasedParts.find(item => String(item.current_released_revision?.id || item.current_released_revision?._id) === String(value))
+    setForm(current => ({
+      ...current,
+      part_revision_id: value,
+      ...(selected ? {
+        part_number: selected.part_number || '',
+        part_name: selected.name || '',
+        drawing_revision: selected.current_released_revision?.revision || '',
+        export_control: selected.current_released_revision?.export_control || 'none',
+      } : {}),
+    }))
+  }
+  useEffect(() => {
+    if (!initialPartRevisionId || form.part_revision_id || !releasedParts.length) return
+    selectPartRevision(initialPartRevisionId)
+  }, [form.part_revision_id, initialPartRevisionId, releasedParts])
   const setWorkflow = (key, value) => setForm(current => ({
     ...current,
     workflow_configuration: {
@@ -107,13 +126,15 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
       <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
       {step === 0 && <div className='productionFormSection'>
         <header><p className='technicalLabel'>Step 1 of 5</p><h2>Identify the awarded part</h2><p>Part numbers can repeat across orders. Velakron will create a unique tracking reference.</p></header>
+        {!!releasedParts.length && <label className='selectField productionPartWorkspaceSelect' htmlFor='production-part-workspace'><span>Released Part Workspace revision (recommended)</span><select id='production-part-workspace' value={form.part_revision_id} onChange={event => selectPartRevision(event.target.value)}><option value=''>Create an unlinked production record</option>{releasedParts.map(item => <option key={item.current_released_revision.id || item.current_released_revision._id} value={item.current_released_revision.id || item.current_released_revision._id}>{item.part_number} · Rev {item.current_released_revision.revision} · {item.name}</option>)}</select><small>A linked record freezes the released manifest and can only be assigned to a supplier that has access to that revision.</small></label>}
+        {form.part_revision_id && <div className='productionLinkedPartNotice'><Box aria-hidden='true' /><div><strong>Controlled Part Workspace revision selected</strong><span>Part identity, revision, and ITAR classification come from the immutable release and cannot drift from production.</span></div></div>}
         <div className='productionFormGrid'>
-          <FormField id='production-part-number' label='Part number' value={form.part_number} onChange={event => set('part_number', event.target.value)} required />
-          <FormField id='production-revision' label='Drawing revision' value={form.drawing_revision} onChange={event => set('drawing_revision', event.target.value)} hint='Optional structured reference, such as C or Rev 7.' />
-          <FormField id='production-part-name' label='Part name or description' value={form.part_name} onChange={event => set('part_name', event.target.value)} required />
+          <FormField id='production-part-number' label='Part number' value={form.part_number} onChange={event => set('part_number', event.target.value)} required disabled={Boolean(form.part_revision_id)} />
+          <FormField id='production-revision' label='Drawing revision' value={form.drawing_revision} onChange={event => set('drawing_revision', event.target.value)} hint='Optional structured reference, such as C or Rev 7.' disabled={Boolean(form.part_revision_id)} />
+          <FormField id='production-part-name' label='Part name or description' value={form.part_name} onChange={event => set('part_name', event.target.value)} required disabled={Boolean(form.part_revision_id)} />
           <FormField id='production-process' label='Process summary' value={form.process_summary} onChange={event => set('process_summary', event.target.value)} hint='Optional, such as five-axis machining and anodizing.' />
         </div>
-        <label className={`productionCheck itarClassificationControl${form.export_control === 'itar' ? ' is-selected' : ''}`}><input type='checkbox' checked={form.export_control === 'itar'} disabled={!itarCapability?.enabled && !itarCapability?.preview} onChange={event => set('export_control', event.target.checked ? 'itar' : 'none')} /><ShieldAlert aria-hidden='true' /><span><strong>This production record contains ITAR-controlled technical data</strong><small>This is a permanent high-security classification. Every file access will require a fresh U.S.-person and ITAR-handling confirmation.</small></span></label>
+        <label className={`productionCheck itarClassificationControl${form.export_control === 'itar' ? ' is-selected' : ''}`}><input type='checkbox' checked={form.export_control === 'itar'} disabled={Boolean(form.part_revision_id) || (!itarCapability?.enabled && !itarCapability?.preview)} onChange={event => set('export_control', event.target.checked ? 'itar' : 'none')} /><ShieldAlert aria-hidden='true' /><span><strong>This production record contains ITAR-controlled technical data</strong><small>{form.part_revision_id ? 'Classification is inherited from the released Part Workspace revision.' : 'This is a permanent high-security classification. Every file access will require a fresh U.S.-person and ITAR-handling confirmation.'}</small></span></label>
         {!itarCapability?.enabled && itarCapability?.preview && <div className='itarAvailabilityNotice itarAvailabilityNotice--preview'><AlertTriangle aria-hidden='true' /><p><strong>Local preview only.</strong> Use synthetic files to review this workflow. Real ITAR data remains blocked until the GovCloud/FIPS environment is enabled.</p></div>}
         {!itarCapability?.enabled && !itarCapability?.preview && <div className='itarAvailabilityNotice'><ShieldAlert aria-hidden='true' /><p><strong>ITAR storage is not yet enabled.</strong> Records cannot be marked ITAR until Velakron is running in the approved GovCloud/FIPS environment.</p></div>}
       </div>}

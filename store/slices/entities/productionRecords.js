@@ -18,6 +18,8 @@ const initialState = {
   filters: {},
   workflow: null,
   warnings: [],
+  revisionChangesByRecord: {},
+  revisionImpactByRecord: {},
   lastFetched: null,
 }
 
@@ -88,6 +90,12 @@ const slice = createSlice({
     workflowReceived: (state, action) => {
       state.workflow = action.payload?.data?.workflow || action.payload?.workflow || state.workflow
     },
+    revisionChangesReceived: (state, action) => {
+      state.revisionChangesByRecord[String(action.payload.recordId)] = action.payload.changes || []
+    },
+    revisionImpactReceived: (state, action) => {
+      state.revisionImpactByRecord[String(action.payload.recordId)] = action.payload.impact || null
+    },
     filtersSet: (state, action) => {
       state.filters = { ...state.filters, ...(action.payload || {}) }
     },
@@ -106,6 +114,8 @@ const {
   mutationFailed,
   mutationRequested,
   requestFailed,
+  revisionChangesReceived,
+  revisionImpactReceived,
   workflowReceived,
 } = slice.actions
 
@@ -188,6 +198,21 @@ export const cancelProductionRecord = (id, payload) => mutate(id, '/cancel', 'po
 export const reopenProductionRecord = (id, payload) => mutate(id, '/reopen', 'post', payload)
 export const archiveProductionRecord = (id, payload) => mutate(id, '/archive', 'post', payload)
 
+export const loadProductionRevisionChanges = id => async dispatch => {
+  const result = await dispatch(apiCallBegan({ url: `/production-records/${id}/revision-changes`, organizationScoped: true, requestKey: `production-revision-changes-${id}` }))
+  if (result?.ok) dispatch(revisionChangesReceived({ recordId: id, changes: result.payload?.data?.changes || [] }))
+  return result
+}
+
+export const loadProductionRevisionImpact = (id, revisionId) => async dispatch => {
+  const result = await dispatch(apiCallBegan({ url: `/production-records/${id}/revision-impact`, params: { to_revision_id: revisionId }, organizationScoped: true, requestKey: `production-revision-impact-${id}` }))
+  if (result?.ok) dispatch(revisionImpactReceived({ recordId: id, impact: result.payload?.data?.impact }))
+  return result
+}
+
+export const proposeProductionRevisionChange = (id, data) => apiCallBegan({ url: `/production-records/${id}/revision-changes`, method: 'post', data, organizationScoped: true, onStart: mutationRequested.type, onError: mutationFailed.type, requestKey: `production-revision-change-propose-${id}` })
+export const actOnProductionRevisionChange = (id, changeId, data) => apiCallBegan({ url: `/production-records/${id}/revision-changes/${changeId}/actions`, method: 'post', data, organizationScoped: true, onStart: mutationRequested.type, onError: mutationFailed.type, requestKey: `production-revision-change-action-${changeId}` })
+
 const stateFor = state => state.entities.productionRecords
 export const productionRecordSelectors = {
   getState: stateFor,
@@ -205,6 +230,8 @@ export const productionRecordSelectors = {
   getPagination: state => stateFor(state).pagination,
   getWorkflow: state => stateFor(state).workflow,
   getWarnings: state => stateFor(state).warnings,
+  getRevisionChanges: id => state => stateFor(state).revisionChangesByRecord[String(id)] || [],
+  getRevisionImpact: id => state => stateFor(state).revisionImpactByRecord[String(id)] || null,
 }
 
 export const { filtersSet } = slice.actions

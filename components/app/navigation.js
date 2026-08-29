@@ -3,12 +3,14 @@ const accountItem = { href: '/account', label: 'Account', icon: 'account' }
 const itemsByOrganizationType = {
   oem: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/parts', label: 'Part workspaces', icon: 'parts', permission: 'part.read', feature: 'part_workspaces' },
     { href: '/app/production', label: 'Production', icon: 'production', permission: 'production_record.read' },
     { href: '/app/suppliers', label: 'Suppliers', icon: 'relationships', permission: 'relationship.read' },
     { href: '/app/team', label: 'Team', icon: 'team', permission: 'membership.read' },
   ],
   supplier: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/parts', label: 'Part workspaces', icon: 'parts', permission: 'part.read', feature: 'part_workspaces' },
     { href: '/app/company', label: 'Onboarding & profile', icon: 'onboarding', permission: 'supplier_profile.read' },
     { href: '/app/facilities', label: 'Facilities', icon: 'facilities', permission: 'supplier_profile.read' },
     { href: '/app/production', label: 'Production', icon: 'production', permission: 'production_record.read' },
@@ -35,7 +37,8 @@ const itemsByOrganizationType = {
 
 export const getNavigationItems = (organizationType, permissions = [], options = {}) => [
   ...(itemsByOrganizationType[organizationType] || []).filter(item => (
-    !item.permission || permissions.includes(item.permission)
+    (!item.permission || permissions.includes(item.permission))
+    && (!item.feature || options.features?.[item.feature] !== false)
   )),
   ...(options.demoWorkspace ? [] : [accountItem]),
 ]

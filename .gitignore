@@ -12,8 +12,9 @@ node_modules/
 out/
 coverage/
 
-# Generated 3D viewer assets (copied by scripts/copyOcctAssets.js)
+# Generated technical viewer assets (copied by scripts/copyOcctAssets.js)
 public/vendor/occt-import-js/
+public/vendor/pdfjs-dist/
 
 # Logs and local tooling
 *.log
@@ -21,4 +22,3 @@ public/vendor/occt-import-js/
 .cache/
 .idea/
 .vscode/
-

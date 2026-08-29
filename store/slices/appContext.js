@@ -8,6 +8,7 @@ const initialState = {
   experience: null,
   availableExperiences: [],
   permissions: [],
+  features: { part_workspaces: true },
   status: 'loading',
   switching: false,
   switchingToOrganizationId: null,
@@ -46,6 +47,7 @@ const applyContext = (state, payload) => {
     ? context.available_experiences
     : []
   state.permissions = Array.isArray(context.permissions) ? context.permissions : []
+  state.features = context.features && typeof context.features === 'object' ? context.features : state.features
   state.status = deriveContextStatus(context)
   state.switching = false
   state.switchingToOrganizationId = null
@@ -180,6 +182,7 @@ export const getAvailableMemberships = state => state.appContext.memberships
 export const getAppContextError = state => state.appContext.error
 export const getAppContextStatus = state => state.appContext.status
 export const getEffectivePermissions = state => state.appContext.permissions
+export const getFeatureEnabled = feature => state => state.appContext.features?.[feature] !== false
 export const getOrganizationContextVersion = state => state.appContext.contextVersion
 export const getOrganizationSwitching = state => state.appContext.switching
 export const getExperienceSwitching = state => state.appContext.switchingExperience

@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BellRing, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, BellRing, Box, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -23,6 +23,8 @@ import { loadPlatformActionCenter, loadPlatformSummary, platformSelectors, track
 import { internalTaskSelectors, loadInternalTasks } from '../../store/slices/entities/internalTasks'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import PlatformActionQueue from '../../components/app/PlatformActionQueue'
+import { loadPartActionSummary, partSelectors } from '../../store/slices/entities/parts'
+import LinkWrap from '../../components/LinkWrap'
 
 const metric = value => String(value ?? '—')
 const recordCompany = (record, organizationType) => organizationType === 'supplier'
@@ -141,7 +143,11 @@ const OperationalDashboard = ({ organization }) => {
   const summary = useSelector(productionCollaborationSelectors.getSummary)
   const loading = useSelector(productionCollaborationSelectors.getSummaryLoading)
   const error = useSelector(productionCollaborationSelectors.getSummaryError)
-  const refresh = useCallback(() => dispatch(loadProductionSummary()), [dispatch])
+  const partActions = useSelector(partSelectors.getActionSummary)
+  const refresh = useCallback(() => {
+    dispatch(loadPartActionSummary())
+    return dispatch(loadProductionSummary())
+  }, [dispatch])
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
     const refreshWhenVisible = () => { if (document.visibilityState !== 'hidden') refresh() }
@@ -168,6 +174,14 @@ const OperationalDashboard = ({ organization }) => {
       <MetricCard label='At risk' value={metric(summary.counts?.at_risk)} detail='Active records with schedule risk' icon={AlertTriangle} tone='warning' href='/app/production?view=active&health=at_risk' />
       <MetricCard label='Delayed' value={metric(summary.counts?.delayed)} detail='Active records past a required date' icon={PackageCheck} tone='danger' href='/app/production?view=active&health=delayed' />
     </section>
+    {partActions && <section className='partActionBand' aria-label='Part Workspace actions'>
+      <div><Box aria-hidden='true' /><span><strong>Part Workspace</strong><small>Technical collaboration responsibility</small></span></div>
+      <LinkWrap href='/app/parts?view=needs_action'><strong>{partActions.needs_action || 0}</strong><span>Needs your action</span></LinkWrap>
+      <LinkWrap href='/app/parts?view=waiting'><strong>{partActions.waiting_on_other || 0}</strong><span>Waiting on other company</span></LinkWrap>
+      <LinkWrap href='/app/parts?view=overdue'><strong>{partActions.overdue || 0}</strong><span>Overdue</span></LinkWrap>
+      {supplier && <LinkWrap href='/app/parts?view=new_revisions'><strong>{partActions.new_revisions || 0}</strong><span>New revisions</span></LinkWrap>}
+      {supplier && <LinkWrap href='/app/parts?view=unacknowledged_requirements'><strong>{partActions.unacknowledged_requirements || 0}</strong><span>Requirements to acknowledge</span></LinkWrap>}
+    </section>}
     <p className='dashboardMetricContext'><Factory aria-hidden='true' /> {metric(summary.counts?.active)} active production records <span aria-hidden='true'>·</span> <CircleCheck aria-hidden='true' /> {metric(summary.counts?.on_schedule)} on schedule</p>
     <div className='dashboardPriorityGrid'>
       <section className='appPanel dashboardPriorityGrid__primary'>
