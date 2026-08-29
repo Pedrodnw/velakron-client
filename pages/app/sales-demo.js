@@ -85,6 +85,10 @@ const commandConsequences = {
   'production.receive': 'The Supplier guest will see shipment receipt confirmed and quality review opened.',
   'production.quality_issue': 'The Supplier guest will receive a high-priority receiving quality issue and requested response.',
   'production.quality_approve': 'The Supplier guest will see the received parts approved and the record completed.',
+  'inspection.record_result': 'The guest will see the counterpart complete the next required inspection sample with a passing synthetic value.',
+  'inspection.submit_package': 'The OEM guest will receive an immutable synthetic inspection package for review.',
+  'inspection.review_package': 'The guest will see the OEM accept the submitted package or return it for a documented correction.',
+  'inspection.confirm_failure': 'Both sides will see a confirmed synthetic failure and one linked non-conformance workflow.',
 }
 
 const templateChangeSummary = (draft, published) => {
@@ -139,6 +143,7 @@ const CommandPanel = ({ session, onChanged }) => {
   const [stage, setStage] = useState('in_production')
   const [category, setCategory] = useState('issue')
   const [requestedAction, setRequestedAction] = useState('supplier_response')
+  const [inspectionDecision, setInspectionDecision] = useState('accepted')
   const [pending, setPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const currentAction = actions.find(item => item.key === actionType)
@@ -169,6 +174,7 @@ const CommandPanel = ({ session, onChanged }) => {
     if (actionType === 'production.expected_ship') payload.expected_ship_date = date
     if (actionType === 'production.advance_stage') Object.assign(payload, { stage, reason: 'Synthetic presenter update' })
     if (actionType === 'production.assign') Object.assign(payload, { part_number: 'VK-DEMO-NEW', part_name: 'Priority flight component [Synthetic]', quantity: 12, required_offset: 14 })
+    if (actionType === 'inspection.review_package') Object.assign(payload, { decision: inspectionDecision, note: text })
     setPending(true)
     setFeedback(null)
     const result = await dispatch(salesDemoRequest({
@@ -194,9 +200,10 @@ const CommandPanel = ({ session, onChanged }) => {
     <form onSubmit={send}>
       <label><span>Interaction</span><select value={actionType} onChange={event => setActionType(event.target.value)}>{actions.map(item => <option key={item.key} value={item.key} disabled={!item.enabled}>{item.label}</option>)}</select></label>
       {currentAction?.requires_record && <label><span>Production record</span><select required value={recordId} onChange={event => setRecordId(event.target.value)}>{eligibleRecords.map(record => <option key={idOf(record)} value={idOf(record)}>{record.part_number} · {record.part_name}</option>)}</select></label>}
-      {['production.note', 'production.attention', 'production.attention_resolve', 'relationship.decline', 'production.quality_issue'].includes(actionType) && <label className='salesDemoControlPanel__wide'><span>{actionType === 'production.attention' ? 'What needs attention?' : actionType === 'production.attention_resolve' ? 'Resolution' : actionType === 'relationship.decline' ? 'Decline reason' : actionType === 'production.quality_issue' ? 'Quality finding' : 'Update message'}</span><textarea rows={3} maxLength={1000} value={text} onChange={event => setText(event.target.value)} required /></label>}
+      {['production.note', 'production.attention', 'production.attention_resolve', 'relationship.decline', 'production.quality_issue', 'inspection.review_package'].includes(actionType) && <label className='salesDemoControlPanel__wide'><span>{actionType === 'production.attention' ? 'What needs attention?' : actionType === 'production.attention_resolve' ? 'Resolution' : actionType === 'relationship.decline' ? 'Decline reason' : actionType === 'production.quality_issue' ? 'Quality finding' : actionType === 'inspection.review_package' ? 'Review note' : 'Update message'}</span><textarea rows={3} maxLength={1000} value={text} onChange={event => setText(event.target.value)} required /></label>}
       {actionType === 'production.attention' && <label><span>Flag category</span><select value={category} onChange={event => setCategory(event.target.value)}><option value='non_conformance'>Non-conformance · high risk</option><option value='production_block'>Production block · high risk</option><option value='issue'>Issue · medium risk</option><option value='information_flag'>Information · no schedule risk</option></select></label>}
       {actionType === 'production.quality_issue' && <label><span>Requested supplier action</span><select value={requestedAction} onChange={event => setRequestedAction(event.target.value)}><option value='supplier_response'>Supplier response</option><option value='return_to_supplier'>Return to supplier</option><option value='replacement'>Replacement parts</option><option value='rework'>Rework plan</option></select></label>}
+      {actionType === 'inspection.review_package' && <label><span>Review decision</span><select value={inspectionDecision} onChange={event => setInspectionDecision(event.target.value)}><option value='accepted'>Accept package</option><option value='changes_requested'>Request changes</option></select></label>}
       {actionType === 'production.expected_ship' && <label><span>Expected ship date</span><input type='date' value={date} onChange={event => setDate(event.target.value)} required /></label>}
       {actionType === 'production.advance_stage' && <label><span>New supplier stage</span><select value={stage} onChange={event => setStage(event.target.value)}>{allowedStages.map(item => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>}
       {actionType && <aside className='salesDemoControlPanel__consequence'><strong>What the guest will see</strong><span>{commandConsequences[actionType]}</span></aside>}

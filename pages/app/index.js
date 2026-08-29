@@ -17,13 +17,14 @@ import { Button } from '../../components/design-system'
 import { formatDate, formatDateTime, formatLabel, formatStorageStatus, statusTone } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
-import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
+import { getActiveMembership, getActiveOrganization, getFeatureEnabled } from '../../store/slices/appContext'
 import { loadProductionSummary, productionCollaborationSelectors } from '../../store/slices/entities/productionCollaboration'
 import { loadPlatformActionCenter, loadPlatformSummary, platformSelectors, trackProductEvent } from '../../store/slices/entities/platformAdministration'
 import { internalTaskSelectors, loadInternalTasks } from '../../store/slices/entities/internalTasks'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import PlatformActionQueue from '../../components/app/PlatformActionQueue'
 import { loadPartActionSummary, partSelectors } from '../../store/slices/entities/parts'
+import { inspectionSelectors, loadInspectionSummary } from '../../store/slices/entities/inspection'
 import LinkWrap from '../../components/LinkWrap'
 
 const metric = value => String(value ?? '—')
@@ -140,14 +141,17 @@ const FounderDashboard = () => {
 
 const OperationalDashboard = ({ organization }) => {
   const dispatch = useDispatch()
+  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
   const summary = useSelector(productionCollaborationSelectors.getSummary)
   const loading = useSelector(productionCollaborationSelectors.getSummaryLoading)
   const error = useSelector(productionCollaborationSelectors.getSummaryError)
   const partActions = useSelector(partSelectors.getActionSummary)
+  const inspectionActions = useSelector(inspectionSelectors.getSummary)
   const refresh = useCallback(() => {
     dispatch(loadPartActionSummary())
+    if (inspectionEnabled) dispatch(loadInspectionSummary())
     return dispatch(loadProductionSummary())
-  }, [dispatch])
+  }, [dispatch, inspectionEnabled])
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
     const refreshWhenVisible = () => { if (document.visibilityState !== 'hidden') refresh() }
@@ -181,6 +185,14 @@ const OperationalDashboard = ({ organization }) => {
       <LinkWrap href='/app/parts?view=overdue'><strong>{partActions.overdue || 0}</strong><span>Overdue</span></LinkWrap>
       {supplier && <LinkWrap href='/app/parts?view=new_revisions'><strong>{partActions.new_revisions || 0}</strong><span>New revisions</span></LinkWrap>}
       {supplier && <LinkWrap href='/app/parts?view=unacknowledged_requirements'><strong>{partActions.unacknowledged_requirements || 0}</strong><span>Requirements to acknowledge</span></LinkWrap>}
+    </section>}
+    {inspectionEnabled && inspectionActions && <section className='partActionBand' aria-label='Inspection and quality actions'>
+      <div><ListChecks aria-hidden='true' /><span><strong>Inspection &amp; quality</strong><small>Released checkpoints and package responsibility</small></span></div>
+      <LinkWrap href='/app/production?inspection=needs_action'><strong>{inspectionActions.needs_action || 0}</strong><span>Needs your action</span></LinkWrap>
+      <LinkWrap href='/app/production?inspection=waiting'><strong>{inspectionActions.waiting || 0}</strong><span>Waiting on other company</span></LinkWrap>
+      <LinkWrap href='/app/production?inspection=due_soon'><strong>{inspectionActions.due_soon || 0}</strong><span>Due in 24 hours</span></LinkWrap>
+      <LinkWrap href='/app/production?inspection=overdue'><strong>{inspectionActions.overdue || 0}</strong><span>Overdue</span></LinkWrap>
+      <LinkWrap href='/app/production?inspection=failed'><strong>{inspectionActions.failures || 0}</strong><span>Quality findings</span></LinkWrap>
     </section>}
     <p className='dashboardMetricContext'><Factory aria-hidden='true' /> {metric(summary.counts?.active)} active production records <span aria-hidden='true'>·</span> <CircleCheck aria-hidden='true' /> {metric(summary.counts?.on_schedule)} on schedule</p>
     <div className='dashboardPriorityGrid'>

@@ -1,4 +1,4 @@
-import { ExternalLink, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
+import { ClipboardCheck, ExternalLink, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -10,7 +10,7 @@ import { formatDate } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { Button } from '../../components/design-system'
-import { getActiveOrganization, getHasPermission } from '../../store/slices/appContext'
+import { getActiveOrganization, getFeatureEnabled, getHasPermission } from '../../store/slices/appContext'
 import {
   findFirstNonEmptySupplierProductionView,
   loadProductionRecords,
@@ -18,6 +18,7 @@ import {
 } from '../../store/slices/entities/productionRecords'
 import { loadRelationships, relationshipSelectors } from '../../store/slices/entities/relationships'
 import { trackProductEvent } from '../../store/slices/entities/platformAdministration'
+import { inspectionSelectors, loadInspectionQueue } from '../../store/slices/entities/inspection'
 
 const views = {
   oem: [{ key: 'active', label: 'Active' }, { key: 'draft', label: 'Drafts' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }],
@@ -25,6 +26,7 @@ const views = {
 }
 const stages = ['assigned', 'accepted', 'material_ordered', 'material_received', 'programming', 'in_production', 'inspection', 'ready_to_ship', 'shipped', 'delivered', 'quality_review', 'approved']
 const healthValues = ['on_schedule', 'at_risk', 'delayed', 'needs_attention', 'unassessed']
+const inspectionViews = ['needs_action', 'waiting', 'due_soon', 'overdue', 'failed']
 const initialFilters = type => ({ view: type === 'supplier' ? 'action_required' : 'active', search: '', stage: '', health: '', attention: '', supplier_organization_id: '', required_from: '', required_to: '', first_article: '', page: 1 })
 const cleanQuery = filters => Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== '' && value !== undefined && value !== 1))
 
@@ -32,6 +34,7 @@ const Production = () => {
   const router = useRouter()
   const dispatch = useDispatch()
   const organization = useSelector(getActiveOrganization)
+  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
   const allowed = useSelector(getHasPermission('production_record.read'))
   const canCreate = useSelector(getHasPermission('production_record.create'))
   const records = useSelector(productionRecordSelectors.getRecords)
@@ -39,6 +42,8 @@ const Production = () => {
   const error = useSelector(productionRecordSelectors.getError)
   const pagination = useSelector(productionRecordSelectors.getPagination)
   const relationships = useSelector(relationshipSelectors.getEntities)
+  const inspectionQueue = useSelector(inspectionSelectors.getQueue)
+  const inspectionQueueView = useSelector(inspectionSelectors.getQueueView)
   const [filters, setFilters] = useState(() => initialFilters(organization?.type))
   const [filtersReady, setFiltersReady] = useState(false)
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -46,6 +51,7 @@ const Production = () => {
   const [checkingAlternativeView, setCheckingAlternativeView] = useState(false)
   const refreshSequence = useRef(0)
   const type = organization?.type
+  const inspectionView = inspectionEnabled && inspectionViews.includes(router.query.inspection) ? router.query.inspection : ''
 
   useEffect(() => {
     if (!router.isReady || !organization?.id) return
@@ -118,6 +124,9 @@ const Production = () => {
   }, [allowed, canChooseAlternativeView, dispatch, filters, filtersReady, organization?.id, requestFilters, router])
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
+    if (allowed && organization?.id && inspectionView) dispatch(loadInspectionQueue(inspectionView))
+  }, [allowed, dispatch, inspectionView, organization?.id])
+  useEffect(() => {
     if (!filtersReady) return undefined
     const refreshWhenVisible = () => { if (document.visibilityState !== 'hidden') refresh() }
     const interval = window.setInterval(refreshWhenVisible, 45_000)
@@ -145,6 +154,10 @@ const Production = () => {
     <AppPageHeader eyebrow='Execution' title='Production' description={type === 'supplier' ? 'Your action queue, active parts, and completed work. Filters stay in the address so you can return to the same view.' : 'Filter awarded work by supplier, stage, schedule health, date, and first-article requirement.'} actions={<>{canCreate && type === 'oem' && <Button href='/app/production/new'><Plus aria-hidden='true' /> New production record</Button>}<Button variant='secondary' onClick={refresh}><RefreshCw aria-hidden='true' /> Refresh</Button></>} />
     <Tabs items={views[type] || []} activeKey={filters.view} onChange={view => updateFilters({ view, page: 1 })} label='Production views' />
     <button className='productionFilterToggle' type='button' aria-expanded={filtersOpen} aria-controls='production-filter-panel' onClick={() => setFiltersOpen(open => !open)}><SlidersHorizontal aria-hidden='true' /> {filtersOpen ? 'Hide filters' : 'Filter records'}{filterCount > 0 && <span>{filterCount} active</span>}</button>
+    {inspectionView && <section className='appPanel inspectionQueuePanel' aria-labelledby='inspection-queue-heading'>
+      <header className='appPanel__header'><div><p className='technicalLabel'>Inspection &amp; quality</p><h2 id='inspection-queue-heading'>{inspectionView.replaceAll('_', ' ')}</h2><p>Quality actions are tied to the released part revision and exact production record.</p></div><Button variant='secondary' onClick={() => router.replace('/app/production', undefined, { shallow: true })}>Close queue</Button></header>
+      {inspectionQueueView !== inspectionView ? <AppSkeleton lines={3} /> : inspectionQueue.length ? <div className='inspectionQueueList'>{inspectionQueue.map(run => <RecordCard key={run.id} href={`/app/production/${run.production_record?.id || run.production_record}`} eyebrow={`${run.kind.replaceAll('_', ' ')} inspection`} title={run.production_record?.part_number || run.part?.part_number || 'Production inspection'} description={`${run.completed_results}/${run.required_results} results · ${run.pass_count} passing · ${run.fail_count + run.unconfirmed_failure_count} findings`} badges={<StatusBadge tone={run.fail_count || run.unconfirmed_failure_count ? 'danger' : run.state === 'accepted' ? 'success' : 'warning'}>{run.state.replaceAll('_', ' ')}</StatusBadge>} actionLabel='Open inspection' />)}</div> : <EmptyState compact icon={ClipboardCheck} title='This inspection queue is clear' description='No released inspection run currently matches this responsibility.' />}
+    </section>}
     <div id='production-filter-panel' className={`productionFilterPanel${filtersOpen ? ' is-open' : ''}`}>
     <FilterBar label='Production filters' actions={<Button variant='secondary' onClick={() => { updateFilters(initialFilters(type)); setFiltersOpen(false) }}>Clear filters</Button>}>
       <label><span>Search</span><div className='inputWithIcon'><Search aria-hidden='true' /><input value={filters.search} onChange={event => updateFilters({ search: event.target.value, page: 1 })} placeholder='Part, PO, or VK reference' /></div></label>

@@ -8,7 +8,7 @@ const initialState = {
   experience: null,
   availableExperiences: [],
   permissions: [],
-  features: { part_workspaces: true },
+  features: { part_workspaces: true, inspection: true },
   status: 'loading',
   switching: false,
   switchingToOrganizationId: null,

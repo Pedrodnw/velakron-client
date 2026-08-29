@@ -22,6 +22,7 @@ const initialState = {
   revisionImpactByRecord: {},
   lastFetched: null,
 }
+const emptyRevisionChanges = Object.freeze([])
 
 const normalize = records => (records || []).reduce((result, record) => {
   const id = String(record.id || record._id)
@@ -230,7 +231,7 @@ export const productionRecordSelectors = {
   getPagination: state => stateFor(state).pagination,
   getWorkflow: state => stateFor(state).workflow,
   getWarnings: state => stateFor(state).warnings,
-  getRevisionChanges: id => state => stateFor(state).revisionChangesByRecord[String(id)] || [],
+  getRevisionChanges: id => state => stateFor(state).revisionChangesByRecord[String(id)] || emptyRevisionChanges,
   getRevisionImpact: id => state => stateFor(state).revisionImpactByRecord[String(id)] || null,
 }
 

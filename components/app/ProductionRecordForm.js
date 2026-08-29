@@ -49,8 +49,18 @@ const steps = [
 ]
 
 const supplierFromRelationship = relationship => relationship.supplier_organization
+const previewSampleCount = (policy, quantity) => {
+  const total = Math.max(1, Number.parseInt(quantity, 10) || 1)
+  const value = Number(policy?.value)
+  if (policy?.strategy === 'first_and_last') return Math.min(total, 2)
+  if (policy?.strategy === 'every_piece') return total
+  if (policy?.strategy === 'fixed_quantity') return Math.min(total, Math.max(1, Math.ceil(value || 1)))
+  if (policy?.strategy === 'every_nth_piece') return Math.max(1, Math.ceil(total / Math.max(1, Math.ceil(value || 1))))
+  if (policy?.strategy === 'percentage') return Math.min(total, Math.max(1, Math.ceil(total * Math.min(100, Math.max(.01, value || 100)) / 100)))
+  return 1
+}
 
-const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], partWorkspaces = [], initialPartRevisionId = '', pending, feedback, workflow, itarCapability, onSubmit }) => {
+const ProductionRecordForm = ({ initial = blankProductionRecord, relationships = [], partWorkspaces = [], initialPartRevisionId = '', inspectionPlanSummary = null, pending, feedback, workflow, itarCapability, onPartRevisionSelected, onSubmit }) => {
   const builder = workflow?.builder || fallbackWorkflowBuilder
   const [form, setForm] = useState(() => ({
     ...blankProductionRecord,
@@ -76,11 +86,24 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
         export_control: selected.current_released_revision?.export_control || 'none',
       } : {}),
     }))
+    onPartRevisionSelected?.(selected || null, value)
   }
   useEffect(() => {
     if (!initialPartRevisionId || form.part_revision_id || !releasedParts.length) return
     selectPartRevision(initialPartRevisionId)
   }, [form.part_revision_id, initialPartRevisionId, releasedParts])
+  useEffect(() => {
+    const characteristics = inspectionPlanSummary?.characteristics || []
+    if (!characteristics.length) return
+    setForm(current => ({
+      ...current,
+      first_article_required: current.first_article_required || characteristics.some(item => item.inspection_stage === 'first_article'),
+      workflow_configuration: {
+        ...current.workflow_configuration,
+        include_quality_review: current.workflow_configuration.include_quality_review || characteristics.some(item => item.inspection_stage === 'receiving'),
+      },
+    }))
+  }, [inspectionPlanSummary])
   const setWorkflow = (key, value) => setForm(current => ({
     ...current,
     workflow_configuration: {
@@ -107,6 +130,13 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
     firstArticleRequired: form.first_article_required,
     builder,
   }), [builder, form.first_article_required, form.workflow_configuration])
+  const inspectionPreview = useMemo(() => {
+    const characteristics = inspectionPlanSummary?.characteristics || []
+    return ['first_article', 'in_process', 'final', 'receiving'].map(stage => {
+      const stageCharacteristics = characteristics.filter(item => item.inspection_stage === stage)
+      return { stage, checkpoints: stageCharacteristics.length, results: stageCharacteristics.reduce((sum, item) => sum + previewSampleCount(item.sample_policy, form.quantity), 0) }
+    }).filter(item => item.checkpoints)
+  }, [form.quantity, inspectionPlanSummary])
 
   const save = action => onSubmit({
     ...form,
@@ -155,6 +185,7 @@ const ProductionRecordForm = ({ initial = blankProductionRecord, relationships =
           <FormField id='production-required-date' label='Required arrival date' type='date' value={form.required_delivery_date} onInput={event => set('required_delivery_date', event.target.value)} onBlur={event => set('required_delivery_date', event.target.value)} required />
           <FormField id='production-transit' label='Estimated transit days' type='number' min='0' max='365' step='1' value={form.transit_days} onChange={event => set('transit_days', event.target.value)} hint='Optional. Used to compare the supplier forecast with arrival.' />
         </div>
+        {form.part_revision_id && inspectionPlanSummary && <section className='productionInspectionPreview'><header><div><p className='technicalLabel'>Inherited from the released revision</p><h3>{inspectionPlanSummary.plan?.title || 'Inspection plan'}</h3><p>Sample counts update with quantity. The server freezes the authoritative scope when this record is created.</p></div><span>{inspectionPlanSummary.characteristics?.length || 0} checkpoints</span></header>{inspectionPreview.length ? <div>{inspectionPreview.map(item => <article key={item.stage}><strong>{formatLabel(item.stage)}</strong><span>{item.checkpoints} checkpoint{item.checkpoints === 1 ? '' : 's'}</span><small>{item.results} expected result{item.results === 1 ? '' : 's'}</small></article>)}</div> : <p>This released revision has an empty inspection plan and will not create inspection runs.</p>}<footer><span>Final gate</span><strong>{formatLabel(inspectionPlanSummary.plan?.final_approval_policy || 'submission_required')}</strong></footer></section>}
         <div className='workflowBuilder'>
           <header><p className='technicalLabel'>Job-specific route</p><h3>Choose how this part will move through production</h3><p>The current Velakron workflow is preselected. Change only the stages this job needs.</p></header>
           <fieldset className='workflowChoiceGroup'>

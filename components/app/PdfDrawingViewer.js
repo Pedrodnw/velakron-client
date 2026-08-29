@@ -140,13 +140,31 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
   }, [source])
 
   useEffect(() => {
-    if (!viewportRef.current || typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(entries => {
-      const rect = entries[0]?.contentRect
-      if (rect) setViewportSize({ width: rect.width, height: rect.height })
-    })
-    observer.observe(viewportRef.current)
-    return () => observer.disconnect()
+    const viewport = viewportRef.current
+    if (!viewport) return undefined
+    const updateViewportSize = rect => {
+      const width = Math.max(0, Number(rect?.width) || 0)
+      const height = Math.max(0, Number(rect?.height) || 0)
+      if (width < 1 || height < 1) return
+      setViewportSize(current => (
+        Math.abs(current.width - width) < 0.5 && Math.abs(current.height - height) < 0.5
+          ? current
+          : { width, height }
+      ))
+    }
+    const measureViewport = () => updateViewportSize(viewport.getBoundingClientRect())
+    measureViewport()
+    const frame = window.requestAnimationFrame(measureViewport)
+    const observer = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(entries => updateViewportSize(entries[0]?.contentRect))
+    observer?.observe(viewport)
+    window.addEventListener('resize', measureViewport)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', measureViewport)
+      observer?.disconnect()
+    }
   }, [inspectionMode, pageRailOpen, pdfDocument])
 
   useEffect(() => {

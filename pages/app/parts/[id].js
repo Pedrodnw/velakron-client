@@ -13,6 +13,7 @@ import {
 } from '../../../components/app'
 import { formatDate, formatDateTime, formatLabel, statusTone } from '../../../components/app/formatters'
 import ItarAccessDialog from '../../../components/app/ItarAccessDialog'
+import InspectionPlanPanel from '../../../components/app/InspectionPlanPanel'
 import PartAssetViewer from '../../../components/app/PartAssetViewer'
 import PartCaseDrawer from '../../../components/app/PartCaseDrawer'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
@@ -68,6 +69,7 @@ const TABS = [
   ['model', '3D model', FileBox],
   ['drawing', 'Drawing', FileText],
   ['requirements', 'Requirements', Check],
+  ['inspection', 'Inspection', ClipboardCheck],
   ['cases', 'Cases & messages', MessageSquareText],
   ['files', 'Files', FileUp],
   ['history', 'History', History],
@@ -90,6 +92,7 @@ const PartWorkspace = () => {
   const organization = useSelector(getActiveOrganization)
   const allowed = useSelector(getHasPermission('part.read'))
   const enabled = useSelector(getFeatureEnabled('part_workspaces'))
+  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
   const canCreateCase = useSelector(getHasPermission('part.collaboration.create'))
   const relationships = useSelector(relationshipSelectors.getEntities)
   const detail = useSelector(partSelectors.getDetailById(id))
@@ -105,6 +108,8 @@ const PartWorkspace = () => {
   const [viewer, setViewer] = useState({ asset: null, source: '', loading: false })
   const [selectedAnchorId, setSelectedAnchorId] = useState('')
   const [pendingAnchor, setPendingAnchor] = useState(null)
+  const [inspectionAnchor, setInspectionAnchor] = useState(null)
+  const [inspectionAnchorRequest, setInspectionAnchorRequest] = useState(false)
   const [annotationMode, setAnnotationMode] = useState(false)
   const [caseDrawer, setCaseDrawer] = useState({ open: false, mode: 'create', id: '' })
   const caseDetail = useSelector(partSelectors.getCollaborationDetail(caseDrawer.id))
@@ -124,6 +129,7 @@ const PartWorkspace = () => {
   const [caseFilters, setCaseFilters] = useState({ search: '', type: 'all', state: 'active', responsibility: 'all', scope: 'revision' })
   const [releaseValidation, setReleaseValidation] = useState({ loading: false, valid: false, errors: [], warnings: [] })
   const [releaseConfirmed, setReleaseConfirmed] = useState(false)
+  const tabs = useMemo(() => TABS.filter(([key]) => key !== 'inspection' || inspectionEnabled), [inspectionEnabled])
 
   const refresh = useCallback(async () => {
     if (!id) return
@@ -145,6 +151,8 @@ const PartWorkspace = () => {
     dispatch(loadPartRevision(id, revisionId))
     setViewer({ asset: null, source: '', loading: false })
     setPendingAnchor(null)
+    setInspectionAnchor(null)
+    setInspectionAnchorRequest(false)
     setSelectedAnchorId('')
     setFeedback(null)
     setCaseFeedback(null)
@@ -165,6 +173,10 @@ const PartWorkspace = () => {
     setTab('cases')
     setCaseDrawer({ open: true, mode: 'detail', id: collaborationId })
   }, [caseDrawer.open, router.query.collaboration])
+  useEffect(() => {
+    const requestedTab = String(router.query.tab || '')
+    if (tabs.some(([key]) => key === requestedTab)) setTab(requestedTab)
+  }, [router.query.tab, tabs])
 
   const revisions = detail?.revisions || []
   const revision = revisionDetail?.revision
@@ -325,6 +337,27 @@ const PartWorkspace = () => {
   }
 
   const chooseVisualAnchor = async anchor => {
+    if (inspectionAnchorRequest) {
+      const anchorResult = await dispatch(createVisualAnchor(id, revisionId, {
+        kind: anchor.anchor_kind,
+        label: anchor.label,
+        anchor_data: anchor.anchor_data,
+        view_state: anchor.view_state,
+        renderer_version: 'velakron-viewer-v1',
+        source_asset_id: viewer.asset?.id || viewer.asset?._id || null,
+      }))
+      if (!anchorResult?.ok) {
+        setFeedback({ type: 'error', message: resultError(anchorResult, 'The inspection reference could not be saved.') })
+        return anchorResult
+      }
+      setInspectionAnchor(anchorResult.payload.data.anchor)
+      setInspectionAnchorRequest(false)
+      setAnnotationMode(false)
+      setSelectedAnchorId(anchorResult.payload.data.anchor.id)
+      setTab('inspection')
+      setFeedback({ type: 'success', message: 'Visual context captured. Finish the inspection checkpoint details.' })
+      return anchorResult
+    }
     if (carryRequest) {
       if (!viewer.asset) {
         setFeedback({ type: 'error', message: 'Open the corresponding target revision file before placing the carried reference.' })
@@ -500,7 +533,7 @@ const PartWorkspace = () => {
       </header>
       <div className='partWorkspaceContext'><div><UsersRound aria-hidden='true' /><span><small>{organization.type === 'supplier' ? 'OEM customer' : 'Revision access'}</small><strong>{relatedCompanyLabel}</strong></span></div><div><Eye aria-hidden='true' /><span><small>Selected context</small><strong>Revision {revision?.revision} · {formatLabel(revision?.lifecycle_state)}</strong></span></div><div><MessageSquareText aria-hidden='true' /><span><small>This revision</small><strong>{openRevisionCases.length} open · {myRevisionCases.length} your action</strong></span></div></div>
       <section className={`partNextStep partNextStep--${nextStep.tone}`}><span className='partNextStep__icon'>{nextStep.tone === 'warning' ? <AlertTriangle aria-hidden='true' /> : nextStep.tone === 'draft' ? <Layers3 aria-hidden='true' /> : nextStep.tone === 'info' ? <Info aria-hidden='true' /> : <CheckCircle2 aria-hidden='true' />}</span><div><p className='technicalLabel'>{nextStep.eyebrow}</p><h2>{nextStep.title}</h2><p>{nextStep.description}</p></div>{nextStep.action && <div className='partNextStep__action'>{nextStep.action.kind === 'release' && <Button onClick={openReleaseReview}>{nextStep.action.label}</Button>}{nextStep.action.kind === 'tab' && <Button variant='secondary' onClick={() => setTab(nextStep.action.tab)}>{nextStep.action.label}</Button>}{nextStep.action.kind === 'cases' && <Button variant='secondary' onClick={() => { setCaseFilters(current => ({ ...current, scope: 'revision', responsibility: 'mine', state: 'active' })); setTab('cases') }}>{nextStep.action.label}</Button>}{nextStep.action.kind === 'share' && <Button onClick={() => openDrawer('share')}>{nextStep.action.label}</Button>}{nextStep.action.kind === 'start-review' && <Button onClick={() => run(() => dispatch(startPartReview(revisionDetail.review.id)), 'Revision review started.', { close: false })}>{nextStep.action.label}</Button>}</div>}</section>
-      <nav className='partWorkspaceTabs' aria-label='Part workspace views'>{TABS.map(([key, label, Icon]) => <button type='button' key={key} className={tab === key ? 'is-active' : ''} onClick={() => { setFeedback(null); setTab(key) }}><Icon aria-hidden='true' /> {label}{key === 'cases' && openRevisionCases.length > 0 && <span>{openRevisionCases.length}</span>}</button>)}</nav>
+      <nav className='partWorkspaceTabs' aria-label='Part workspace views'>{tabs.map(([key, label, Icon]) => <button type='button' key={key} className={tab === key ? 'is-active' : ''} onClick={() => { setFeedback(null); setTab(key) }}><Icon aria-hidden='true' /> {label}{key === 'cases' && openRevisionCases.length > 0 && <span>{openRevisionCases.length}</span>}</button>)}</nav>
 
       {tab === 'overview' && <section className='partOverview'>
         <article className='partWorkspacePanel partOverview__definition'><header><div><p className='technicalLabel'>Controlled definition</p><h2>Revision {revision?.revision}</h2><p>{revision?.engineering_note || 'This workspace keeps the released technical definition, discussion, and production use together.'}</p></div></header><dl className='partOverviewFacts'><div><dt>Material</dt><dd>{revision?.material || 'Not specified'}</dd></div><div><dt>Finish / coating</dt><dd>{revision?.finish || 'Not specified'}</dd></div><div><dt>Process</dt><dd>{revision?.process_summary || 'Not specified'}</dd></div><div><dt>Classification</dt><dd>{revision?.export_control === 'itar' ? 'ITAR controlled' : 'Standard controlled data'}</dd></div><div><dt>Files</dt><dd>{assets.length}</dd></div><div><dt>Requirements</dt><dd>{revisionDetail?.requirements?.length || 0}</dd></div></dl></article>
@@ -517,6 +550,16 @@ const PartWorkspace = () => {
       {tab === 'requirements' && <section className='partWorkspacePanel'><header><div><p className='technicalLabel'>Structured requirements</p><h2>Revision requirements</h2><p>Requirements travel with the released manifest and remain separately searchable and acknowledgeable.</p></div>{allowedActions.can_edit_revision && <Button onClick={() => { setFeedback(null); setRequirementEditId(''); setRequirement({ type: 'general', title: '', body: '', source_reference: '', acknowledgement_requested: false }); setDrawer('requirement') }}><Plus aria-hidden='true' /> Add requirement</Button>}</header>{revisionDetail?.requirements?.length ? <div className='partRequirementList'>{revisionDetail.requirements.map((item, index) => { const acknowledged = acknowledgedRequirementIds.has(String(item.id || item._id)); return <article key={item.id || item._id}><span className='partRequirementList__index'>{String(index + 1).padStart(2, '0')}</span><div><div className='partRequirementList__title'><StatusBadge tone='info'>{formatLabel(item.type)}</StatusBadge><h3>{item.title}</h3>{item.acknowledgement_requested && <StatusBadge tone={acknowledged ? 'success' : 'warning'}>{acknowledged ? 'Acknowledged' : organization.type === 'supplier' ? 'Your acknowledgement requested' : 'Supplier acknowledgement requested'}</StatusBadge>}</div><p>{item.body}</p>{item.source_reference && <small>Source: {item.source_reference}</small>}</div><div className='partRequirementList__actions'>{organization.type === 'supplier' && item.acknowledgement_requested && <Button variant='secondary' disabled={acknowledged || mutating} onClick={() => run(() => dispatch(acknowledgePartRequirement(revisionDetail.review.id, item.id)), 'Requirement acknowledged.', { close: false })}>{acknowledged ? <Check aria-hidden='true' /> : <Clock3 aria-hidden='true' />} {acknowledged ? 'Acknowledged' : 'Acknowledge'}</Button>}{allowedActions.can_edit_revision && <><Button variant='secondary' aria-label={`Edit ${item.title}`} onClick={() => { setFeedback(null); setRequirementEditId(item.id || item._id); setRequirement({ type: item.type, title: item.title, body: item.body, source_reference: item.source_reference || '', acknowledgement_requested: Boolean(item.acknowledgement_requested) }); setDrawer('requirement') }}><Pencil aria-hidden='true' /> Edit</Button><Button variant='danger' aria-label={`Delete ${item.title}`} onClick={() => { if (window.confirm(`Delete the draft requirement “${item.title}”?`)) run(() => dispatch(removePartRequirement(id, revisionId, item.id || item._id)), 'Draft requirement removed.', { close: false }) }}><Trash2 aria-hidden='true' /></Button></>}</div></article>})}</div> : <div className='partWorkspaceEmpty'><Check aria-hidden='true' /><h3>No structured requirements</h3><p>The technical files still remain part of the controlled revision manifest.</p></div>}
         {organization.type === 'supplier' && revisionDetail.review && <div className='partReviewPanel'><div><p className='technicalLabel'>Supplier revision review</p><h3>{formatLabel(revisionDetail.review.state)}</h3><div className='partReviewProgress'><span><b>{acknowledgedRequirementCount}</b> of <b>{requestedRequirements.length}</b> requested acknowledgements complete</span><progress max={Math.max(requestedRequirements.length, 1)} value={acknowledgedRequirementCount} aria-label={`${acknowledgedRequirementCount} of ${requestedRequirements.length} required acknowledgements complete`} /></div><p>Revision acknowledgement confirms the complete released package was reviewed. It is separate from production acceptance and never changes the OEM’s immutable release.</p>{unacknowledgedRequirementCount > 0 && <p className='partReviewPanel__warning'><AlertTriangle aria-hidden='true' /> {unacknowledgedRequirementCount} requested acknowledgement{unacknowledgedRequirementCount === 1 ? '' : 's'} remain. You can still acknowledge the revision, but the outstanding items stay visible.</p>}</div><div>{revisionDetail.review.state === 'not_started' && <Button onClick={() => run(() => dispatch(startPartReview(revisionDetail.review.id)), 'Revision review started.', { close: false })}>Start review</Button>}{['not_started', 'in_review', 'changes_requested'].includes(revisionDetail.review.state) && <><Button variant='secondary' onClick={() => openDrawer('review-changes')}>Request changes</Button><Button onClick={() => run(() => dispatch(acknowledgePartRevision(revisionDetail.review.id)), 'Revision acknowledged.', { close: false })}>Acknowledge revision</Button></>}</div></div>}
       </section>}
+
+      {inspectionEnabled && tab === 'inspection' && <InspectionPlanPanel partId={id} revisionId={revisionId} revision={revision} organizationType={organization.type} selectedAnchor={inspectionAnchor} onOpenAnchor={focusAnchor} onRequestVisualContext={async () => {
+        const asset = viewAssets.drawing[0] || viewAssets.model[0]
+        if (!asset) { setFeedback({ type: 'error', message: 'Upload a drawing or 3D model before selecting inspection context.' }); return }
+        setInspectionAnchorRequest(true)
+        setTab(asset.role === 'drawing' ? 'drawing' : 'model')
+        await openAsset(asset)
+        setAnnotationMode(true)
+        setFeedback({ type: 'info', message: 'Selection mode is active. Click a model feature or drag over the drawing area this checkpoint describes.' })
+      }} />}
 
       {tab === 'cases' && <section className='partWorkspacePanel'><header><div><p className='technicalLabel'>Bilateral technical record</p><h2>Cases and messages</h2><p>Cases default to revision {revision?.revision}. Choose all revisions only when you need the broader part history.</p></div>{canCreateCase && activeShares.length > 0 && <Button onClick={openCreateCase}><Plus aria-hidden='true' /> New case</Button>}</header>{cases.length ? <><div className='partCaseFilters'><label><span>Revision scope</span><select value={caseFilters.scope} onChange={event => setCaseFilters(current => ({ ...current, scope: event.target.value }))}><option value='revision'>Revision {revision?.revision}</option><option value='all'>All part revisions</option></select></label><label><span>Search</span><input value={caseFilters.search} onChange={event => setCaseFilters(current => ({ ...current, search: event.target.value }))} placeholder='Title or description' /></label><label><span>Type</span><select value={caseFilters.type} onChange={event => setCaseFilters(current => ({ ...current, type: event.target.value }))}><option value='all'>All types</option><option value='clarification'>Clarification</option><option value='information'>Information</option><option value='manufacturability_suggestion'>Manufacturability suggestion</option><option value='deviation_request'>Deviation request</option></select></label><label><span>Status</span><select value={caseFilters.state} onChange={event => setCaseFilters(current => ({ ...current, state: event.target.value }))}><option value='active'>Open work</option><option value='all'>Every status</option><option value='closed'>Closed</option><option value='accepted'>Accepted</option><option value='rejected'>Rejected</option></select></label><label><span>Responsibility</span><select value={caseFilters.responsibility} onChange={event => setCaseFilters(current => ({ ...current, responsibility: event.target.value }))}><option value='all'>Either company</option><option value='mine'>My company</option><option value='other'>Other company</option></select></label></div>{visibleCases.length ? <div className='partCaseList'>{visibleCases.map(item => { const mine = item.current_actor_side === organization.type; const owner = item.current_actor_side === 'none' ? 'No next action' : mine ? 'Your company owns the next step' : `Waiting on ${relatedCompanyLabel}`; return <button type='button' key={item.id || item._id} onClick={() => openCase(item)}><div><span className='technicalLabel'>{formatLabel(item.type)} · Revision {item.part_revision?.revision || '?'}</span><strong>{item.title}</strong><small>{item.visual_anchor ? 'Visual reference attached' : 'Revision-level'} · Updated {formatDateTime(item.last_activity_at)}</small><span className={`partCaseList__owner${mine ? ' is-mine' : ''}`}>{owner}</span></div><div><StatusBadge tone={statusTone(item.state)}>{formatLabel(item.state)}</StatusBadge><StatusBadge tone={item.priority === 'high' ? 'danger' : item.priority === 'normal' ? 'warning' : 'neutral'}>{formatLabel(item.priority)}</StatusBadge>{item.schedule_effect !== 'none' && <StatusBadge tone='warning'>{formatLabel(item.schedule_effect)} schedule effect</StatusBadge>}{item.due_at && <span className='partCaseList__due'>Due {formatDate(item.due_at)}</span>}<ChevronRight aria-hidden='true' /></div></button> })}</div> : <div className='partWorkspaceEmpty'><MessageSquareText aria-hidden='true' /><h3>No cases match these filters</h3><p>{caseFilters.responsibility === 'mine' ? `Nothing is assigned to your company in this ${caseFilters.scope === 'revision' ? 'revision' : 'workspace'} view.` : 'Change or clear a filter to see the remaining technical record.'}</p><Button variant='secondary' onClick={() => setCaseFilters({ search: '', type: 'all', state: 'active', responsibility: 'all', scope: 'revision' })}>Show open revision cases</Button></div>}</> : <div className='partWorkspaceEmpty'><MessageSquareText aria-hidden='true' /><h3>No technical cases yet</h3><p>Create a clarification, information notice, manufacturability suggestion, or deviation request.</p></div>}</section>}
 

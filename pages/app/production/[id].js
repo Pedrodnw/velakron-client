@@ -5,13 +5,14 @@ import { useDispatch, useSelector } from 'react-redux'
 import { AppPageHeader, AppSkeleton, ATTENTION_CATEGORIES, ErrorState, PermissionDenied, ProductionAttentionPanel, ProductionCollaborationPanel, ProductionStageStepper, ResponsiveDrawer, ScheduleHealthBadge, StatusBadge } from '../../../components/app'
 import { formatDate, formatLabel, statusTone } from '../../../components/app/formatters'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
+import InspectionQualityPanel from '../../../components/app/InspectionQualityPanel'
 import Seo from '../../../components/Seo'
 import FormField from '../../../components/auth/FormField'
 import FormMessage from '../../../components/auth/FormMessage'
 import { resultError } from '../../../components/auth/utils'
 import { Button } from '../../../components/design-system'
 import { getAuthUser } from '../../../store/slices/auth'
-import { getActiveOrganization, getHasPermission } from '../../../store/slices/appContext'
+import { getActiveOrganization, getFeatureEnabled, getHasPermission } from '../../../store/slices/appContext'
 import { loadMachines, machineSelectors } from '../../../store/slices/entities/machines'
 import { loadRelationships, relationshipSelectors } from '../../../store/slices/entities/relationships'
 import {
@@ -317,6 +318,7 @@ const ProductionRecordDetail = () => {
   const dispatch = useDispatch()
   const user = useSelector(getAuthUser)
   const organization = useSelector(getActiveOrganization)
+  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
   const allowed = useSelector(getHasPermission('production_record.read'))
   const record = useSelector(state => router.query.id ? productionRecordSelectors.getRecordById(router.query.id)(state) : null)
   const detail = useSelector(state => router.query.id ? productionRecordSelectors.getDetailById(router.query.id)(state) : null)
@@ -496,6 +498,7 @@ const ProductionRecordDetail = () => {
         <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} currentStepId={record.current_workflow_step_id} lifecycleState={record.lifecycle_state} />
       </section>
       {partId && <section className='appPanel productionRevisionChanges'><header className='appPanel__header'><div><p className='technicalLabel'>Part revision control</p><h2>Revision-change record</h2></div><GitCompareArrows aria-hidden='true' /></header>{revisionChanges.length ? <div className='productionRevisionChangeList'>{revisionChanges.map(change => <article key={change.id || change._id}><div><strong>Rev {change.from_revision?.revision} → Rev {change.to_revision?.revision}</strong><span>{change.reason}</span><small>{formatDate(change.created_at)}</small></div><div><StatusBadge tone={statusTone(change.state)}>{formatLabel(change.state)}</StatusBadge>{((organization.type === 'supplier' && change.state === 'supplier_review') || (organization.type === 'oem' && ['proposed', 'changes_requested', 'approved'].includes(change.state))) && <Button variant='secondary' onClick={() => { setActionTarget(change); setDrawer('revision-change-action') }}>Review</Button>}</div></article>)}</div> : <p className='productionRevisionChanges__empty'>This production record has not changed its frozen Part Workspace revision.</p>}</section>}
+      {inspectionEnabled && <InspectionQualityPanel production={record} organizationType={organization.type} />}
       {record.oem_internal_note && <section className='appPanel productionInternalNote'><header className='appPanel__header'><div><p className='technicalLabel'>OEM only</p><h2>Internal note</h2></div></header><p>{record.oem_internal_note}</p></section>}
       <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
       {organization.type === 'oem' && (detail?.actions?.cancel || detail?.actions?.reopen || detail?.actions?.archive) && <section className='appPanel productionLifecycleActions'><header className='appPanel__header'><div><p className='technicalLabel'>Record controls</p><h2>Lifecycle</h2></div></header><div>{detail.actions.cancel && <Button variant='secondary' onClick={() => setDrawer('cancel')}><X aria-hidden='true' /> Cancel record</Button>}{detail.actions.reopen && <Button variant='secondary' onClick={() => setDrawer('reopen')}><RotateCcw aria-hidden='true' /> Reopen record</Button>}{detail.actions.archive && <Button variant='secondary' onClick={() => setDrawer('archive')}><Archive aria-hidden='true' /> Archive record</Button>}</div></section>}

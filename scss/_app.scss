@@ -1393,7 +1393,7 @@
     padding: 22px;
   }
 
-  &--wide { width: min(100%, 980px); }
+  &--wide { width: min(100%, 1120px); }
 }
 
 .appSkeleton {
@@ -2882,6 +2882,27 @@
   small { margin-top: 4px; color: var(--app-text-muted); font-size: 12px; }
 }
 
+.productionInspectionPreview {
+  overflow: hidden;
+  border: 1px solid var(--vk-info-border);
+  border-radius: $radius;
+  background: var(--vk-action-soft);
+
+  > header,
+  > footer { @include flex-row(center, space-between, 16px); padding: 14px 16px; }
+  > header h3 { margin: 3px 0; font-size: 17px; }
+  > header p:last-child { margin: 0; color: var(--app-text-muted); font-size: 11px; }
+  > header > span { flex: 0 0 auto; padding: 6px 9px; border-radius: 999px; background: var(--app-surface); color: var(--vk-info); font-size: 10px; font-weight: 750; }
+  > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--vk-info-border); border-bottom: 1px solid var(--vk-info-border); background: var(--app-surface); }
+  article { display: grid; gap: 3px; padding: 12px 14px; border-right: 1px solid var(--app-border); }
+  article:last-child { border-right: 0; }
+  article span,
+  article small { color: var(--app-text-muted); font-size: 10px; }
+  > footer { justify-content: flex-start; }
+  > footer span { color: var(--app-text-muted); }
+  > p { padding: 14px 16px; }
+}
+
 .workflowBuilder {
   display: grid;
   gap: 20px;
@@ -3321,6 +3342,11 @@
 
   .workflowChoiceGrid,
   .workflowToggleGrid { grid-template-columns: 1fr; }
+
+  .productionInspectionPreview > header { align-items: flex-start; flex-direction: column; }
+  .productionInspectionPreview > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .productionInspectionPreview article:nth-child(2) { border-right: 0; }
+  .productionInspectionPreview article:nth-child(-n + 2) { border-bottom: 1px solid var(--app-border); }
 
   .customRouteBuilder,
   .workflowPreview { padding: 14px; }
