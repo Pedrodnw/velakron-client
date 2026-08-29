@@ -1,6 +1,6 @@
 import { AlertTriangle, ArrowLeft, Box, Check, CheckCircle2, ChevronRight, CircleDot, ClipboardCheck, Clock3, Copy, Download, Eye, FileBox, FileText, FileUp, History, Info, Layers3, LoaderCircle, MessageSquareText, Pencil, Plus, RefreshCw, Send, Share2, ShieldAlert, Trash2, UsersRound } from 'lucide-react'
 import { useRouter } from 'next/router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   AppPageHeader,
@@ -106,6 +106,9 @@ const PartWorkspace = () => {
   const revisionDetail = useSelector(partSelectors.getRevisionDetail(revisionId))
   const [tab, setTab] = useState('overview')
   const [viewer, setViewer] = useState({ asset: null, source: '', loading: false })
+  const [caseVisual, setCaseVisual] = useState({ asset: null, source: '', loading: false, error: '', protected: false })
+  const autoOpenedAssetRef = useRef('')
+  const caseVisualRequestRef = useRef('')
   const [selectedAnchorId, setSelectedAnchorId] = useState('')
   const [pendingAnchor, setPendingAnchor] = useState(null)
   const [inspectionAnchor, setInspectionAnchor] = useState(null)
@@ -149,6 +152,7 @@ const PartWorkspace = () => {
   useEffect(() => {
     if (!revisionId || !id) return
     dispatch(loadPartRevision(id, revisionId))
+    autoOpenedAssetRef.current = ''
     setViewer({ asset: null, source: '', loading: false })
     setPendingAnchor(null)
     setInspectionAnchor(null)
@@ -206,15 +210,6 @@ const PartWorkspace = () => {
     ? [currentShare?.oem_organization?.name].filter(Boolean)
     : activeShares.map(item => item.supplier_organization?.name).filter(Boolean)
   const relatedCompanyLabel = relatedCompanyNames.length ? relatedCompanyNames.join(', ') : organization?.type === 'supplier' ? 'OEM customer' : 'No Supplier has access yet'
-  useEffect(() => {
-    if (!['model', 'drawing'].includes(tab) || !viewer.asset) return
-    const viewerAssetId = String(viewer.asset.id || viewer.asset._id || '')
-    if (selectedVisualAssets.some(asset => String(asset.id || asset._id) === viewerAssetId)) return
-    setViewer({ asset: null, source: '', loading: false })
-    setSelectedAnchorId('')
-    setPendingAnchor(null)
-    setAnnotationMode(false)
-  }, [selectedVisualAssets, tab, viewer.asset])
   const visibleCases = useMemo(() => cases.filter(item => {
     if (caseFilters.scope === 'revision' && caseRevisionIdOf(item) !== revisionId) return false
     const search = caseFilters.search.trim().toLowerCase()
@@ -286,7 +281,7 @@ const PartWorkspace = () => {
     }))
   }
 
-  const openAsset = async (asset, attestation = null) => {
+  const openAsset = useCallback(async (asset, attestation = null) => {
     if (revision?.export_control === 'itar' && !attestation) {
       setItarRequest({ asset, purpose: 'view' })
       return null
@@ -301,7 +296,59 @@ const PartWorkspace = () => {
     setViewer({ asset, source: result.payload.data.view.target, loading: false })
     setItarRequest(null)
     return result
-  }
+  }, [dispatch, id, revision?.export_control, revisionId])
+
+  useEffect(() => {
+    if (!['model', 'drawing'].includes(tab)) return
+    const viewerAssetId = String(viewer.asset?.id || viewer.asset?._id || '')
+    if (selectedVisualAssets.some(asset => String(asset.id || asset._id) === viewerAssetId)) return
+    setSelectedAnchorId('')
+    setPendingAnchor(null)
+    setAnnotationMode(false)
+    if (!selectedVisualAssets.length) {
+      setViewer({ asset: null, source: '', loading: false })
+      return
+    }
+    const primaryAsset = selectedVisualAssets.find(asset => asset.is_primary)
+      || selectedVisualAssets.find(asset => asset.role === (tab === 'model' ? 'primary_model' : 'drawing'))
+      || selectedVisualAssets[0]
+    const key = `${revisionId}:${tab}:${primaryAsset.id || primaryAsset._id}`
+    if (autoOpenedAssetRef.current === key) return
+    autoOpenedAssetRef.current = key
+    openAsset(primaryAsset)
+  }, [openAsset, revisionId, selectedVisualAssets, tab, viewer.asset])
+
+  const caseVisualItem = caseDetail?.item
+  const caseVisualAnchorId = String(caseVisualItem?.visual_anchor?.id || caseVisualItem?.visual_anchor?._id || '')
+  const caseVisualAsset = caseVisualItem?.source_asset
+  const caseVisualAssetId = String(caseVisualAsset?.id || caseVisualAsset?._id || caseVisualAsset || '')
+  const caseVisualRevisionId = caseRevisionIdOf(caseVisualItem)
+  const caseVisualExportControl = caseVisualItem?.part_revision?.export_control || 'none'
+  const caseVisualKey = [caseDrawer.id, caseVisualRevisionId, caseVisualAssetId, caseVisualAnchorId].join(':')
+  useEffect(() => {
+    if (!caseDrawer.open || caseDrawer.mode !== 'detail' || !caseVisualAnchorId || !caseVisualAssetId || !caseVisualRevisionId) {
+      caseVisualRequestRef.current = ''
+      setCaseVisual({ asset: null, source: '', loading: false, error: '', protected: false })
+      return
+    }
+    if (caseVisualRequestRef.current === caseVisualKey) return
+    caseVisualRequestRef.current = caseVisualKey
+    if (caseVisualExportControl === 'itar') {
+      setCaseVisual({ asset: caseVisualAsset, source: '', loading: false, error: '', protected: true })
+      return
+    }
+    let cancelled = false
+    setCaseVisual({ asset: caseVisualAsset, source: '', loading: true, error: '', protected: false })
+    dispatch(requestPartAssetView(id, caseVisualRevisionId, caseVisualAssetId, {})).then(result => {
+      if (cancelled) return
+      if (!result?.ok) {
+        setCaseVisual({ asset: caseVisualAsset, source: '', loading: false, error: resultError(result, 'The linked visual could not be displayed.'), protected: false })
+        return
+      }
+      setCaseVisual({ asset: caseVisualAsset, source: result.payload.data.view.target, loading: false, error: '', protected: false })
+    })
+    return () => { cancelled = true }
+  }, [caseDrawer.mode, caseDrawer.open, caseVisualAnchorId, caseVisualAssetId, caseVisualExportControl, caseVisualKey, caseVisualRevisionId, dispatch, id])
   const downloadAsset = async (asset, attestation = null) => {
     if (revision?.export_control === 'itar' && !attestation) {
       setItarRequest({ asset, purpose: 'download' })
@@ -568,7 +615,7 @@ const PartWorkspace = () => {
       {tab === 'history' && <section className='partWorkspacePanel'><header><div><p className='technicalLabel'>Immutable trace</p><h2>Workspace history</h2><p>Part, revision, sharing, annotation, review, and collaboration changes appear in one ordered record.</p></div></header>{history.length ? <ol className='partHistory'>{history.map(event => <li key={event.id || event._id}><span><Clock3 aria-hidden='true' /></span><div><strong>{formatLabel(event.event_type)}</strong><p>{event.reason || event.actor?.name || 'Recorded by Velakron'}</p><time>{formatDateTime(event.created_at)}</time></div></li>)}</ol> : <div className='partWorkspaceEmpty'><History aria-hidden='true' /><h3>No history available</h3></div>}</section>}
     </section>
 
-    <PartCaseDrawer open={caseDrawer.open} mode={caseDrawer.mode} itemDetail={caseDetail} shares={activeShares} productionRecords={productionRecords} selectedAnchor={pendingAnchor} sourceAsset={viewer.asset} itarControlled={revision?.export_control === 'itar'} pending={mutating} upload={upload} feedback={caseFeedback} organizationType={organization.type} relatedCompanyName={relatedCompanyLabel} onClose={() => { setCaseDrawer({ open: false, mode: 'create', id: '' }); setCaseFeedback(null); setAnnotationMode(false); setPendingAnchor(null) }} onRequestAnchor={() => { setCaseDrawer({ open: false, mode: 'create', id: '' }); setCaseFeedback(null); setAnnotationMode(true); setFeedback({ type: 'info', message: 'Selection mode is active. Click a visible model surface, or click or drag on a drawing, to capture context for the new case.' }) }} onOpenAnchor={focusAnchor} onCreate={createCase} onMessage={body => runCase(() => dispatch(postPartCollaborationMessage(caseDrawer.id, body)), 'Message added to the conversation.')} onUpdate={payload => runCase(() => dispatch(updatePartCollaboration(caseDrawer.id, payload)), 'Responsibility updated.')} onAction={(action, note) => runCase(() => dispatch(applyPartCollaborationAction(caseDrawer.id, { action, note, version: caseDetail.item.version })), 'Workflow advanced and responsibility refreshed.')} onUpload={(file, itar) => runCase(() => dispatch(uploadPartCollaborationAttachment(caseDrawer.id, { file, itar: revision?.export_control === 'itar' ? itar : {} })), 'Evidence attached.')} onDownloadAttachment={downloadCollaborationAttachment} onArchive={item => { const reason = window.prompt('Why is this closed case being archived?'); if (!reason) return null; return runCase(() => dispatch(archivePartCollaboration(item.id || item._id, { reason, version: item.version })), 'Closed case archived.').then(result => { if (result?.ok) setCaseDrawer({ open: false, mode: 'create', id: '' }); return result }) }} onPromote={payload => runCase(() => dispatch(promotePartCollaboration(caseDrawer.id, payload)), 'Case promoted to production attention.')} />
+    <PartCaseDrawer open={caseDrawer.open} mode={caseDrawer.mode} itemDetail={caseDetail} shares={activeShares} productionRecords={productionRecords} selectedAnchor={pendingAnchor} sourceAsset={viewer.asset} linkedVisual={caseVisual} itarControlled={revision?.export_control === 'itar'} pending={mutating} upload={upload} feedback={caseFeedback} organizationType={organization.type} relatedCompanyName={relatedCompanyLabel} onClose={() => { setCaseDrawer({ open: false, mode: 'create', id: '' }); setCaseFeedback(null); setAnnotationMode(false); setPendingAnchor(null) }} onRequestAnchor={() => { setCaseDrawer({ open: false, mode: 'create', id: '' }); setCaseFeedback(null); setAnnotationMode(true); setFeedback({ type: 'info', message: 'Selection mode is active. Click a visible model surface, or click or drag on a drawing, to capture context for the new case.' }) }} onOpenAnchor={focusAnchor} onCreate={createCase} onMessage={body => runCase(() => dispatch(postPartCollaborationMessage(caseDrawer.id, body)), 'Message added to the conversation.')} onUpdate={payload => runCase(() => dispatch(updatePartCollaboration(caseDrawer.id, payload)), 'Responsibility updated.')} onAction={(action, note) => runCase(() => dispatch(applyPartCollaborationAction(caseDrawer.id, { action, note, version: caseDetail.item.version })), 'Workflow advanced and responsibility refreshed.')} onUpload={(file, itar) => runCase(() => dispatch(uploadPartCollaborationAttachment(caseDrawer.id, { file, itar: revision?.export_control === 'itar' ? itar : {} })), 'Evidence attached.')} onDownloadAttachment={downloadCollaborationAttachment} onArchive={item => { const reason = window.prompt('Why is this closed case being archived?'); if (!reason) return null; return runCase(() => dispatch(archivePartCollaboration(item.id || item._id, { reason, version: item.version })), 'Closed case archived.').then(result => { if (result?.ok) setCaseDrawer({ open: false, mode: 'create', id: '' }); return result }) }} onPromote={payload => runCase(() => dispatch(promotePartCollaboration(caseDrawer.id, payload)), 'Case promoted to production attention.')} />
 
     <ResponsiveDrawer open={drawer === 'revision'} title='Edit draft revision' onClose={() => setDrawer('')}><form className='partDrawerForm' onSubmit={event => { event.preventDefault(); run(() => dispatch(updatePartRevision(id, revisionId, { ...revisionForm, version: revision.version })), 'Draft revision updated.') }}><FormMessage type={feedback?.type}>{feedback?.message}</FormMessage><FormField id='edit-revision' label='Revision' value={revisionForm.revision} onChange={event => setRevisionForm(current => ({ ...current, revision: event.target.value }))} required /><FormField id='edit-material' label='Material' value={revisionForm.material} onChange={event => setRevisionForm(current => ({ ...current, material: event.target.value }))} /><FormField id='edit-finish' label='Finish / coating' value={revisionForm.finish} onChange={event => setRevisionForm(current => ({ ...current, finish: event.target.value }))} /><label className='textAreaField' htmlFor='edit-process'><span>Process summary</span><textarea id='edit-process' value={revisionForm.process_summary} onChange={event => setRevisionForm(current => ({ ...current, process_summary: event.target.value }))} /></label><label className='textAreaField' htmlFor='edit-engineering-note'><span>Engineering note</span><textarea id='edit-engineering-note' value={revisionForm.engineering_note} onChange={event => setRevisionForm(current => ({ ...current, engineering_note: event.target.value }))} /></label><label className='productionCheck'><input type='checkbox' checked={revisionForm.export_control === 'itar'} onChange={event => setRevisionForm(current => ({ ...current, export_control: event.target.checked ? 'itar' : 'none' }))} /><ShieldAlert aria-hidden='true' /><span><strong>ITAR-controlled revision</strong><small>Every technical file will require protected storage and a fresh access confirmation.</small></span></label><footer><Button variant='secondary' onClick={() => setDrawer('')}>Cancel</Button><Button type='submit' disabled={mutating}>Save draft</Button></footer></form></ResponsiveDrawer>
 
