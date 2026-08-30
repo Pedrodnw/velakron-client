@@ -86,10 +86,19 @@ const AppNavigation = ({ onNavigate }) => {
     {visibleItems.map(({ href, label, icon, exact }) => {
       const Icon = icons[icon]
       const active = exact ? router.pathname === href : router.pathname.startsWith(href)
+      const itemHref = href === '/app/parts'
+        ? partActions?.needs_action > 0
+          ? '/app/parts?view=needs_action'
+          : partActions?.new_revisions > 0
+            ? '/app/parts?view=new_revisions'
+            : href
+        : href
+      const partActionCount = (partActions?.needs_action || 0) + (partActions?.new_revisions || 0)
       const count = href === '/admin/action-center'
         ? actionCenter?.counts?.needs_velakron || 0
-        : href === '/app/parts' ? (partActions?.needs_action || 0) + (partActions?.new_revisions || 0) : 0
-      return <LinkWrap key={href} href={href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
+        : href === '/app/parts' ? partActionCount
+          : href === '/app/production' && organization?.type === 'supplier' ? partActionCount : 0
+      return <LinkWrap key={href} href={itemHref} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
         <Icon aria-hidden='true' />
         <span>{label}</span>
         {count > 0 && <strong className='appNavigation__count' aria-label={`${count} item${count === 1 ? '' : 's'} need action`}>{count > 99 ? '99+' : count}</strong>}

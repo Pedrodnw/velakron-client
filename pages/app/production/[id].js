@@ -1,18 +1,18 @@
-import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, GitCompareArrows, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, ShieldAlert, Truck, UserRoundCheck, X } from 'lucide-react'
+import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, GitCompareArrows, LoaderCircle, PackageCheck, RefreshCw, RotateCcw, Send, ShieldAlert, UserRoundCheck, X } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppPageHeader, AppSkeleton, ATTENTION_CATEGORIES, ErrorState, PermissionDenied, ProductionAttentionPanel, ProductionCollaborationPanel, ProductionStageStepper, ResponsiveDrawer, ScheduleHealthBadge, StatusBadge } from '../../../components/app'
 import { formatDate, formatLabel, statusTone } from '../../../components/app/formatters'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
-import InspectionQualityPanel from '../../../components/app/InspectionQualityPanel'
+import ProductionPartWorkspace, { ProductionPartThumbnail } from '../../../components/app/ProductionPartWorkspace'
 import Seo from '../../../components/Seo'
 import FormField from '../../../components/auth/FormField'
 import FormMessage from '../../../components/auth/FormMessage'
 import { resultError } from '../../../components/auth/utils'
 import { Button } from '../../../components/design-system'
 import { getAuthUser } from '../../../store/slices/auth'
-import { getActiveOrganization, getFeatureEnabled, getHasPermission } from '../../../store/slices/appContext'
+import { getActiveOrganization, getHasPermission } from '../../../store/slices/appContext'
 import { loadMachines, machineSelectors } from '../../../store/slices/entities/machines'
 import { loadRelationships, relationshipSelectors } from '../../../store/slices/entities/relationships'
 import {
@@ -59,14 +59,6 @@ import { trackProductEvent } from '../../../store/slices/entities/platformAdmini
 const inputDate = value => value ? String(value).slice(0, 10) : ''
 const requestKey = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
 const relatedSupplier = relationship => relationship.supplier_organization
-const updateAge = value => {
-  if (!value) return 'No supplier update yet'
-  const hours = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 3_600_000))
-  if (hours < 1) return 'Less than an hour ago'
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
-  const days = Math.floor(hours / 24)
-  return `${days} day${days === 1 ? '' : 's'} ago`
-}
 const qualityStatusLabel = value => ({
   not_ready: 'Not ready',
   pending: 'Awaiting OEM inspection',
@@ -318,7 +310,6 @@ const ProductionRecordDetail = () => {
   const dispatch = useDispatch()
   const user = useSelector(getAuthUser)
   const organization = useSelector(getActiveOrganization)
-  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
   const allowed = useSelector(getHasPermission('production_record.read'))
   const record = useSelector(state => router.query.id ? productionRecordSelectors.getRecordById(router.query.id)(state) : null)
   const detail = useSelector(state => router.query.id ? productionRecordSelectors.getDetailById(router.query.id)(state) : null)
@@ -452,7 +443,7 @@ const ProductionRecordDetail = () => {
   return <>
     <Seo title={`${record.public_reference} production record`} description='Production commitment detail.' path={`/app/production/${record.id}`} noIndex />
     <Button href={returnPath} variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Production</Button>
-    <AppPageHeader eyebrow={record.public_reference} title={record.part_number || 'Draft production record'} description={record.part_name || 'Complete the draft before assigning it to a supplier.'} actions={actionButtons} />
+    <AppPageHeader eyebrow={record.public_reference} title={record.part_number || 'Draft production record'} description={record.part_name || 'Complete the draft before assigning it to a supplier.'} media={partId && record.part_revision ? <ProductionPartThumbnail partId={partId} revisionId={String(record.part_revision?.id || record.part_revision?._id || record.part_revision)} exportControl={record.export_control} /> : null} actions={actionButtons} />
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     {error && <ErrorState description={error.message} onRetry={() => dispatch(loadProductionRecord(record.id))} />}
     <div className='productionStatusStrip'>
@@ -471,36 +462,15 @@ const ProductionRecordDetail = () => {
     {activeProductionBlock && <div className='supplierStateNotice supplierStateNotice--changes_requested'><AlertTriangle aria-hidden='true' /><div><strong>Production is blocked</strong><p>Stage changes, delivery confirmation, and final approval remain locked until the production-block workflow is approved and the recipient confirms production has been released.</p></div></div>}
     {projectedLate && <div className='supplierStateNotice supplierStateNotice--changes_requested'><CalendarCheck aria-hidden='true' /><div><strong>The current forecast arrives after the required date</strong><p>The forecast remains visible instead of blocking acceptance so both companies can act on the real schedule.</p></div></div>}
     <ProductionAttentionPanel conditions={collaboration?.attention || []} canAcknowledge={canAcknowledgeAttention} canResolve={item => canResolveAttention && (item.workflow?.managed || organization.type !== 'supplier' || item.source === 'supplier')} pending={collaboration?.mutating} onAcknowledge={item => runInline(() => dispatch(acknowledgeProductionAttention(record.id, item.id)), 'Attention reason acknowledged.')} onResolve={item => { setActionTarget(item); setDrawer('resolve-attention') }} onWorkflowAction={(item, action) => { setActionTarget({ item, action }); setDrawer('attention-workflow-action') }} />
-    {partId && <section className='partProductionLink'>
-      <div><GitCompareArrows aria-hidden='true' /><span><p className='technicalLabel'>Controlled technical baseline</p><strong>{record.part_revision_snapshot?.part_number || record.part_number} · Revision {record.part_revision_snapshot?.revision || record.drawing_revision}</strong><small>Manifest {record.part_revision_snapshot?.manifest_hash ? `${record.part_revision_snapshot.manifest_hash.slice(0, 12)}…` : 'not recorded'}</small></span></div>
-      <div><Button href={`/app/parts/${partId}`} variant='secondary'>Open Part Workspace</Button>{organization.type === 'oem' && record.lifecycle_state === 'active' && linkedPartDetail?.revisions?.some(item => item.lifecycle_state === 'released' && String(item.id || item._id) !== String(record.part_revision?.id || record.part_revision?._id || record.part_revision)) && <Button variant='secondary' onClick={() => setDrawer('revision-change')}><GitCompareArrows aria-hidden='true' /> Propose revision change</Button>}</div>
-    </section>}
     <div className='productionDetailGrid'>
-      <section className='appPanel productionFacts'>
-        <header className='appPanel__header'><div><p className='technicalLabel'>Commitment</p><h2>Production details</h2></div><Truck aria-hidden='true' /></header>
-        <dl className='appDetailList'>
-          <div><dt>OEM customer</dt><dd>{record.oem_organization?.name}</dd></div>
-          <div><dt>Supplier</dt><dd>{record.supplier_organization?.name || 'Not assigned'}</dd></div>
-          <div><dt>PO reference</dt><dd>{record.po_number || 'Not provided'}{record.po_line_number ? ` / line ${record.po_line_number}` : ''}</dd></div>
-          <div><dt>Drawing revision</dt><dd>{record.drawing_revision || 'Not provided'}</dd></div>
-          <div><dt>Quantity</dt><dd>{record.quantity || 'Not provided'} {record.unit === 'other' ? record.unit_other : formatLabel(record.unit)}</dd></div>
-          <div><dt>Required arrival</dt><dd>{formatDate(record.required_delivery_date)}</dd></div>
-          <div><dt>Expected ship</dt><dd>{formatDate(record.expected_ship_date)}</dd></div>
-          <div><dt>Projected arrival</dt><dd>{formatDate(record.projected_arrival_date)}</dd></div>
-          <div><dt>Last supplier update</dt><dd>{updateAge(record.last_supplier_update_at)}</dd></div>
-          <div><dt>Primary machine</dt><dd>{record.current_machine ? `${record.current_machine.shop_identifier} — ${record.current_machine.manufacturer} ${record.current_machine.model}` : 'Not assigned'}</dd></div>
-          <div><dt>First article</dt><dd>{record.first_article_required ? 'Required' : 'Not required'}</dd></div>
-          <div><dt>Export control</dt><dd>{record.export_control === 'itar' ? 'ITAR controlled' : 'Not marked ITAR'}</dd></div>
-        </dl>
-      </section>
+      <ProductionPartWorkspace record={record} organization={organization} onEditDetails={detail?.actions?.edit ? () => setDrawer('edit') : null} />
       <section className='appPanel productionProgress'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Current workflow</p><h2>Production progress</h2></div></header>
         <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} currentStepId={record.current_workflow_step_id} lifecycleState={record.lifecycle_state} />
       </section>
-      {partId && <section className='appPanel productionRevisionChanges'><header className='appPanel__header'><div><p className='technicalLabel'>Part revision control</p><h2>Revision-change record</h2></div><GitCompareArrows aria-hidden='true' /></header>{revisionChanges.length ? <div className='productionRevisionChangeList'>{revisionChanges.map(change => <article key={change.id || change._id}><div><strong>Rev {change.from_revision?.revision} → Rev {change.to_revision?.revision}</strong><span>{change.reason}</span><small>{formatDate(change.created_at)}</small></div><div><StatusBadge tone={statusTone(change.state)}>{formatLabel(change.state)}</StatusBadge>{((organization.type === 'supplier' && change.state === 'supplier_review') || (organization.type === 'oem' && ['proposed', 'changes_requested', 'approved'].includes(change.state))) && <Button variant='secondary' onClick={() => { setActionTarget(change); setDrawer('revision-change-action') }}>Review</Button>}</div></article>)}</div> : <p className='productionRevisionChanges__empty'>This production record has not changed its frozen Part Workspace revision.</p>}</section>}
-      {inspectionEnabled && <InspectionQualityPanel production={record} organizationType={organization.type} />}
+      {partId && <section className='appPanel productionRevisionChanges'><header className='appPanel__header'><div><p className='technicalLabel'>Part revision control</p><h2>Revision-change record</h2></div><div>{organization.type === 'oem' && record.lifecycle_state === 'active' && linkedPartDetail?.revisions?.some(item => item.lifecycle_state === 'released' && String(item.id || item._id) !== String(record.part_revision?.id || record.part_revision?._id || record.part_revision)) && <Button variant='secondary' onClick={() => setDrawer('revision-change')}><GitCompareArrows aria-hidden='true' /> Propose revision change</Button>}</div></header>{revisionChanges.length ? <div className='productionRevisionChangeList'>{revisionChanges.map(change => <article key={change.id || change._id}><div><strong>Rev {change.from_revision?.revision} → Rev {change.to_revision?.revision}</strong><span>{change.reason}</span><small>{formatDate(change.created_at)}</small></div><div><StatusBadge tone={statusTone(change.state)}>{formatLabel(change.state)}</StatusBadge>{((organization.type === 'supplier' && change.state === 'supplier_review') || (organization.type === 'oem' && ['proposed', 'changes_requested', 'approved'].includes(change.state))) && <Button variant='secondary' onClick={() => { setActionTarget(change); setDrawer('revision-change-action') }}>Review</Button>}</div></article>)}</div> : <p className='productionRevisionChanges__empty'>This production record has not changed its frozen Part Workspace revision.</p>}</section>}
       {record.oem_internal_note && <section className='appPanel productionInternalNote'><header className='appPanel__header'><div><p className='technicalLabel'>OEM only</p><h2>Internal note</h2></div></header><p>{record.oem_internal_note}</p></section>}
-      <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
+      <ProductionCollaborationPanel record={record} detail={detail} collaboration={collaboration} partEvents={detail?.partActivity || []} organization={organization} userId={user?.id || user?._id} permissions={{ canArchiveNote, canArchiveAttachment }} feedback={feedback} onOpenPartCase={collaborationId => router.replace({ pathname: router.pathname, query: { ...router.query, part_tab: 'cases', collaboration: collaborationId } }, undefined, { shallow: true })} onCreateNote={payload => runInline(() => dispatch(createProductionNote(record.id, payload)), 'Note added.')} onReviseNote={(note, body) => runInline(() => dispatch(reviseProductionNote(record.id, note.id, { body })), 'Note revision saved.')} onArchiveNote={note => { setActionTarget(note); setDrawer('archive-note') }} onUpload={payload => runInline(() => dispatch(uploadProductionAttachment(record.id, payload)), 'File uploaded and verified.')} onDownload={(file, attestation) => dispatch(requestAttachmentDownload(record.id, file.id, attestation))} onView={(file, attestation) => dispatch(requestAttachmentView(record.id, file.id, attestation))} onArchiveAttachment={file => { setActionTarget(file); setDrawer('archive-attachment') }} />
       {organization.type === 'oem' && (detail?.actions?.cancel || detail?.actions?.reopen || detail?.actions?.archive) && <section className='appPanel productionLifecycleActions'><header className='appPanel__header'><div><p className='technicalLabel'>Record controls</p><h2>Lifecycle</h2></div></header><div>{detail.actions.cancel && <Button variant='secondary' onClick={() => setDrawer('cancel')}><X aria-hidden='true' /> Cancel record</Button>}{detail.actions.reopen && <Button variant='secondary' onClick={() => setDrawer('reopen')}><RotateCcw aria-hidden='true' /> Reopen record</Button>}{detail.actions.archive && <Button variant='secondary' onClick={() => setDrawer('archive')}><Archive aria-hidden='true' /> Archive record</Button>}</div></section>}
     </div>
     <ResponsiveDrawer open={Boolean(drawer)} title={{ accept: 'Review assignment', decline: 'Decline assignment', assign: record.supplier_organization ? 'Reassign supplier' : 'Assign supplier', machine: 'Primary machine', stage: 'Update production stage', forecast: 'Update shipping forecast', attention: 'Flag for attention', 'attention-workflow-action': actionTarget?.action?.label || 'Attention workflow action', 'revision-change': 'Propose production revision change', 'revision-change-action': 'Review production revision change', 'quality-issue': 'Report quality issue', 'quality-approval': 'Approve delivered parts', 'resolve-attention': 'Resolve attention reason', 'archive-note': 'Archive note', 'archive-attachment': 'Remove file', edit: 'Edit production record', delivery: 'Confirm delivery', cancel: 'Cancel production record', reopen: 'Reopen production record', archive: 'Archive production record' }[drawer] || 'Production action'} onClose={closeDrawer}>

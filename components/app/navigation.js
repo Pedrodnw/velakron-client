@@ -10,7 +10,6 @@ const itemsByOrganizationType = {
   ],
   supplier: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
-    { href: '/app/parts', label: 'Part workspaces', icon: 'parts', permission: 'part.read', feature: 'part_workspaces' },
     { href: '/app/company', label: 'Onboarding & profile', icon: 'onboarding', permission: 'supplier_profile.read' },
     { href: '/app/facilities', label: 'Facilities', icon: 'facilities', permission: 'supplier_profile.read' },
     { href: '/app/production', label: 'Production', icon: 'production', permission: 'production_record.read' },

@@ -13,6 +13,8 @@ const initialState = {
   collaborationDetailsById: {},
   historyByPart: {},
   actionSummary: null,
+  actionItems: [],
+  actionItemsLoading: false,
   loading: false,
   detailLoading: false,
   mutating: false,
@@ -69,12 +71,21 @@ const slice = createSlice({
     actionSummaryReceived: (state, action) => {
       state.actionSummary = action.payload?.data || action.payload || null
     },
+    actionItemsRequested: state => {
+      state.actionItemsLoading = true
+      state.error = null
+    },
+    actionItemsReceived: (state, action) => {
+      state.actionItems = action.payload?.data?.items || []
+      state.actionItemsLoading = false
+    },
     mutationRequested: state => { state.mutating = true; state.error = null },
     uploadChanged: (state, action) => { state.upload = action.payload },
     requestFailed: (state, action) => {
       state.loading = false
       state.detailLoading = false
       state.mutating = false
+      state.actionItemsLoading = false
       state.upload = null
       state.error = action.payload?.error || action.payload
     },
@@ -88,6 +99,8 @@ const slice = createSlice({
 const {
   collaborationDetailReceived,
   collaborationListReceived,
+  actionItemsReceived,
+  actionItemsRequested,
   actionSummaryReceived,
   detailRequested,
   historyReceived,
@@ -110,6 +123,15 @@ export const loadParts = (params = {}) => call({
 export const loadPartActionSummary = () => call({
   url: '/parts/actions/summary', onSuccess: actionSummaryReceived.type,
   onError: requestFailed.type, requestKey: 'parts-action-summary',
+})
+
+export const loadPartActionItems = () => call({
+  url: '/part-collaboration',
+  params: { state: 'active', needs_action: true, page_size: 100 },
+  onStart: actionItemsRequested.type,
+  onSuccess: actionItemsReceived.type,
+  onError: requestFailed.type,
+  requestKey: 'parts-action-items',
 })
 
 export const loadPart = id => call({
@@ -270,6 +292,8 @@ export const partSelectors = {
   getCollaborationDetail: id => state => stateFor(state).collaborationDetailsById[String(id)] || null,
   getHistoryByPart: id => state => stateFor(state).historyByPart[String(id)] || EMPTY_LIST,
   getActionSummary: state => stateFor(state).actionSummary,
+  getActionItems: state => stateFor(state).actionItems,
+  getActionItemsLoading: state => stateFor(state).actionItemsLoading,
   getLoading: state => stateFor(state).loading,
   getDetailLoading: state => stateFor(state).detailLoading,
   getMutating: state => stateFor(state).mutating,

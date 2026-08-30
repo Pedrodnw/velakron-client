@@ -649,6 +649,26 @@
   @include flex-row(space-between, flex-end, 28px);
   margin-bottom: 30px;
 
+  &__identity {
+    display: flex;
+    min-width: 0;
+    gap: 18px;
+    align-items: center;
+  }
+
+  &__media {
+    display: grid;
+    width: 82px;
+    height: 82px;
+    flex: 0 0 auto;
+    overflow: hidden;
+    place-items: center;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    background: linear-gradient(145deg, #fff, var(--app-canvas));
+    box-shadow: 0 8px 26px rgba(22, 38, 63, .07);
+  }
+
   &__copy {
     max-width: 780px;
 
@@ -1057,7 +1077,7 @@
 
 .timelineRow {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
   gap: 12px;
   align-items: start;
   padding: 15px 0;
@@ -1090,6 +1110,12 @@
     margin: 0;
     color: var(--app-text-muted);
     font-size: 12px;
+  }
+
+  &__action .vk-button {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 10px;
   }
 }
 
@@ -1542,6 +1568,7 @@
   .timelineRow {
     grid-template-columns: 32px minmax(0, 1fr);
 
+    &__action,
     time {
       grid-column: 2;
     }
@@ -3211,6 +3238,22 @@
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: 20px;
   align-items: start;
+}
+
+.productionPartWorkspace,
+.productionPartWorkspaceFallback,
+.productionPartWorkspaceLoading { grid-column: 1 / -1; }
+
+.productionPartWorkspaceLoading {
+  display: flex;
+  min-height: 180px;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+
+  > svg { width: 22px; color: var(--vk-info); }
+  strong { display: block; }
+  p { margin: 4px 0 0; color: var(--app-text-muted); font-size: 11px; }
 }
 
 .productionFacts { grid-row: span 2; }

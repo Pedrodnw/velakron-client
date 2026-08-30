@@ -31,6 +31,7 @@ const idOf = value => String(value?.id || value?._id || value || '')
 const runTone = state => state === 'accepted' ? 'success' : state === 'changes_requested' ? 'danger' : state === 'submitted' ? 'info' : state === 'ready_to_submit' ? 'warning' : 'neutral'
 const resultTone = state => state === 'pass' ? 'success' : String(state).startsWith('fail') ? 'danger' : 'neutral'
 const actorLabel = (run, organizationType) => run.current_actor_side === 'none' ? 'Complete' : run.current_actor_side === organizationType ? 'Your company owns the next step' : `Waiting on ${formatLabel(run.current_actor_side)}`
+const gatePolicyLabel = value => ({ oem_approval_required: 'OEM approval required', completion_required: 'Completion required', submission_required: 'Submission required' }[value] || formatLabel(value))
 const alternateAttributeValue = expectation => expectation === 'pass' ? 'fail' : expectation === 'present' ? 'absent' : 'present'
 const newImportState = () => ({ open: false, csv: '', file: null, attachmentId: '', preview: null, delimiter: ',', idempotency_key: '', mapping: { header_row: 1, decimal_separator: '.', characteristic: 'characteristic_id', sample: 'sample', value: 'value', unit: 'unit', inspected_at: 'inspected_at', instrument: 'instrument' } })
 
@@ -49,7 +50,7 @@ const ResultEntry = ({ characteristic, sampleNumber, result, pending, onSave, on
   </article>
 }
 
-const InspectionRunWorkspace = ({ runId, production, organizationType, onClose, onChanged }) => {
+const InspectionRunWorkspace = ({ runId, production, organizationType, onClose, onChanged, embedded = false }) => {
   const dispatch = useDispatch()
   const detail = useSelector(inspectionSelectors.getRunDetail(runId))
   const evidence = useSelector(inspectionSelectors.getAttachments(runId))
@@ -165,9 +166,8 @@ const InspectionRunWorkspace = ({ runId, production, organizationType, onClose, 
     const linkedCharacteristic = linkedResult && characteristicMap.get(idOf(linkedResult.inspection_characteristic))
     return linkedCharacteristic ? `${linkedCharacteristic.characteristic_id} · Sample ${linkedResult.sample_key}` : 'Inspection checkpoint evidence'
   }
-  const partId = idOf(production.part)
   return <div className='inspectionRunWorkspace'>
-    <header className='inspectionRunWorkspace__header'><div><p className='technicalLabel'>{formatLabel(run.kind)} inspection</p><h2>{production.part_number} · {run.completed_results} of {run.required_results}</h2><p>{actorLabel(run, organizationType)}</p></div><div><StatusBadge tone={runTone(run.state)}>{formatLabel(run.state)}</StatusBadge>{partId && <Button variant='secondary' href={`/app/parts/${partId}?tab=inspection`}>Open released definition</Button>}<Button variant='secondary' onClick={refresh}><RefreshCw aria-hidden='true' /> Refresh</Button></div></header>
+    <header className='inspectionRunWorkspace__header'><div><p className='technicalLabel'>{formatLabel(run.kind)} inspection</p><h2>{production.part_number} · {run.completed_results} of {run.required_results}</h2><p>{actorLabel(run, organizationType)}</p>{embedded && <small>The released definition and every inspection stage remain visible in the production record behind this panel.</small>}</div><div><StatusBadge tone={runTone(run.state)}>{formatLabel(run.state)}</StatusBadge><Button variant='secondary' onClick={refresh}><RefreshCw aria-hidden='true' /> Refresh</Button></div></header>
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     <div className='inspectionCompletion'><progress max={Math.max(run.required_results, 1)} value={run.completed_results} /><span>{run.pass_count} pass · {run.fail_count} confirmed failure{run.fail_count === 1 ? '' : 's'} · {run.unconfirmed_failure_count} need confirmation</span></div>
     {canRecord && <details className='inspectionAssignment'><summary><UserRoundCheck aria-hidden='true' /> Responsibility and due date</summary><div><label><span>Assignee</span><select value={assignment.assignee_membership_id} onChange={event => setAssignment(current => ({ ...current, assignee_membership_id: event.target.value }))}><option value=''>Company quality queue</option>{(detail.assignment_options || []).map(option => <option key={option.id} value={option.id}>{option.name} · {formatLabel(option.role)}</option>)}</select></label><label><span>Due date</span><input type='date' value={assignment.due_at} onChange={event => setAssignment(current => ({ ...current, due_at: event.target.value }))} /></label><Button variant='secondary' onClick={saveAssignment}>Save responsibility</Button></div></details>}
@@ -191,7 +191,7 @@ const InspectionRunWorkspace = ({ runId, production, organizationType, onClose, 
   </div>
 }
 
-const InspectionQualityPanel = ({ production, organizationType }) => {
+const InspectionQualityPanel = ({ production, organizationType, embedded = false }) => {
   const dispatch = useDispatch()
   const runs = useSelector(inspectionSelectors.getRuns(production.id))
   const loading = useSelector(inspectionSelectors.getLoading)
@@ -201,9 +201,9 @@ const InspectionQualityPanel = ({ production, organizationType }) => {
   if (!production.inspection_plan) return null
   return <section className='appPanel inspectionQualityPanel'>
     <header className='appPanel__header'><div><p className='technicalLabel'>Collaborative inspection & quality</p><h2>Inspection plan execution</h2><p>Structured checkpoints, evidence, package review, and quality gates tied to this production record.</p></div><Button variant='secondary' onClick={refresh}><RefreshCw aria-hidden='true' /> Refresh</Button></header>
-    {loading && !runs.length ? <p>Loading inspections…</p> : <div className='inspectionRunCards'>{runs.map(run => { const assignee = run.assignee_membership?.user; const assigneeName = [assignee?.first_name, assignee?.last_name].filter(Boolean).join(' '); return <article key={idOf(run)} className={`inspectionRunCard inspectionRunCard--${run.state}`}><div className='inspectionRunCard__icon'>{run.fail_count || run.unconfirmed_failure_count ? <AlertTriangle aria-hidden='true' /> : run.state === 'accepted' ? <CheckCircle2 aria-hidden='true' /> : <Ruler aria-hidden='true' />}</div><div><p className='technicalLabel'>{formatLabel(run.kind)}</p><h3>{formatLabel(run.state)}</h3><p>{actorLabel(run, organizationType)}</p><progress max={Math.max(run.required_results, 1)} value={run.completed_results} /><small>{run.completed_results}/{run.required_results} results · {run.pass_count} pass · {run.fail_count + run.unconfirmed_failure_count} finding{run.fail_count + run.unconfirmed_failure_count === 1 ? '' : 's'}</small></div><div><StatusBadge tone={runTone(run.state)}>{formatLabel(run.gate_policy)}</StatusBadge>{assigneeName && <span>Assigned to {assigneeName}</span>}{run.due_at && <span>Due {formatDate(run.due_at)}</span>}<Button onClick={() => setSelectedRun(idOf(run))}>{run.current_actor_side === organizationType ? 'Continue inspection' : 'Review details'}</Button></div></article> })}</div>}
+    {loading && !runs.length ? <p>Loading inspections…</p> : <div className='inspectionRunCards'>{runs.map(run => { const assignee = run.assignee_membership?.user; const assigneeName = [assignee?.first_name, assignee?.last_name].filter(Boolean).join(' '); return <article key={idOf(run)} className={`inspectionRunCard inspectionRunCard--${run.state}`}><div className='inspectionRunCard__icon'>{run.fail_count || run.unconfirmed_failure_count ? <AlertTriangle aria-hidden='true' /> : run.state === 'accepted' ? <CheckCircle2 aria-hidden='true' /> : <Ruler aria-hidden='true' />}</div><div><p className='technicalLabel'>{formatLabel(run.kind)}</p><h3>{formatLabel(run.state)}</h3><p>{actorLabel(run, organizationType)}</p><progress max={Math.max(run.required_results, 1)} value={run.completed_results} /><small>{run.completed_results}/{run.required_results} results · {run.pass_count} pass · {run.fail_count + run.unconfirmed_failure_count} finding{run.fail_count + run.unconfirmed_failure_count === 1 ? '' : 's'}</small></div><div><StatusBadge tone={runTone(run.state)}>{gatePolicyLabel(run.gate_policy)}</StatusBadge>{assigneeName && <span>Assigned to {assigneeName}</span>}{run.due_at && <span>Due {formatDate(run.due_at)}</span>}<Button onClick={() => setSelectedRun(idOf(run))}>{run.current_actor_side === organizationType ? 'Continue inspection' : 'Review details'}</Button></div></article> })}</div>}
     {!loading && !runs.length && <div className='partWorkspaceEmpty'><ClipboardCheck aria-hidden='true' /><h3>No inspection runs were provisioned</h3><p>The linked released plan may not include a checkpoint for this production workflow.</p></div>}
-    <ResponsiveDrawer wide open={Boolean(selectedRun)} title='Inspection & quality workspace' onClose={() => setSelectedRun('')}><InspectionRunWorkspace runId={selectedRun} production={production} organizationType={organizationType} onClose={() => setSelectedRun('')} onChanged={refresh} /></ResponsiveDrawer>
+    <ResponsiveDrawer wide open={Boolean(selectedRun)} title='Inspection & quality workspace' onClose={() => setSelectedRun('')}><InspectionRunWorkspace runId={selectedRun} production={production} organizationType={organizationType} embedded={embedded} onClose={() => setSelectedRun('')} onChanged={refresh} /></ResponsiveDrawer>
   </section>
 }
 

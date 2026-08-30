@@ -18,6 +18,25 @@
 .partQueueContext .technicalLabel { color: var(--vk-info); }
 .partQueueContext strong { display: block; margin-top: 2px; font-size: 14px; }
 .partQueueContext p { margin: 3px 0 0; color: var(--app-text-muted); font-size: 10px; }
+.partActionTopics { padding: 0; }
+.partActionTopics > header { display: flex; gap: 18px; align-items: center; justify-content: space-between; padding: 18px; border-bottom: 1px solid var(--app-border); }
+.partActionTopics > header p,
+.partActionTopics > header h2 { margin: 0; }
+.partActionTopics > header h2 { margin-top: 3px; font-size: 18px; }
+.partActionTopics > header p:last-child { margin-top: 4px; color: var(--app-text-muted); font-size: 11px; }
+.partActionTopics__list { display: grid; }
+.partActionTopic { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 13px; align-items: center; padding: 15px 18px; border-bottom: 1px solid var(--app-border); color: var(--app-text); text-decoration: none; transition: background .16s ease; }
+.partActionTopic:last-child { border-bottom: 0; }
+.partActionTopic:hover { background: var(--vk-action-soft); }
+.partActionTopic__icon { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--vk-warning-border); border-radius: 9px; background: var(--vk-warning-soft); color: var(--vk-warning); }
+.partActionTopic__icon svg { width: 17px; }
+.partActionTopic > div:nth-child(2) { display: grid; min-width: 0; gap: 4px; }
+.partActionTopic > div:nth-child(2) strong,
+.partActionTopic > div:nth-child(2) small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.partActionTopic > div:nth-child(2) strong { font-size: 13px; }
+.partActionTopic > div:nth-child(2) small { color: var(--app-text-muted); font-size: 10px; }
+.partActionTopic > div:last-child { display: flex; flex: 0 0 auto; gap: 7px; align-items: center; }
+.partActionTopic > div:last-child > svg { width: 16px; color: var(--vk-info); }
 
 .partWorkspaceCreate {
   max-width: 1160px;
@@ -107,6 +126,29 @@
   &__actions .vk-button { min-height: 40px; }
 }
 
+.productionPartThumbnail { display: grid; width: 100%; height: 100%; place-items: center; color: var(--vk-info); }
+.productionPartThumbnail svg { width: 32px; height: 32px; stroke-width: 1.4; }
+.productionPartThumbnail img { display: block; width: 100%; height: 100%; padding: 6px; object-fit: contain; }
+.productionPartWorkspace { min-width: 0; margin-bottom: 0; }
+.productionPartWorkspace > .partNextStep { margin: 0; border: 0; border-bottom: 1px solid var(--app-border); border-radius: 0; }
+.partWorkspaceTabs.productionPartWorkspace__tabs { grid-template-columns: repeat(8, minmax(96px, 1fr)); overflow-x: hidden; }
+.productionPartWorkspace__tabs button { min-width: 0; gap: 6px; padding-inline: 7px; font-size: 11px; text-align: center; }
+.productionPartWorkspace__feedback { padding: 14px 18px 0; }
+.productionPartWorkspace__overview { padding: 20px; }
+.productionPartWorkspace .productionPartDetails { min-height: 0; }
+.productionPartDetails__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+.productionPartDetails__list > div { min-width: 0; }
+.productionPartWorkspaceFallback > p { margin: 0 0 18px; color: var(--app-text-muted); font-size: 12px; line-height: 1.6; }
+.productionPartWorkspaceFallback .productionPartDetails { padding: 0; border: 0; box-shadow: none; }
+.productionPartWorkspaceFallback .productionPartDetails > header { margin-bottom: 16px; }
+.productionCaseScope { display: flex; width: fit-content; gap: 4px; margin-bottom: 18px; padding: 4px; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-canvas); }
+.productionCaseScope button { display: flex; min-height: 34px; gap: 7px; align-items: center; padding: 6px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--app-text-muted); cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.productionCaseScope button.is-active { background: var(--app-surface); color: var(--vk-info); box-shadow: 0 2px 8px rgba(22, 38, 63, .08); }
+.productionCaseScope span { display: grid; min-width: 19px; height: 19px; place-items: center; border-radius: 999px; background: var(--vk-action-soft); color: var(--vk-info); font-size: 9px; }
+.productionInspectionWorkspace { display: grid; gap: 18px; padding: 18px; background: var(--app-canvas); }
+.productionInspectionWorkspace > * { margin: 0; }
+.productionTechnicalActions { margin-bottom: 18px; }
+
 .partWorkspaceContext { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--app-border); background: #fff; }
 .partWorkspaceContext > div { display: flex; min-width: 0; gap: 10px; align-items: center; padding: 11px 17px; border-right: 1px solid var(--app-border); }
 .partWorkspaceContext > div:last-child { border-right: 0; }
@@ -126,8 +168,13 @@
 .partNextStep__icon svg { width: 19px; }
 .partNextStep .technicalLabel { margin: 0; color: var(--vk-info); }
 .partNextStep h2 { margin: 2px 0 3px; font-size: 17px; }
-.partNextStep p:last-child { margin: 0; color: var(--app-text-muted); font-size: 11px; line-height: 1.5; }
+.partNextStep > div > p:not(.technicalLabel) { margin: 0; color: var(--app-text-muted); font-size: 11px; line-height: 1.5; }
 .partNextStep__action { justify-self: end; }
+.partNextStep__queue { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.partNextStep__queue button { display: inline-flex; min-height: 29px; gap: 5px; align-items: center; padding: 5px 9px; border: 1px solid var(--app-border); border-radius: 999px; background: rgba(255, 255, 255, .8); color: var(--app-text); cursor: pointer; font: inherit; font-size: 9px; font-weight: 750; }
+.partNextStep__queue button:hover { border-color: var(--vk-info-border); color: var(--vk-info); }
+.partNextStep__queue button svg { width: 13px; height: 13px; color: var(--vk-info); }
+.partNextStep__queue button span { color: var(--app-text-muted); font-weight: 600; }
 
 .partWorkspaceTabs {
   display: grid;
@@ -176,6 +223,13 @@
 .partViewerStage__toolbar p { margin: 0 0 3px; }
 .partViewerStage__toolbar strong { display: block; overflow: hidden; max-width: 500px; text-overflow: ellipsis; white-space: nowrap; }
 .partViewerStage__toolbar > div:last-child { display: flex; gap: 7px; }
+.partViewerSelectionGuide { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--vk-info-border); border-radius: 9px; background: var(--vk-action-soft); color: var(--vk-info); }
+.partViewerSelectionGuide > svg { width: 18px; height: 18px; }
+.partViewerSelectionGuide strong,
+.partViewerSelectionGuide span { display: block; }
+.partViewerSelectionGuide strong { font-size: 11px; }
+.partViewerSelectionGuide span { margin-top: 2px; color: var(--app-text-muted); font-size: 9px; line-height: 1.45; }
+.partViewerSelectionGuide button { border: 0; background: transparent; color: var(--vk-info); cursor: pointer; font: inherit; font-size: 10px; font-weight: 750; }
 .partViewerStage .modelViewer__toolbar { align-items: flex-start; flex-wrap: wrap; }
 .partViewerStage .modelViewer__toolbar > p { min-width: 0; flex: 1 1 280px; line-height: 1.5; }
 .partViewerStage .modelViewer__toolbar > div { flex: 1 1 420px; flex-wrap: wrap; justify-content: flex-end; }
@@ -313,6 +367,16 @@
 .partOverviewFacts dt { color: var(--app-text-muted); font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .partOverviewFacts dd { overflow-wrap: anywhere; margin: 5px 0 0; font-size: 12px; font-weight: 700; }
 .partOverviewActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.partOverview__package { display: flex; flex-direction: column; }
+.partPackageNavigator { display: grid; gap: 7px; margin-bottom: 14px; }
+.partPackageNavigator button { display: grid; grid-template-columns: 30px minmax(0, 1fr) 16px; gap: 10px; align-items: center; width: 100%; min-height: 54px; padding: 9px 11px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface); color: var(--app-text); cursor: pointer; text-align: left; }
+.partPackageNavigator button:hover { border-color: var(--vk-info-border); background: var(--vk-action-soft); }
+.partPackageNavigator button > svg:first-child { width: 17px; color: var(--vk-info); }
+.partPackageNavigator button > svg:last-child { width: 14px; color: var(--app-text-muted); }
+.partPackageNavigator strong,
+.partPackageNavigator small { display: block; }
+.partPackageNavigator strong { font-size: 11px; }
+.partPackageNavigator small { margin-top: 3px; color: var(--app-text-muted); font-size: 9px; }
 .partOverviewRecords { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .partOverviewRecords .button { justify-content: space-between; min-height: 62px; text-align: left; }
 .partOverviewRecords .button span { display: grid; gap: 3px; }
@@ -338,6 +402,10 @@
 .partRequirementList small { display: block; margin-top: 7px; color: var(--vk-info); }
 .partRequirementList__actions { display: flex; gap: 6px; align-items: center; }
 .partRequirementList__actions .vk-button { min-height: 34px; padding: 7px 10px; }
+.partRequirementProgress { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, .65fr); gap: 18px; align-items: center; margin-bottom: 14px; padding: 13px 15px; border: 1px solid var(--vk-info-border); border-radius: 9px; background: var(--vk-action-soft); }
+.partRequirementProgress p { margin: 0; }
+.partRequirementProgress strong { display: block; margin-top: 4px; font-size: 12px; }
+.partRequirementProgress progress { width: 100%; height: 8px; border: 0; border-radius: 999px; accent-color: var(--vk-info); }
 .partReviewPanel { display: flex; gap: 20px; align-items: center; justify-content: space-between; margin-top: 18px; padding: 18px; border: 1px solid var(--vk-info-border); border-radius: 10px; background: var(--vk-action-soft); }
 .partReviewPanel p { max-width: 680px; margin: 4px 0 0; color: var(--app-text-muted); }
 .partReviewPanel h3 { margin: 3px 0; }
@@ -346,6 +414,13 @@
 .partReviewProgress progress { width: 100%; height: 7px; border: 0; border-radius: 999px; accent-color: var(--vk-info); }
 .partReviewPanel__warning { display: flex; gap: 7px; align-items: flex-start; color: var(--vk-warning) !important; font-size: 10px; }
 .partReviewPanel__warning svg { width: 15px; flex: 0 0 auto; }
+.partReviewSteps { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+.partReviewSteps li { display: inline-flex; gap: 6px; align-items: center; padding: 6px 9px; border: 1px solid var(--app-border); border-radius: 999px; background: rgba(255, 255, 255, .72); color: var(--app-text-muted); font-size: 9px; font-weight: 700; }
+.partReviewSteps li span { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 999px; background: var(--app-canvas); color: var(--app-text-muted); font-size: 8px; }
+.partReviewSteps li.is-current { border-color: var(--vk-warning-border); color: var(--vk-warning); }
+.partReviewSteps li.is-current span { background: var(--vk-warning-soft); color: var(--vk-warning); }
+.partReviewSteps li.is-complete { border-color: var(--vk-success-border); color: var(--vk-success); }
+.partReviewSteps li.is-complete span { background: var(--vk-success-soft); color: var(--vk-success); }
 
 .partFileList article { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--app-border); }
 .partFileList article:last-child { border-bottom: 0; }
@@ -381,6 +456,10 @@
 .partHistory strong { font-size: 13px; }
 .partHistory p { margin: 4px 0; color: var(--app-text-muted); font-size: 12px; }
 .partHistory time { color: var(--app-text-faint); font-size: 10px; }
+.partHistory__content { display: flex; min-width: 0; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.partHistory__content > div { min-width: 0; }
+.partHistory__content .vk-button { min-height: 34px; flex: 0 0 auto; padding: 7px 10px; font-size: 10px; }
+.partHistory__content .vk-button svg { width: 14px; }
 
 .partDrawerForm,
 .partCaseForm,
@@ -400,6 +479,14 @@
 .partCaseForm__context strong,
 .partCaseForm__context span { display: block; }
 .partCaseForm__context span { margin-top: 3px; color: var(--app-text-muted); font-size: 11px; }
+.partCaseLockedContext { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--app-border); border-radius: 9px; background: var(--app-canvas); }
+.partCaseLockedContext > div { min-width: 0; padding: 13px 14px; }
+.partCaseLockedContext > div + div { border-left: 1px solid var(--app-border); }
+.partCaseLockedContext p { margin: 0; }
+.partCaseLockedContext strong,
+.partCaseLockedContext span { display: block; }
+.partCaseLockedContext strong { overflow: hidden; margin-top: 5px; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.partCaseLockedContext span { margin-top: 3px; color: var(--app-text-muted); font-size: 9px; line-height: 1.45; }
 .partCaseLinks { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 14px; border: 1px solid var(--app-border); border-radius: 8px; }
 .partCaseLinks legend { padding: 0 6px; font-size: 12px; font-weight: 700; }
 .partCaseLinks label { font-size: 12px; }
@@ -453,12 +540,20 @@
 .partCaseMessages article time { color: var(--app-text-muted); font-size: 9px; }
 .partCaseMessages article p { margin: 7px 0 0; white-space: pre-wrap; font-size: 12px; line-height: 1.6; }
 .partCaseMessages__empty { color: var(--app-text-muted); font-size: 12px; }
+.partCaseArchived { display: flex; gap: 10px; align-items: flex-start; padding: 13px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-canvas); color: var(--app-text-muted); }
+.partCaseArchived > svg { width: 18px; flex: 0 0 auto; color: var(--vk-info); }
+.partCaseArchived strong,
+.partCaseArchived span { display: block; }
+.partCaseArchived strong { color: var(--app-text); font-size: 12px; }
+.partCaseArchived span { margin-top: 3px; font-size: 10px; }
 .partCaseResponse { display: grid; gap: 12px; padding: 15px; border: 1px solid var(--vk-info-border); border-radius: 10px; background: linear-gradient(145deg, var(--app-surface), var(--vk-action-soft)); }
 .partCaseResponse > header p,
 .partCaseResponse > header h3 { margin: 0; }
 .partCaseResponse > header h3 { margin-top: 3px; font-size: 15px; }
 .partCaseResponse__modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-canvas); }
-.partCaseResponse__modes button { min-height: 38px; padding: 7px 9px; border: 0; border-radius: 6px; background: transparent; color: var(--app-text-muted); font: inherit; font-size: 11px; font-weight: 750; cursor: pointer; }
+.partCaseResponse__modes button { display: grid; min-height: 52px; gap: 2px; align-content: center; padding: 7px 9px; border: 0; border-radius: 6px; background: transparent; color: var(--app-text-muted); cursor: pointer; font: inherit; text-align: left; }
+.partCaseResponse__modes button strong { font-size: 10px; }
+.partCaseResponse__modes button small { color: inherit; font-size: 8px; font-weight: 550; line-height: 1.35; }
 .partCaseResponse__modes button:hover { color: var(--app-text); }
 .partCaseResponse__modes button.is-active { background: var(--app-surface); color: var(--vk-info); box-shadow: var(--app-shadow-soft); }
 .partCaseResponse__description { margin: -3px 0 0; color: var(--app-text-muted); font-size: 10px; line-height: 1.5; }
@@ -515,6 +610,7 @@
 .partReleaseReview__confirmation { border-color: var(--vk-info-border); background: var(--vk-action-soft); }
 
 .inspectionPlanEmpty { display: grid; min-height: 500px; align-content: center; justify-items: center; text-align: center; }
+.inspectionPlanEmpty--compact { min-height: 300px; }
 .inspectionPlanEmpty > svg { width: 48px; height: 48px; margin-bottom: 14px; padding: 11px; border: 1px solid var(--vk-info-border); border-radius: 12px; background: var(--vk-action-soft); color: var(--vk-info); }
 .inspectionPlanEmpty > p:not(.technicalLabel) { max-width: 620px; color: var(--app-text-muted); }
 .inspectionPlanPanel__actions { display: flex; gap: 9px; flex-wrap: wrap; }
@@ -729,6 +825,9 @@
   .partQueueGrid { display: flex; overflow-x: auto; scroll-snap-type: x proximity; }
   .partQueueCard { min-width: 235px; scroll-snap-align: start; }
   .partQueueContext { align-items: stretch; flex-direction: column; }
+  .partActionTopics > header { align-items: flex-start; flex-direction: column; }
+  .partActionTopic { grid-template-columns: 34px minmax(0, 1fr); padding: 13px; }
+  .partActionTopic > div:last-child { grid-column: 2; flex-wrap: wrap; }
   .partWorkspaceCreate > footer,
   .partDrawerForm > footer,
   .partCaseForm > footer { align-items: stretch; flex-direction: column-reverse; }
@@ -743,12 +842,19 @@
   .partNextStep__icon { width: 34px; height: 34px; }
   .partNextStep__action { grid-column: 2; width: 100%; justify-self: stretch; }
   .partNextStep__action .vk-button { width: 100%; }
+  .partNextStep__queue { margin-top: 8px; }
+  .partNextStep__queue button { width: 100%; border-radius: 7px; justify-content: flex-start; }
+  .partNextStep__queue button span { margin-left: auto; }
   .partWorkspaceTabs { position: sticky; z-index: 4; top: var(--app-mobile-header-height, 64px); grid-template-columns: repeat(8, minmax(132px, 1fr)); }
+  .partWorkspaceTabs.productionPartWorkspace__tabs { display: flex; width: 100%; min-width: 0; overflow-x: auto; }
+  .productionPartWorkspace__tabs button { flex: 0 0 126px; }
   .partWorkspaceTabs button { min-height: 50px; font-size: 11px; }
   .partViewerStage { padding: 10px; }
   .partViewerStage__toolbar { align-items: flex-start; flex-direction: column; }
   .partViewerStage__toolbar > div:last-child { width: 100%; }
   .partViewerStage__toolbar .vk-button { flex: 1; }
+  .partViewerSelectionGuide { grid-template-columns: 24px minmax(0, 1fr); }
+  .partViewerSelectionGuide button { grid-column: 2; justify-self: start; padding: 3px 0; }
   .partViewerStage .modelViewer__toolbar > p,
   .partViewerStage .modelViewer__toolbar > div { width: 100%; flex: 0 1 auto; }
   .partViewerStage .modelViewer__toolbar > div { justify-content: flex-start; }
@@ -819,6 +925,10 @@
   .inspectionPackageHistory code { grid-column: 1 / -1; }
   .inspectionSubmissionComparison article { grid-template-columns: 1fr; }
   .partWorkspacePanel > header { align-items: stretch; flex-direction: column; }
+  .productionPartDetails__list { grid-template-columns: 1fr; }
+  .partRequirementProgress { grid-template-columns: 1fr; gap: 9px; }
+  .productionCaseScope { width: 100%; }
+  .productionCaseScope button { flex: 1; justify-content: center; }
   .partOverview { grid-template-columns: 1fr; padding: 8px; }
   .partOverview__wide { grid-column: auto; }
   .partOverviewFacts,
@@ -830,10 +940,14 @@
   .partCaseFilters { grid-template-columns: 1fr; }
   .partCaseForm__context { grid-template-columns: 30px minmax(0, 1fr); }
   .partCaseForm__context .vk-button { grid-column: 2; justify-self: start; }
+  .partCaseLockedContext { grid-template-columns: 1fr; }
+  .partCaseLockedContext > div + div { border-top: 1px solid var(--app-border); border-left: 0; }
   .partCaseDetail__summary { flex-direction: column; }
   .partCaseDetail__badges { justify-content: flex-start; }
   .partCaseDetail__facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .partCaseMessages article { max-width: 100%; }
+  .partHistory__content { align-items: stretch; flex-direction: column; }
+  .partHistory__content .vk-button { width: fit-content; }
   .partCaseVisual > header { align-items: flex-start; flex-direction: column; }
   .partCaseVisual > header .vk-button { width: 100%; }
   .partCaseVisual__preview .partPdfWorkspace,

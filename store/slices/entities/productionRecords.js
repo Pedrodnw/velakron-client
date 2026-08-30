@@ -65,6 +65,7 @@ const slice = createSlice({
         assignments: data.assignments || [],
         machineAssignments: data.machine_assignments || [],
         timeline: data.timeline || [],
+        partActivity: data.part_activity || [],
         actions: data.actions || {},
         compliance: data.compliance || {},
       }

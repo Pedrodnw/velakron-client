@@ -1,4 +1,4 @@
-import { ClipboardCheck, ExternalLink, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
+import { ChevronRight, ClipboardCheck, ExternalLink, MessageSquareText, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -6,7 +6,7 @@ import {
   AppPageHeader, AppSkeleton, DataTable, ErrorState, FilterBar, Pagination,
   PermissionDenied, RecordCard, ScheduleHealthBadge, StageBadge, StatusBadge, Tabs,
 } from '../../components/app'
-import { formatDate } from '../../components/app/formatters'
+import { formatDate, formatDateTime, formatLabel, statusTone } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { Button } from '../../components/design-system'
@@ -19,6 +19,8 @@ import {
 import { loadRelationships, relationshipSelectors } from '../../store/slices/entities/relationships'
 import { trackProductEvent } from '../../store/slices/entities/platformAdministration'
 import { inspectionSelectors, loadInspectionQueue } from '../../store/slices/entities/inspection'
+import LinkWrap from '../../components/LinkWrap'
+import { loadPartActionItems, partSelectors } from '../../store/slices/entities/parts'
 
 const views = {
   oem: [{ key: 'active', label: 'Active' }, { key: 'draft', label: 'Drafts' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }],
@@ -44,6 +46,8 @@ const Production = () => {
   const relationships = useSelector(relationshipSelectors.getEntities)
   const inspectionQueue = useSelector(inspectionSelectors.getQueue)
   const inspectionQueueView = useSelector(inspectionSelectors.getQueueView)
+  const partActionItems = useSelector(partSelectors.getActionItems)
+  const partActionItemsLoading = useSelector(partSelectors.getActionItemsLoading)
   const [filters, setFilters] = useState(() => initialFilters(organization?.type))
   const [filtersReady, setFiltersReady] = useState(false)
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -127,6 +131,9 @@ const Production = () => {
     if (allowed && organization?.id && inspectionView) dispatch(loadInspectionQueue(inspectionView))
   }, [allowed, dispatch, inspectionView, organization?.id])
   useEffect(() => {
+    if (allowed && organization?.id && type === 'supplier') dispatch(loadPartActionItems())
+  }, [allowed, dispatch, organization?.id, type])
+  useEffect(() => {
     if (!filtersReady) return undefined
     const refreshWhenVisible = () => { if (document.visibilityState !== 'hidden') refresh() }
     const interval = window.setInterval(refreshWhenVisible, 45_000)
@@ -152,6 +159,7 @@ const Production = () => {
   return <>
     <Seo title='Production' description='Track awarded manufacturing commitments and supplier progress.' path='/app/production' noIndex />
     <AppPageHeader eyebrow='Execution' title='Production' description={type === 'supplier' ? 'Your action queue, active parts, and completed work. Filters stay in the address so you can return to the same view.' : 'Filter awarded work by supplier, stage, schedule health, date, and first-article requirement.'} actions={<>{canCreate && type === 'oem' && <Button href='/app/production/new'><Plus aria-hidden='true' /> New production record</Button>}<Button variant='secondary' onClick={refresh}><RefreshCw aria-hidden='true' /> Refresh</Button></>} />
+    {type === 'supplier' && (partActionItemsLoading || partActionItems.length > 0) && <section className='appPanel partActionTopics productionTechnicalActions'><header><div><p className='technicalLabel'>Technical collaboration</p><h2>Part topics needing your response</h2><p>Open the production record directly at the case and discussion.</p></div><StatusBadge tone='warning'>{partActionItems.length || '…'}</StatusBadge></header>{partActionItemsLoading && !partActionItems.length ? <AppSkeleton lines={3} /> : <div className='partActionTopics__list'>{partActionItems.map(item => { const itemId = item.id || item._id; const productionId = item.production_records?.[0]?.id || item.production_records?.[0]?._id || item.production_records?.[0]; if (!productionId) return null; return <LinkWrap key={itemId} href={`/app/production/${productionId}?part_tab=cases&collaboration=${itemId}`} className='partActionTopic'><span className='partActionTopic__icon'><MessageSquareText aria-hidden='true' /></span><div><span className='technicalLabel'>{item.part?.part_number || 'Part'} · Revision {item.part_revision?.revision || '?'}</span><strong>{item.title}</strong><small>{formatLabel(item.type)} · Updated {formatDateTime(item.last_activity_at)}</small></div><div><StatusBadge tone={statusTone(item.state)}>{formatLabel(item.state)}</StatusBadge><ChevronRight aria-hidden='true' /></div></LinkWrap>})}</div>}</section>}
     <Tabs items={views[type] || []} activeKey={filters.view} onChange={view => updateFilters({ view, page: 1 })} label='Production views' />
     <button className='productionFilterToggle' type='button' aria-expanded={filtersOpen} aria-controls='production-filter-panel' onClick={() => setFiltersOpen(open => !open)}><SlidersHorizontal aria-hidden='true' /> {filtersOpen ? 'Hide filters' : 'Filter records'}{filterCount > 0 && <span>{filterCount} active</span>}</button>
     {inspectionView && <section className='appPanel inspectionQueuePanel' aria-labelledby='inspection-queue-heading'>

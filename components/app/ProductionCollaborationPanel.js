@@ -117,6 +117,7 @@ const ProductionCollaborationPanel = ({
   record,
   detail,
   collaboration,
+  partEvents = [],
   organization,
   userId,
   permissions,
@@ -128,6 +129,7 @@ const ProductionCollaborationPanel = ({
   onDownload,
   onView,
   onArchiveAttachment,
+  onOpenPartCase,
 }) => {
   const [tab, setTab] = useState('timeline')
   const [viewingModel, setViewingModel] = useState(null)
@@ -136,7 +138,12 @@ const ProductionCollaborationPanel = ({
   const [accessFeedback, setAccessFeedback] = useState(null)
   const documents = useMemo(() => collaboration.attachments.filter(item => item.category !== 'photo'), [collaboration.attachments])
   const photos = useMemo(() => collaboration.attachments.filter(item => item.category === 'photo'), [collaboration.attachments])
-  const timeline = collaboration.timeline.length ? collaboration.timeline : detail?.timeline || []
+  const productionTimeline = collaboration.timeline.length ? collaboration.timeline : detail?.timeline || []
+  const timeline = useMemo(() => {
+    const byId = new Map()
+    ;[...productionTimeline, ...partEvents].forEach(event => byId.set(String(event.id || event._id), event))
+    return [...byId.values()].sort((left, right) => new Date(left.occurred_at || left.created_at || 0) - new Date(right.occurred_at || right.created_at || 0))
+  }, [partEvents, productionTimeline])
   const tabs = [
     { key: 'timeline', label: 'Timeline', count: timeline.length },
     { key: 'notes', label: 'Notes', count: collaboration.notes.length },
@@ -176,10 +183,10 @@ const ProductionCollaborationPanel = ({
   }
   return <>
   <section className='appPanel productionCollaborationPanel'>
-    <header className='appPanel__header'><div><p className='technicalLabel'>Shared operating record</p><h2>Updates and collaboration</h2></div>{collaboration.loading && <LoaderCircle className='spin' aria-label='Refreshing collaboration' />}</header>
+    <header className='appPanel__header'><div><p className='technicalLabel'>Shared operating record</p><h2>Updates, evidence, and history</h2><p>Production events and technical Part Workspace decisions appear together in the timeline.</p></div>{collaboration.loading && <LoaderCircle className='spin' aria-label='Refreshing collaboration' />}</header>
     <Tabs items={tabs} activeKey={tab} onChange={setTab} label='Production detail sections' />
     <div className='productionTabBody'>
-      {tab === 'timeline' && (timeline.length ? <ProductionTimeline events={timeline} /> : <EmptyState compact title='No timeline events' description='Production activity will appear here.' />)}
+      {tab === 'timeline' && (timeline.length ? <ProductionTimeline events={timeline} onOpenPartCase={onOpenPartCase} /> : <EmptyState compact title='No timeline events' description='Production and part-collaboration activity will appear here.' />)}
       {tab === 'notes' && <><NoteComposer organizationType={organization.type} pending={collaboration.mutating} feedback={feedback} onSubmit={onCreateNote} /><NoteList notes={collaboration.notes} userId={userId} canArchive={permissions.canArchiveNote} pending={collaboration.mutating} onRevise={onReviseNote} onArchive={onArchiveNote} /></>}
       {tab === 'documents' && <><FileUploader kind='document' organizationType={organization.type} record={record} itarCapability={detail?.compliance?.itar} pending={collaboration.mutating} upload={collaboration.upload} feedback={feedback} onUpload={onUpload} /><FileList files={documents} itarControlled={itarControlled} canArchive={permissions.canArchiveAttachment} userId={userId} pending={collaboration.mutating} onDownload={file => beginFileAction(file, 'download')} onArchive={onArchiveAttachment} onView={file => beginFileAction(file, 'view')} /></>}
       {tab === 'photos' && <><FileUploader kind='photo' organizationType={organization.type} record={record} itarCapability={detail?.compliance?.itar} pending={collaboration.mutating} upload={collaboration.upload} feedback={feedback} onUpload={onUpload} /><FileList files={photos} itarControlled={itarControlled} canArchive={permissions.canArchiveAttachment} userId={userId} pending={collaboration.mutating} onDownload={file => beginFileAction(file, 'download')} onArchive={onArchiveAttachment} onView={file => beginFileAction(file, 'view')} /></>}

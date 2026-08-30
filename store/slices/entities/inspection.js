@@ -5,6 +5,7 @@ import { uploadMimeForFile } from '../../modelFiles'
 import { organizationContextCleared, organizationSwitchRequested } from '../appContext'
 
 const initialState = { plansByRevision: {}, runsByProduction: {}, detailsByRun: {}, attachmentsByRun: {}, summary: null, queue: [], queueView: '', loading: false, mutating: false, upload: null, error: null }
+const emptyRuns = Object.freeze([])
 const emptyAttachments = Object.freeze({ attachments: Object.freeze([]), pagination: Object.freeze({ page: 1, page_size: 50, total: 0, pages: 1 }) })
 const slice = createSlice({
   name: 'inspection', initialState,
@@ -99,7 +100,7 @@ export const uploadInspectionEvidence = (runId, { file, resultId = '', category 
 const stateFor = state => state.entities.inspection
 export const inspectionSelectors = {
   getPlan: revisionId => state => stateFor(state).plansByRevision[String(revisionId)] || null,
-  getRuns: productionId => state => stateFor(state).runsByProduction[String(productionId)] || [],
+  getRuns: productionId => state => stateFor(state).runsByProduction[String(productionId)] || emptyRuns,
   getRunDetail: runId => state => stateFor(state).detailsByRun[String(runId)] || null,
   getAttachments: runId => state => stateFor(state).attachmentsByRun[String(runId)] || emptyAttachments,
   getSummary: state => stateFor(state).summary,
