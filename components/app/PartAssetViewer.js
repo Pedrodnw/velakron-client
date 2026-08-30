@@ -107,13 +107,13 @@ const DrawingViewer = props => extensionFor(props.file) === 'pdf'
   ? <PdfDrawingViewer {...props} />
   : <ImageDrawingViewer {...props} />
 
-const PartAssetViewer = ({ asset, source, loading, annotationMode = false, anchors = [], selectedAnchorId = '', onSelect }) => {
+const PartAssetViewer = ({ asset, source, loading, annotationMode = false, anchors = [], caseMarkers = [], selectedAnchorId = '', onSelect, onOpenCase }) => {
   const file = asset?.attachment || asset
   const extension = useMemo(() => extensionFor(file), [file])
   const selectedAnchor = anchors.find(anchor => String(anchor.id || anchor._id) === String(selectedAnchorId)) || null
   if (loading) return <div className='partViewerEmpty'><LoaderCircle className='spin' aria-hidden='true' /><strong>Opening protected file</strong></div>
   if (!asset || !source) return <div className='partViewerEmpty'><FileText aria-hidden='true' /><strong>Select a viewable file</strong><span>Models and drawings remain private until you explicitly open them.</span></div>
-  if (['step', 'stp', 'stl'].includes(extension)) return <ModelViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} />
+  if (['step', 'stp', 'stl'].includes(extension)) return <ModelViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} caseMarkers={caseMarkers} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} onOpenCase={onOpenCase} />
   if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(extension)) return <DrawingViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} />
   return <div className='partViewerEmpty'><MousePointer2 aria-hidden='true' /><strong>Preview unavailable</strong><span>Download this file to inspect it in its native application.</span></div>
 }

@@ -98,24 +98,33 @@ const buildStepGroup = (THREE, result) => {
 const disposeObject = object => {
   object?.traverse?.(child => {
     child.geometry?.dispose?.()
-    if (Array.isArray(child.material)) child.material.forEach(material => material.dispose?.())
-    else child.material?.dispose?.()
+    const disposeMaterial = material => {
+      material?.map?.dispose?.()
+      material?.dispose?.()
+    }
+    if (Array.isArray(child.material)) child.material.forEach(disposeMaterial)
+    else disposeMaterial(child.material)
   })
 }
+
+const humanize = value => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase())
 
 const ModelViewer = ({
   file,
   source,
   annotationMode = false,
   anchors = [],
+  caseMarkers = [],
   selectedAnchorId = '',
   selectedAnchor = null,
   onSelect,
+  onOpenCase,
 }) => {
   const mountRef = useRef(null)
   const fitRef = useRef(() => {})
   const zoomRef = useRef(() => {})
   const onSelectRef = useRef(onSelect)
+  const onOpenCaseRef = useRef(onOpenCase)
   const annotationModeRef = useRef(annotationMode)
   const markerSyncRef = useRef(() => {})
   const restoreViewRef = useRef(() => {})
@@ -126,15 +135,18 @@ const ModelViewer = ({
   const [error, setError] = useState('')
   const [transparent, setTransparent] = useState(false)
   const [selectionFeedback, setSelectionFeedback] = useState('')
+  const [hoveredMarker, setHoveredMarker] = useState(null)
+  const [projectedMarkers, setProjectedMarkers] = useState([])
 
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
+  useEffect(() => { onOpenCaseRef.current = onOpenCase }, [onOpenCase])
   useEffect(() => {
     annotationModeRef.current = annotationMode
     setSelectionFeedback(annotationMode ? 'Click once on a visible model surface. Dragging changes the view without selecting.' : '')
   }, [annotationMode])
   useEffect(() => {
-    markerSyncRef.current(anchors, selectedAnchorId)
-  }, [anchors, selectedAnchorId])
+    markerSyncRef.current(anchors, caseMarkers, selectedAnchorId)
+  }, [anchors, caseMarkers, selectedAnchorId])
   useEffect(() => { if (selectedAnchor) restoreViewRef.current(selectedAnchor.view_state || {}) }, [selectedAnchor])
 
   useEffect(() => {
@@ -144,14 +156,16 @@ const ModelViewer = ({
     let renderer = null
     let controls = null
     let model = null
-    let markerGroup = null
     let keyboardMove = null
     let pointerDown = null
     let pointerUp = null
+    let projectCaseMarkers = () => {}
 
     const start = async () => {
       setStatus('loading')
       setError('')
+      setHoveredMarker(null)
+      setProjectedMarkers([])
       try {
         const extension = modelExtension(file?.display_filename || file?.original_filename)
         const parserPromise = extension === 'stl'
@@ -225,33 +239,29 @@ const ModelViewer = ({
         const modelBox = new THREE.Box3().setFromObject(model)
         const modelSize = modelBox.getSize(new THREE.Vector3())
         const modelMinimum = modelBox.min.clone()
-        const markerRadius = Math.max(Math.max(modelSize.x, modelSize.y, modelSize.z) * 0.012, 0.2)
-        markerGroup = new THREE.Group()
-        markerGroup.name = 'Velakron annotations'
-        scene.add(markerGroup)
-        markerSyncRef.current = (nextAnchors = [], selectedId = '') => {
-          if (!markerGroup) return
-          disposeObject(markerGroup)
-          markerGroup.clear()
-          nextAnchors
-            .filter(anchor => (anchor?.anchor_kind || anchor?.kind) === 'model_face' && Array.isArray(anchor?.anchor_data?.point))
-            .forEach(anchor => {
-              const marker = new THREE.Mesh(
-                new THREE.SphereGeometry(markerRadius, 18, 12),
-                new THREE.MeshStandardMaterial({
-                  color: String(anchor._id || anchor.id) === String(selectedId) ? 0xff8b21 : 0x086bff,
-                  emissive: String(anchor._id || anchor.id) === String(selectedId) ? 0x4d1f00 : 0x001c48,
-                  emissiveIntensity: 0.45,
-                  depthTest: false,
-                }),
-              )
-              marker.position.fromArray(anchor.anchor_data.point)
-              marker.renderOrder = 20
-              marker.userData.velakronAnchorId = anchor._id || anchor.id
-              markerGroup.add(marker)
-            })
+        let activeCaseMarkers = caseMarkers
+        projectCaseMarkers = () => {
+          if (!renderer || !camera) return
+          const next = activeCaseMarkers.map(caseMarker => {
+            const point = new THREE.Vector3(...caseMarker.anchor.anchor_data.point).project(camera)
+            return {
+              ...caseMarker,
+              x: ((point.x + 1) / 2) * 100,
+              y: ((1 - point.y) / 2) * 100,
+              visible: point.z >= -1 && point.z <= 1 && point.x >= -1.08 && point.x <= 1.08 && point.y >= -1.08 && point.y <= 1.08,
+            }
+          })
+          setProjectedMarkers(next)
         }
-        markerSyncRef.current(anchors, selectedAnchorId)
+        markerSyncRef.current = (_nextAnchors = [], nextCaseMarkers = [], selectedId = '') => {
+          setHoveredMarker(null)
+          activeCaseMarkers = nextCaseMarkers.map(caseMarker => ({
+            ...caseMarker,
+            selected: String(caseMarker.anchorId) === String(selectedId),
+          }))
+          projectCaseMarkers()
+        }
+        markerSyncRef.current(anchors, caseMarkers, selectedAnchorId)
 
         const fit = () => {
           const box = new THREE.Box3().setFromObject(model)
@@ -268,6 +278,7 @@ const ModelViewer = ({
           camera.updateProjectionMatrix()
           controls.target.copy(center)
           controls.update()
+          projectCaseMarkers()
         }
         restoreViewRef.current = state => {
           if (!Array.isArray(state?.camera_position) || !Array.isArray(state?.camera_target)) return
@@ -277,6 +288,7 @@ const ModelViewer = ({
           camera.lookAt(controls.target)
           camera.updateProjectionMatrix()
           controls.update()
+          projectCaseMarkers()
         }
         orientationRef.current = orientation => {
           const center = modelBox.getCenter(new THREE.Vector3())
@@ -293,6 +305,7 @@ const ModelViewer = ({
           controls.target.copy(center)
           camera.lookAt(center)
           controls.update()
+          projectCaseMarkers()
         }
         transparencyRef.current = enabled => {
           model.traverse(child => {
@@ -327,22 +340,27 @@ const ModelViewer = ({
 
         const raycaster = new THREE.Raycaster()
         const pointer = new THREE.Vector2()
+        const updatePointer = event => {
+          const bounds = renderer.domElement.getBoundingClientRect()
+          pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1
+          pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+          raycaster.setFromCamera(pointer, camera)
+        }
         let pointerOrigin = null
         pointerDown = event => {
           pointerOrigin = { x: event.clientX, y: event.clientY }
         }
         pointerUp = event => {
-          if (!annotationModeRef.current || !pointerOrigin || !onSelectRef.current) return
+          if (!pointerOrigin) return
           const moved = Math.hypot(event.clientX - pointerOrigin.x, event.clientY - pointerOrigin.y)
           pointerOrigin = null
           if (moved > 6) {
-            setSelectionFeedback('View adjusted. Now click once on the exact surface you want to reference.')
+            if (annotationModeRef.current) setSelectionFeedback('View adjusted. Now click once on the exact surface you want to reference.')
             return
           }
-          const bounds = renderer.domElement.getBoundingClientRect()
-          pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1
-          pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1
-          raycaster.setFromCamera(pointer, camera)
+          if (!annotationModeRef.current) return
+          if (!onSelectRef.current) return
+          updatePointer(event)
           const hit = raycaster.intersectObject(model, true).find(candidate => candidate.object?.isMesh)
           if (!hit) {
             setSelectionFeedback('No model surface was found at that point. Try Fit model, rotate the part, then click directly on visible geometry.')
@@ -376,6 +394,7 @@ const ModelViewer = ({
         }
         renderer.domElement.addEventListener('pointerdown', pointerDown)
         renderer.domElement.addEventListener('pointerup', pointerUp)
+        controls.addEventListener('change', projectCaseMarkers)
         fitRef.current = fit
         zoomRef.current = factor => {
           const offset = camera.position.clone().sub(controls.target).multiplyScalar(factor)
@@ -389,6 +408,7 @@ const ModelViewer = ({
           renderer.setSize(width, height, false)
           camera.aspect = width / height
           camera.updateProjectionMatrix()
+          projectCaseMarkers()
         }
         resizeObserver = new ResizeObserver(resize)
         resizeObserver.observe(mountRef.current)
@@ -425,8 +445,8 @@ const ModelViewer = ({
       if (keyboardMove) renderer?.domElement?.removeEventListener('keydown', keyboardMove)
       if (pointerDown) renderer?.domElement?.removeEventListener('pointerdown', pointerDown)
       if (pointerUp) renderer?.domElement?.removeEventListener('pointerup', pointerUp)
+      controls?.removeEventListener('change', projectCaseMarkers)
       controls?.dispose()
-      disposeObject(markerGroup)
       disposeObject(model)
       renderer?.dispose()
       renderer?.domElement?.remove()
@@ -448,6 +468,33 @@ const ModelViewer = ({
     </div>
     <div className={`modelViewer__viewport${annotationMode ? ' modelViewer__viewport--annotating' : ''}`}>
       <div className='modelViewer__canvas' ref={mountRef} />
+      {projectedMarkers.length > 0 && <nav className='modelViewer__markers' aria-label='Cases anchored in this 3D model'>
+        {projectedMarkers.filter(marker => marker.visible).map(marker => <button
+          type='button'
+          key={marker.id}
+          className={marker.selected ? 'is-selected' : ''}
+          style={{ left: `${marker.x}%`, top: `${marker.y}%`, '--case-color': marker.presentation?.color, '--cluster-offset': `${(marker.clusterIndex - ((marker.clusterSize - 1) / 2)) * 38}px` }}
+          onMouseEnter={() => setHoveredMarker(marker)}
+          onMouseLeave={() => setHoveredMarker(null)}
+          onFocus={() => setHoveredMarker(marker)}
+          onBlur={event => { if (!event.currentTarget.matches(':hover')) setHoveredMarker(null) }}
+          onClick={() => onOpenCaseRef.current?.(marker.caseItem)}
+          aria-label={`Open case ${marker.caseNumber}: ${marker.caseItem?.title}`}
+        >{marker.caseNumber}</button>)}
+      </nav>}
+      {hoveredMarker && <aside
+        className='modelViewer__casePreview'
+        style={{ '--case-color': hoveredMarker.presentation?.color, '--case-soft': hoveredMarker.presentation?.soft, '--case-border': hoveredMarker.presentation?.border }}
+        aria-live='polite'
+      >
+        <div className='modelViewer__caseNumber'>{hoveredMarker.caseNumber}</div>
+        <div>
+          <p>{hoveredMarker.presentation?.label || 'Technical case'} · Case {hoveredMarker.caseNumber}</p>
+          <strong>{hoveredMarker.caseItem?.title}</strong>
+          <span>{humanize(hoveredMarker.caseItem?.state)} · {humanize(hoveredMarker.caseItem?.priority)} priority</span>
+        </div>
+        <small>Click the numbered marker to open the full case.</small>
+      </aside>}
       {status === 'loading' && <div className='modelViewer__state'><LoaderCircle className='spin' aria-hidden='true' /><strong>Preparing the 3D model</strong><span>STEP files can take a moment to convert in your browser.</span></div>}
       {status === 'error' && <div className='modelViewer__state modelViewer__state--error'><strong>Unable to display this model</strong><span>{error}</span></div>}
     </div>
