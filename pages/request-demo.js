@@ -48,13 +48,14 @@ const RequestDemo = () => {
     event.preventDefault()
     setPending(true)
     setError('')
+    const submittedEmail = form.email
     const result = await dispatch(submitDemoRequest(form))
     setPending(false)
     if (!result?.ok) {
       setError(requestError(result))
       return
     }
-    setSuccess(result.payload?.data || { received: true })
+    setSuccess({ ...(result.payload?.data || { received: true }), email: submittedEmail })
     setForm(initialForm)
   }
 
@@ -85,8 +86,9 @@ const RequestDemo = () => {
             {success ? <div className='demoRequestSuccess' role='status'>
               <span><CheckCircle2 aria-hidden='true' /></span>
               <p className='visibilityHome__eyebrow'>Request received</p>
-              <h2 id='demo-request-title'>Thank you. We’ll be in touch.</h2>
-              <p>Your request is now with the Velakron team. We’ll review what you shared and contact you to arrange the right demo.</p>
+              <h2 id='demo-request-title'>Thank you. Let’s set up your demo.</h2>
+              <p>Your request is now in the Velakron CRM and assigned for scheduling. A team member will contact you within one business day to choose a time.</p>
+              {success.confirmation_email_queued && <p className='demoRequestSuccess__email'><Mail aria-hidden='true' /> A confirmation email is on its way to <strong>{success.email}</strong>.</p>}
               {success.reference_id && <small>Reference: {success.reference_id}</small>}
               <button type='button' onClick={() => setSuccess(null)}>Submit another request</button>
             </div> : <>

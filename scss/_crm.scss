@@ -414,6 +414,42 @@
 .crmContactDetail { display: grid; gap: 20px; }
 .crmContactDetail h3 { margin: 0 0 10px; font-size: 14px; }
 
+.crmLeadDetail { display: grid; gap: 18px; }
+.crmLeadIdentity { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface-subtle); }
+.crmLeadIdentity__avatar { display: grid; width: 56px; height: 56px; border: 1px solid rgba($primary, .34); border-radius: 50%; background: rgba($primary, .1); color: var(--vk-info); font-size: 15px; font-weight: 800; place-items: center; }
+.crmLeadIdentity h3 { margin: 3px 0 2px; color: var(--app-text); font-size: 18px; }
+.crmLeadIdentity p { margin: 0; color: var(--app-text-muted); font-size: 11px; }
+.crmLeadIdentity > a { @include flex-row(flex-start, center, 7px); color: var(--vk-info); font-size: 11px; font-weight: 700; }
+.crmLeadIdentity > a svg { width: 15px; }
+.crmLeadSummary { overflow: hidden; margin: 0; border: 1px solid var(--app-border); border-radius: 10px; }
+.crmLeadSummary > div { min-height: 92px; }
+.crmLeadConnectionNotice { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 12px; align-items: start; padding: 15px; border: 1px solid rgba(#f0ad4e, .36); border-radius: 9px; background: rgba(#f0ad4e, .08); }
+.crmLeadConnectionNotice > svg { display: grid; width: 36px; height: 36px; padding: 9px; border: 1px solid rgba(#f0ad4e, .35); border-radius: 8px; color: var(--vk-warning); }
+.crmLeadConnectionNotice strong { color: var(--app-text); font-size: 12px; }
+.crmLeadConnectionNotice p { margin: 4px 0 0; color: var(--app-text-muted); font-size: 11px; line-height: 1.6; }
+.crmLeadNoteComposer { overflow: hidden; border: 1px solid rgba($primary, .38); border-radius: 10px; background: rgba($primary, .035); }
+.crmLeadNoteComposer > header { @include flex-row(space-between, flex-start, 18px); padding: 16px 18px; border-bottom: 1px solid rgba($primary, .16); }
+.crmLeadNoteComposer > header h3 { margin: 3px 0 2px; font-size: 16px; }
+.crmLeadNoteComposer > header p { margin: 0; color: var(--app-text-muted); font-size: 10px; }
+.crmLeadNoteComposer > header button { border: 0; background: transparent; color: var(--app-text-muted); cursor: pointer; font: inherit; font-size: 10px; font-weight: 700; }
+.crmLeadNoteComposer .crmFieldGrid { padding: 18px; }
+.crmLeadNoteComposer > footer { @include flex-row(flex-end, center, 9px); padding: 13px 18px; border-top: 1px solid rgba($primary, .16); background: var(--app-surface); }
+.crmLeadRelationshipNotes { padding: 15px 17px; border-left: 3px solid var(--vk-info); background: var(--app-surface-subtle); }
+.crmLeadRelationshipNotes > p:last-child { margin: 6px 0 0; color: var(--app-text-secondary); font-size: 11px; line-height: 1.7; white-space: pre-wrap; }
+.crmLeadHistory { padding: 18px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); }
+.crmLeadHistory > header { @include flex-row(space-between, center, 14px); margin-bottom: 18px; }
+.crmLeadHistory > header h3 { margin: 3px 0 0; font-size: 16px; }
+.crmLeadHistory .crmTimeline small { display: block; }
+.crmLeadHistory .crmTimeline small b { color: var(--app-text-secondary); }
+.crmLeadRelated { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--app-border); border-radius: 10px; }
+.crmLeadRelated > article { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; min-height: 102px; align-content: center; padding: 15px; border-right: 1px solid var(--app-border); }
+.crmLeadRelated > article:last-child { border-right: 0; }
+.crmLeadRelated > article > svg { width: 20px; color: var(--vk-info); }
+.crmLeadRelated > article > span { display: grid; gap: 3px; min-width: 0; }
+.crmLeadRelated small, .crmLeadRelated span span { color: var(--app-text-muted); font-size: 9px; }
+.crmLeadRelated strong { overflow: hidden; color: var(--app-text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.crmLeadRelated a { color: var(--vk-info); font-size: 10px; font-weight: 700; }
+
 .crmAssessmentOverview { margin-bottom: 20px; }
 .crmAssessmentFunnel { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); overflow: hidden; margin-top: 18px; border: 1px solid var(--app-border, #dfe4ea); border-radius: 10px; background: var(--app-surface-subtle, #f8fafc); }
 .crmAssessmentFunnel > div { position: relative; display: grid; min-height: 108px; align-content: center; justify-items: center; gap: 3px; padding: 13px 8px; border-right: 1px solid var(--app-border, #dfe4ea); text-align: center; }
@@ -517,4 +553,10 @@
   .crmAssessmentRecordScores > div:last-child { border-bottom: 0; }
   .crmAssessmentRecords dl > div:nth-last-child(-n + 2) { border-bottom: 1px solid var(--app-border, #dfe4ea); }
   .crmAssessmentRecords dl > div:last-child { border-bottom: 0; }
+  .crmLeadIdentity { grid-template-columns: 46px minmax(0, 1fr); }
+  .crmLeadIdentity__avatar { width: 46px; height: 46px; }
+  .crmLeadIdentity > a { grid-column: 1 / -1; }
+  .crmLeadRelated { grid-template-columns: 1fr; }
+  .crmLeadRelated > article { border-right: 0; border-bottom: 1px solid var(--app-border); }
+  .crmLeadRelated > article:last-child { border-bottom: 0; }
 }

@@ -47,6 +47,20 @@ export const loadTradeShowLeads = params => apiCallBegan({
   onError: actions.leadsFailed.type,
 })
 
+export const loadTradeShowLeadDetail = id => apiCallBegan({
+  url: `/trade-show/leads/${id}`,
+  organizationScoped: true,
+  requestKey: `trade-show-lead-${id}`,
+})
+
+export const createTradeShowLeadNote = (id, data) => apiCallBegan({
+  url: `/trade-show/leads/${id}/notes`,
+  method: 'post',
+  data,
+  organizationScoped: true,
+  requestKey: `trade-show-lead-note-${id}`,
+})
+
 export const deleteTradeShowLead = id => apiCallBegan({
   url: `/trade-show/leads/${id}`,
   method: 'delete',

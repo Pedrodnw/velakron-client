@@ -1,4 +1,4 @@
-import { CircleDollarSign, Plus, Search, Target, TrendingUp } from 'lucide-react'
+import { CalendarPlus, CircleDollarSign, Plus, Search, Target, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useDispatch } from 'react-redux'
@@ -17,6 +17,17 @@ import { crmErrorMessage, crmRequest } from '../../../store/crmApi'
 const stages = ['lead', 'contacted', 'discovery', 'demo', 'pilot_discussion', 'proposal', 'negotiation', 'won', 'lost']
 const lostReasons = ['no_budget', 'no_priority', 'timing', 'competitor', 'built_internally', 'no_response', 'product_fit', 'other']
 const initialForm = { organization: '', name: '', contact: '', owner: '', priority_score: 3, priority_rationale: '', estimated_first_year_value: '', expected_close_date: '', pain_point: '', use_case: '', next_action: '', next_action_at: '', source: '' }
+const meetingHref = (opportunity, contact) => {
+  const params = new URLSearchParams({
+    new: '1',
+    organization: opportunity.organization?.id || '',
+    title: `Velakron demo — ${opportunity.organization?.name || opportunity.name}`,
+    purpose: opportunity.use_case || 'Personalized Velakron product demonstration.',
+    duration: '30',
+  })
+  if (contact?.id) params.set('contact', contact.id)
+  return `/app/crm/calendar?${params}`
+}
 
 const CrmOpportunities = () => {
   const router = useRouter()
@@ -34,6 +45,8 @@ const CrmOpportunities = () => {
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [detail, setDetail] = useState(null)
+  const detailContact = detail?.opportunity?.contacts?.find(item => item.primary)?.contact
+    || detail?.opportunity?.contacts?.[0]?.contact
 
   const load = useCallback(async (next = filters) => {
     setState(value => ({ ...value, loading: true, error: '' }))
@@ -144,7 +157,14 @@ const CrmOpportunities = () => {
       </FieldGrid></form>
     </CrmModal>
     <CrmModal open={Boolean(closing)} title='Close opportunity as lost' description='Record a structured reason so the founders can learn from the pipeline.' onClose={() => !saving && setClosing(null)} actions={<><Button variant='secondary' onClick={() => setClosing(null)}>Cancel</Button><Button type='submit' form='crm-lost-form' disabled={saving}>Close as lost</Button></>}><form id='crm-lost-form' onSubmit={closeLost}><FieldGrid><Field label='Lost reason'><select value={lostReason} onChange={event => setLostReason(event.target.value)}>{lostReasons.map(value => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select></Field><Field label='Details' wide><textarea rows={4} maxLength={1000} value={stageReason} onChange={event => setStageReason(event.target.value)} /></Field></FieldGrid></form></CrmModal>
-    <CrmModal open={Boolean(detail)} title={detail?.opportunity?.name || 'Opportunity'} description={detail?.opportunity ? `${detail.opportunity.organization?.name} · ${detail.opportunity.stage.replaceAll('_', ' ')}` : ''} onClose={() => setDetail(null)} wide>
+    <CrmModal
+      open={Boolean(detail)}
+      title={detail?.opportunity?.name || 'Opportunity'}
+      description={detail?.opportunity ? `${detail.opportunity.organization?.name} · ${detail.opportunity.stage.replaceAll('_', ' ')}` : ''}
+      onClose={() => setDetail(null)}
+      wide
+      actions={detail?.opportunity && <Button href={meetingHref(detail.opportunity, detailContact)}><CalendarPlus aria-hidden='true' /> Schedule meeting</Button>}
+    >
       {detail?.opportunity && <div className='crmOpportunityDetail'><section className='crmRecordSummary crmRecordSummary--compact'><div><span>Priority</span><strong>{detail.opportunity.priority_score} / 5</strong><small>{detail.opportunity.priority_rationale}</small></div><div><span>First-year value</span><strong>{formatMoney(detail.opportunity.estimated_first_year_value)}</strong></div><div><span>Expected close</span><strong>{formatShortDate(detail.opportunity.expected_close_date)}</strong></div><div><span>Owner</span><strong>{OwnerName({ membership: detail.opportunity.owner })}</strong></div><div className='crmRecordSummary__next'><span>Next action</span><strong>{detail.opportunity.next_action || 'Not set'}</strong><small>{formatShortDate(detail.opportunity.next_action_at)}</small></div></section><section><h3>Pain point and use case</h3><p>{detail.opportunity.pain_point || 'No pain point recorded.'}</p><p>{detail.opportunity.use_case || 'No use case recorded.'}</p></section><section><h3>Recent activity</h3>{detail.interactions?.length ? <div className='crmTimeline'>{detail.interactions.slice(0, 10).map(item => <article key={item.id || item._id}><span className='crmTimeline__dot' /><div><header><strong>{item.subject || item.type.replaceAll('_', ' ')}</strong><time>{formatShortDate(item.occurred_at)}</time></header><p>{item.summary}</p></div></article>)}</div> : <p>No opportunity activity yet.</p>}</section><section><h3>Private opportunity files</h3><CrmFilesPanel subject='opportunities' subjectId={detail.opportunity.id} /></section></div>}
     </CrmModal>
   </>

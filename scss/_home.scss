@@ -905,6 +905,21 @@
   .visibilityHome__eyebrow::after { width: 28px; height: 2px; background: currentColor; content: ''; }
   h2 { margin: 0 0 15px; color: var(--vh-ink); font-size: 35px; letter-spacing: -0.045em; }
   > p:not(.visibilityHome__eyebrow) { max-width: 460px; margin: 0; color: #657386; font-size: 14px; line-height: 1.7; }
+  > .demoRequestSuccess__email {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 22px !important;
+    padding: 12px 15px;
+    border: 1px solid #bfd8ff;
+    border-radius: 7px;
+    background: #eef5ff;
+    color: #244464 !important;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+    text-align: left;
+  }
+  .demoRequestSuccess__email svg { width: 17px; min-width: 17px; color: var(--vh-blue); }
   > small { margin-top: 25px; color: #8c98a5; font-family: 'JetBrains Mono', monospace; font-size: 8px; word-break: break-all; }
   button { margin-top: 31px; padding: 10px 16px; border: 1px solid #c7d3df; border-radius: 6px; background: #fff; color: #1d2c3c; cursor: pointer; font-size: 11px; font-weight: 700; }
   button:hover { border-color: #9cb1c7; background: #f8fafc; }

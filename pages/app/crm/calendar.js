@@ -51,9 +51,15 @@ const CrmCalendar = () => {
   useEffect(() => {
     if (!router.isReady) return
     if (router.query.new === '1') setOpen(true)
-    if (router.query.organization) setForm(value => ({ ...value, organization: String(router.query.organization) }))
-    if (router.query.contact) setForm(value => ({ ...value, contacts: [String(router.query.contact)] }))
-  }, [router.isReady, router.query.contact, router.query.new, router.query.organization])
+    setForm(value => ({
+      ...value,
+      ...(router.query.organization ? { organization: String(router.query.organization) } : {}),
+      ...(router.query.contact ? { contacts: [String(router.query.contact)] } : {}),
+      ...(router.query.title ? { title: String(router.query.title) } : {}),
+      ...(router.query.purpose ? { purpose: String(router.query.purpose) } : {}),
+      ...([15, 30, 45, 60, 90, 120].includes(Number(router.query.duration)) ? { duration: Number(router.query.duration) } : {}),
+    }))
+  }, [router.isReady, router.query.contact, router.query.duration, router.query.new, router.query.organization, router.query.purpose, router.query.title])
   useEffect(() => {
     if (!form.organization) { setContacts([]); return }
     dispatch(crmRequest({ url: `/organizations/${form.organization}`, requestKey: `crm-calendar-org-${form.organization}` })).then(result => result?.ok && setContacts(result.payload.data.contacts || []))
