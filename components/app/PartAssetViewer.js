@@ -3,6 +3,7 @@ import { Crosshair, FileText, Focus, LoaderCircle, MousePointer2, RotateCw, Zoom
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { resolveFileTransferTarget } from '../../store/fileTransfer'
 import { drawingAnchorStyle, normalizedDrawingPoint } from '../../store/drawingViewer'
+import { captureVisualContextPreview } from './visualContextPreview'
 
 const ModelViewer = dynamic(() => import('./ModelViewer'), { ssr: false })
 const PdfDrawingViewer = dynamic(() => import('./PdfDrawingViewer'), {
@@ -14,6 +15,7 @@ const extensionFor = file => String(file?.display_filename || file?.original_fil
 
 const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnchorId, selectedAnchor, onSelect }) => {
   const frameRef = useRef(null)
+  const imageRef = useRef(null)
   const [origin, setOrigin] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -63,13 +65,21 @@ const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnc
     const width = Math.abs(end.x - origin.x)
     const height = Math.abs(end.y - origin.y)
     const isRegion = width > 0.012 || height > 0.012
+    const anchorData = isRegion
+      ? { page: 1, x: Math.min(origin.x, end.x), y: Math.min(origin.y, end.y), width, height }
+      : { page: 1, x: end.x, y: end.y }
     onSelect({
       anchor_kind: isRegion ? 'drawing_region' : 'drawing_point',
       label: isRegion ? 'Drawing region' : 'Drawing point',
-      anchor_data: isRegion
-        ? { page: 1, x: Math.min(origin.x, end.x), y: Math.min(origin.y, end.y), width, height }
-        : { page: 1, x: end.x, y: end.y },
+      anchor_data: anchorData,
       view_state: { page: 1, zoom, rotation, fit_mode: 'custom' },
+      visual_preview: captureVisualContextPreview(imageRef.current, {
+        kind: isRegion ? 'region' : 'point',
+        x: anchorData.x,
+        y: anchorData.y,
+        width: anchorData.width,
+        height: anchorData.height,
+      }),
     })
     setOrigin(null)
   }
@@ -86,7 +96,7 @@ const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnc
     onPointerDown={event => annotationMode && setOrigin(normalizedPoint(event))}
     onPointerUp={select}
   >
-    <img src={localSource} alt={file?.display_filename || file?.original_filename || 'Technical drawing'} style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }} />
+    <img ref={imageRef} src={localSource} alt={file?.display_filename || file?.original_filename || 'Technical drawing'} style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }} />
     <div className='partDrawingViewer__anchors' aria-hidden='true'>
       {anchors.filter(anchor => ['drawing_point', 'drawing_region'].includes(anchor.anchor_kind || anchor.kind) && Number(anchor.anchor_data?.page || 1) === 1).map((anchor, index) => {
         const selected = String(anchor.id || anchor._id) === String(selectedAnchorId)

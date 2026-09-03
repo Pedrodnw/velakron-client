@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Crosshair, FileWarning, Focus, LoaderCircle,
 import { useEffect, useRef, useState } from 'react'
 import { resolveFileTransferTarget } from '../../store/fileTransfer'
 import { clampDrawingPage, drawingAnchorStyle, drawingFitScale, normalizedDrawingPoint } from '../../store/drawingViewer'
+import { captureVisualContextPreview } from './visualContextPreview'
 
 const PDF_WORKER_URL = '/vendor/pdfjs-dist/pdf.worker.min.mjs'
 const PDF_CMAP_URL = '/vendor/pdfjs-dist/cmaps/'
@@ -260,13 +261,21 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
     const width = Math.abs(end.x - selectionOrigin.x)
     const height = Math.abs(end.y - selectionOrigin.y)
     const isRegion = width > 0.012 || height > 0.012
+    const anchorData = isRegion
+      ? { page, x: Math.min(selectionOrigin.x, end.x), y: Math.min(selectionOrigin.y, end.y), width, height }
+      : { page, x: end.x, y: end.y }
     onSelect({
       anchor_kind: isRegion ? 'drawing_region' : 'drawing_point',
       label: isRegion ? `Drawing region · ${pageLabels[page - 1] || `Sheet ${page}`}` : `Drawing point · ${pageLabels[page - 1] || `Sheet ${page}`}`,
-      anchor_data: isRegion
-        ? { page, x: Math.min(selectionOrigin.x, end.x), y: Math.min(selectionOrigin.y, end.y), width, height }
-        : { page, x: end.x, y: end.y },
+      anchor_data: anchorData,
       view_state: { page, zoom: renderedScale, rotation, fit_mode: fitMode },
+      visual_preview: captureVisualContextPreview(canvasRef.current, {
+        kind: isRegion ? 'region' : 'point',
+        x: anchorData.x,
+        y: anchorData.y,
+        width: anchorData.width,
+        height: anchorData.height,
+      }),
     })
     setSelectionOrigin(null)
     setSelectionCurrent(null)

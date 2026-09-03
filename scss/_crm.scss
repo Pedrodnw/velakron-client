@@ -414,6 +414,42 @@
 .crmContactDetail { display: grid; gap: 20px; }
 .crmContactDetail h3 { margin: 0 0 10px; font-size: 14px; }
 
+.crmAssessmentOverview { margin-bottom: 20px; }
+.crmAssessmentFunnel { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); overflow: hidden; margin-top: 18px; border: 1px solid var(--app-border, #dfe4ea); border-radius: 10px; background: var(--app-surface-subtle, #f8fafc); }
+.crmAssessmentFunnel > div { position: relative; display: grid; min-height: 108px; align-content: center; justify-items: center; gap: 3px; padding: 13px 8px; border-right: 1px solid var(--app-border, #dfe4ea); text-align: center; }
+.crmAssessmentFunnel > div:last-child { border-right: 0; }
+.crmAssessmentFunnel__icon { display: grid; width: 28px; height: 28px; margin-bottom: 3px; border: 1px solid rgba($primary, .25); border-radius: 7px; background: var(--vk-info-soft); color: var(--vk-info); place-items: center; }
+.crmAssessmentFunnel__icon svg { width: 14px; height: 14px; }
+.crmAssessmentFunnel strong { color: var(--app-text, #101319); font-size: 21px; }
+.crmAssessmentFunnel small { color: var(--app-text-muted, #7d8898); font-size: 9px; }
+.crmAssessmentFunnel i { position: absolute; z-index: 2; top: 50%; right: -9px; display: grid; width: 18px; height: 18px; transform: translateY(-50%); border: 1px solid var(--app-border, #dfe4ea); border-radius: 50%; background: var(--app-surface, #fff); color: var(--vk-info); font-size: 10px; font-style: normal; place-items: center; }
+.crmAssessmentPriority { margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--app-border, #dfe4ea); }
+.crmAssessmentPriority > strong { display: block; margin-bottom: 9px; font-size: 12px; }
+.crmAssessmentPriority > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.crmAssessmentPriority a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border: 1px solid var(--app-border, #dfe4ea); border-radius: 8px; color: var(--app-text, #101319); }
+.crmAssessmentPriority a:hover { border-color: rgba($primary, .5); background: var(--vk-info-soft); }
+.crmAssessmentPriority a > span:first-child { display: grid; min-width: 0; gap: 2px; }
+.crmAssessmentPriority a > span:first-child strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.crmAssessmentPriority a small, .crmAssessmentPriority a > span:last-child { color: var(--app-text-muted, #7d8898); font-size: 9px; }
+.crmAssessmentPriority a b { color: var(--vk-info); font-size: 11px; }
+.crmAssessmentRecords { display: grid; gap: 14px; margin-top: 18px; }
+.crmAssessmentRecords > article { overflow: hidden; border: 1px solid var(--app-border, #dfe4ea); border-radius: 10px; background: var(--app-surface, #fff); }
+.crmAssessmentRecords > article > header { display: flex; min-height: 54px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--app-border, #dfe4ea); background: var(--app-surface-subtle, #f8fafc); }
+.crmAssessmentRecords > article > header > span { display: flex; align-items: center; gap: 9px; }
+.crmAssessmentRecords > article > header svg { width: 17px; color: var(--vk-info); }
+.crmAssessmentRecords > article > header strong { font-size: 12px; }
+.crmAssessmentRecordScores { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--app-border, #dfe4ea); }
+.crmAssessmentRecordScores > div { display: grid; min-height: 82px; align-content: center; gap: 3px; padding: 13px 16px; border-right: 1px solid var(--app-border, #dfe4ea); }
+.crmAssessmentRecordScores > div:last-child { border-right: 0; }
+.crmAssessmentRecordScores strong { color: var(--app-text, #101319); font-size: 24px; line-height: 1; text-transform: capitalize; }
+.crmAssessmentRecordScores > div:last-child strong { font-size: 15px; }
+.crmAssessmentRecordScores span { color: var(--app-text-muted, #7d8898); font-size: 9px; }
+.crmAssessmentRecords dl { display: grid; grid-template-columns: repeat(2, 1fr); margin: 0; padding: 8px 16px 15px; }
+.crmAssessmentRecords dl > div { display: grid; grid-template-columns: minmax(130px, .8fr) 1.2fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--app-border, #dfe4ea); }
+.crmAssessmentRecords dl > div:nth-last-child(-n + 2) { border-bottom: 0; }
+.crmAssessmentRecords dt { color: var(--app-text-muted, #7d8898); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.crmAssessmentRecords dd { margin: 0; color: var(--app-text, #101319); font-size: 11px; font-weight: 650; }
+
 @media (max-width: 1400px) {
   .crmSubnav { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); gap: 8px 18px; align-items: center; }
   .crmSubnav__title { min-width: 0; }
@@ -431,6 +467,11 @@
   .crmCardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .crmOnboardingSummary { grid-template-columns: 170px 1fr 50px; }
   .crmOnboardingSummary p, .crmOnboardingSummary .statusBadge { grid-column: span 3; }
+  .crmAssessmentFunnel { grid-template-columns: repeat(3, 1fr); }
+  .crmAssessmentFunnel > div:nth-child(3) { border-right: 0; }
+  .crmAssessmentFunnel > div:nth-child(-n + 3) { border-bottom: 1px solid var(--app-border, #dfe4ea); }
+  .crmAssessmentFunnel > div:nth-child(3) i { display: none; }
+  .crmAssessmentPriority > div { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -463,4 +504,17 @@
   .crmConnectionList article > .vk-button,
   .crmAutomationList article > .vk-button { grid-column: 2; width: fit-content; }
   .crmConnectionList article > button:last-child { grid-column: 1; grid-row: 2; }
+  .crmAssessmentFunnel { grid-template-columns: repeat(2, 1fr); }
+  .crmAssessmentFunnel > div { border-bottom: 1px solid var(--app-border, #dfe4ea); }
+  .crmAssessmentFunnel > div:nth-child(2n) { border-right: 0; }
+  .crmAssessmentFunnel > div:nth-child(3) { border-right: 1px solid var(--app-border, #dfe4ea); }
+  .crmAssessmentFunnel > div:nth-child(5), .crmAssessmentFunnel > div:nth-child(6) { border-bottom: 0; }
+  .crmAssessmentFunnel > div:nth-child(2n) i { display: none; }
+  .crmAssessmentFunnel > div:nth-child(3) i { display: grid; }
+  .crmAssessmentPriority > div { grid-template-columns: 1fr; }
+  .crmAssessmentRecordScores, .crmAssessmentRecords dl { grid-template-columns: 1fr; }
+  .crmAssessmentRecordScores > div { border-right: 0; border-bottom: 1px solid var(--app-border, #dfe4ea); }
+  .crmAssessmentRecordScores > div:last-child { border-bottom: 0; }
+  .crmAssessmentRecords dl > div:nth-last-child(-n + 2) { border-bottom: 1px solid var(--app-border, #dfe4ea); }
+  .crmAssessmentRecords dl > div:last-child { border-bottom: 0; }
 }

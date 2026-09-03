@@ -65,7 +65,7 @@ const footerColumns = [
       ['Resources', '/#resources'],
       ['Help center', '/#resources'],
       ['Contact', '/contact'],
-      ['Request a demo', '/request-demo'],
+      ['Book a demo', '/request-demo'],
     ],
   },
   {
@@ -100,7 +100,7 @@ export const MarketingHeader = () => {
 
       <div className='visibilityHomeHeader__actions'>
         <LinkWrap className='visibilityHomeHeader__login' href='/login'>Log in</LinkWrap>
-        <ButtonLink href='/request-demo'>Request a Demo</ButtonLink>
+        <ButtonLink href='/request-demo'>Book a Demo</ButtonLink>
       </div>
 
       <button
@@ -117,7 +117,7 @@ export const MarketingHeader = () => {
 
     <nav id='visibility-home-mobile-navigation' className='visibilityHomeHeader__mobileNav' aria-label='Mobile navigation'>
       <LinkWrap href='/login' onClick={() => setOpen(false)}>Log in</LinkWrap>
-      <ButtonLink href='/request-demo' className='visibilityHomeHeader__mobileCta'>Request a Demo</ButtonLink>
+      <ButtonLink href='/request-demo' className='visibilityHomeHeader__mobileCta'>Book a Demo</ButtonLink>
     </nav>
   </header>
 }
@@ -278,7 +278,7 @@ const VisibilityLandingPage = () => (
               Velakron gives OEMs real-time visibility into every part, every machine, and every supplier—so you can make faster decisions and keep production moving.
             </p>
             <div className='visibilityHero__actions'>
-              <ButtonLink href='/request-demo'>Request a Demo</ButtonLink>
+              <ButtonLink href='/request-demo'>Book a Demo</ButtonLink>
               <ButtonLink href='#how-it-works' secondary>See How It Works</ButtonLink>
             </div>
             <div className='visibilityHero__trust'>
@@ -292,6 +292,18 @@ const VisibilityLandingPage = () => (
             <div className='visibilityHero__float visibilityHero__float--top'><span><Eye /></span><div><strong>Full visibility</strong><small>Across your supply chain</small></div></div>
             <div className='visibilityHero__float visibilityHero__float--bottom'><span><CircleCheck /></span><div><strong>42 parts on schedule</strong><small>Updated in real time</small></div></div>
           </div>
+        </div>
+      </section>
+
+      <section className='visibilityAssessmentPromo' aria-labelledby='visibility-assessment-heading'>
+        <div className='visibilityHome__container visibilityAssessmentPromo__panel'>
+          <div className='visibilityAssessmentPromo__icon' aria-hidden='true'><Eye /></div>
+          <div className='visibilityAssessmentPromo__copy'>
+            <p className='visibilityHome__eyebrow'>Production Visibility Assessment</p>
+            <h2 id='visibility-assessment-heading'>How much visibility do you actually have into your suppliers?</h2>
+            <p>Find out in about 2 minutes.</p>
+          </div>
+          <ButtonLink href='/visibility-assessment'>Check Your Visibility</ButtonLink>
         </div>
       </section>
 
@@ -338,7 +350,7 @@ const VisibilityLandingPage = () => (
             <h2>Ready to get visibility<br /> that drives impact?</h2>
             <p>See how Velakron gives your team the clarity to make faster decisions, reduce risk, and keep every program moving forward.</p>
             <div>
-              <ButtonLink href='/request-demo'>Request a Demo</ButtonLink>
+              <ButtonLink href='/request-demo'>Book a Demo</ButtonLink>
               <ButtonLink href='/contact' secondary>Talk to Sales</ButtonLink>
             </div>
           </div>

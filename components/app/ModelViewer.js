@@ -2,6 +2,7 @@ import { Focus, Layers3, LoaderCircle, MousePointer2, ZoomIn, ZoomOut } from 'lu
 import { useEffect, useId, useRef, useState } from 'react'
 import { resolveFileTransferTarget } from '../../store/fileTransfer'
 import { modelExtension, modelFormatLabel } from '../../store/modelFiles'
+import { captureVisualContextPreview } from './visualContextPreview'
 
 let occtRuntimePromise = null
 const modelBytesPromises = new Map()
@@ -368,6 +369,13 @@ const ModelViewer = ({
           }
           const normal = hit.face?.normal?.clone?.() || new THREE.Vector3(0, 0, 1)
           normal.transformDirection(hit.object.matrixWorld)
+          renderer.render(scene, camera)
+          const projectedPoint = hit.point.clone().project(camera)
+          const visualPreview = captureVisualContextPreview(renderer.domElement, {
+            kind: 'point',
+            x: (projectedPoint.x + 1) / 2,
+            y: (1 - projectedPoint.y) / 2,
+          })
           setSelectionFeedback('Surface captured. Opening the case form with this visual context.')
           onSelectRef.current({
             anchor_kind: 'model_face',
@@ -390,6 +398,7 @@ const ModelViewer = ({
               camera_up: camera.up.toArray(),
               section_planes: [],
             },
+            visual_preview: visualPreview,
           })
         }
         renderer.domElement.addEventListener('pointerdown', pointerDown)

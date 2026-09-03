@@ -40,7 +40,6 @@ const PartCaseDrawer = ({
   onOpenAnchor,
   onArchive,
   onPromote,
-  onRequestAnchor,
 }) => {
   const [form, setForm] = useState(emptyForm)
   const [replyMode, setReplyMode] = useState('message')
@@ -131,10 +130,22 @@ const PartCaseDrawer = ({
   return <ResponsiveDrawer open={open} title={mode === 'create' ? 'Create collaboration case' : item?.title || 'Collaboration case'} onClose={onClose} wide>
     {mode === 'create' ? <form className='partCaseForm' onSubmit={submitCreate}>
       <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-      <div className='partCaseForm__context'>
+      <div className={`partCaseForm__context${selectedAnchor?.visual_preview?.data_url ? ' has-preview' : ''}`}>
         <MessageSquareText aria-hidden='true' />
-        <div><p className='technicalLabel'>{selectedAnchor ? 'Captured visual context' : 'Revision context'}</p><strong>{selectedAnchor ? selectedAnchor.label || formatLabel(selectedAnchor.anchor_kind || selectedAnchor.kind) : 'Revision-level case'}</strong><span>{selectedAnchor ? `${sourceAsset?.attachment?.display_filename || sourceAsset?.attachment?.original_filename || 'Selected technical file'} · The saved view will open with the case.` : 'No drawing or model selection is attached yet.'}</span></div>
-        <Button type='button' variant='secondary' onClick={onRequestAnchor}>Select in viewer</Button>
+        <div className='partCaseForm__contextCopy'><p className='technicalLabel'>{selectedAnchor ? 'Captured visual context' : 'Revision context'}</p><strong>{selectedAnchor ? selectedAnchor.label || formatLabel(selectedAnchor.anchor_kind || selectedAnchor.kind) : 'Revision-level case'}</strong><span>{selectedAnchor ? `${sourceAsset?.attachment?.display_filename || sourceAsset?.attachment?.original_filename || 'Selected technical file'} · The saved view will open with the case.` : 'No drawing or model selection is attached.'}</span></div>
+        {selectedAnchor?.visual_preview?.data_url && <figure className='partCaseForm__visualPreview'>
+          <img src={selectedAnchor.visual_preview.data_url} alt='Thumbnail of the selected visual context' />
+          {selectedAnchor.visual_preview.selection && <span
+            className={`partCaseForm__visualMarker is-${selectedAnchor.visual_preview.selection.kind}`}
+            style={{
+              left: `${selectedAnchor.visual_preview.selection.x * 100}%`,
+              top: `${selectedAnchor.visual_preview.selection.y * 100}%`,
+              width: selectedAnchor.visual_preview.selection.kind === 'region' ? `${selectedAnchor.visual_preview.selection.width * 100}%` : undefined,
+              height: selectedAnchor.visual_preview.selection.kind === 'region' ? `${selectedAnchor.visual_preview.selection.height * 100}%` : undefined,
+            }}
+          />}
+          <figcaption>Selected view</figcaption>
+        </figure>}
       </div>
       {lockProductionContext && productionRecords[0] && <div className='partCaseLockedContext'><div><p className='technicalLabel'>Recipient</p><strong>{relatedCompanyName || (organizationType === 'supplier' ? 'OEM customer' : 'Supplier')}</strong><span>This case is shared with the company connected to this production.</span></div><div><p className='technicalLabel'>Linked production</p><strong>{productionRecords[0].public_reference || productionRecords[0].po_number}</strong><span>The case will remain visible in this production record and timeline.</span></div></div>}
       <div className='productionFormGrid'>

@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarPlus, Link2, MailPlus, MessageSquarePlus, Pencil, Plus, RefreshCw, Trash2, UserPlus } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, ClipboardCheck, Link2, MailPlus, MessageSquarePlus, Pencil, Plus, RefreshCw, Trash2, UserPlus } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
@@ -21,6 +21,16 @@ const initialNote = { subject: '', summary: '', outcome: '', next_action: '', fo
 const initialOrganization = { name: '', status: 'prospect', industry: '', website: '', account_owner: '', lead_source: '', next_action: '', next_action_at: '', notes: '' }
 const initialRelationship = { organization: '', status: 'potential', owner: '', next_action: '', next_follow_up_at: '', notes: '' }
 const initialInvitation = { first_name: '', last_name: '', email: '', access: 'admin', message: '' }
+const assessmentAnswerLabels = {
+  supplier_count: 'Outside suppliers',
+  status_method: 'Current status method',
+  chasing_frequency: 'Status chasing',
+  delay_awareness: 'Delay awareness',
+  operational_impact: 'Primary impact',
+  role: 'Role',
+  company_size: 'Company size',
+  buying_timeline: 'Buying timeline',
+}
 
 const OrganizationDetail = () => {
   const router = useRouter()
@@ -57,7 +67,7 @@ const OrganizationDetail = () => {
 
   if (state.loading && !state.data) return <section className='appPanel'><AppSkeleton lines={12} /></section>
   if (state.error || !state.data) return <ErrorState title='Organization could not be loaded' description={state.error || 'This organization is unavailable.'} onRetry={load} />
-  const { organization, contacts = [], opportunities = [], onboardings = [], interactions = [], meetings = [], tasks = [], links = [] } = state.data
+  const { organization, contacts = [], opportunities = [], onboardings = [], interactions = [], meetings = [], tasks = [], links = [], visibility_assessments: visibilityAssessments = [] } = state.data
 
   const addContact = async event => {
     event.preventDefault(); setSaving(true); setFeedback(null)
@@ -170,6 +180,7 @@ const OrganizationDetail = () => {
       { key: 'pipeline', label: 'Opportunities', count: opportunities.length }, { key: 'onboarding', label: 'Onboarding', count: onboardings.length },
       { key: 'activity', label: 'Activity', count: interactions.length }, { key: 'tasks', label: 'Tasks', count: tasks.length },
       { key: 'files', label: 'Files' },
+      { key: 'assessments', label: 'Assessments', count: visibilityAssessments.length },
       { key: 'relationships', label: 'OEM ↔ Supplier', count: links.length },
     ]} activeKey={tab} onChange={setTab} /></div>
 
@@ -193,6 +204,11 @@ const OrganizationDetail = () => {
     {tab === 'activity' && <section className='appPanel'><CrmPanelHeader title='Full relationship history' actions={<Button onClick={() => setModal('note')}><Plus aria-hidden='true' /> Log activity</Button>} />{interactions.length ? <div className='crmTimeline'>{interactions.map(item => <article key={item.id || item._id}><span className='crmTimeline__dot' /><div><header><strong>{item.subject || item.type.replaceAll('_', ' ')}</strong><time>{formatDateTime(item.occurred_at)}</time></header><p>{item.summary}</p>{item.outcome && <small>Outcome: {item.outcome}</small>}</div></article>)}</div> : <EmptyState compact title='No history yet' description='Calls, meetings, emails, notes, tasks, and status changes will appear here.' />}</section>}
     {tab === 'tasks' && <section className='appPanel'><CrmPanelHeader title='Founder follow-up tasks' actions={<Button href={`/app/tasks?crm_organization=${organization.id}`}><Plus aria-hidden='true' /> Open task workspace</Button>} />{tasks.length ? <div className='crmStackList'>{tasks.map(item => <LinkWrap className='crmStackRow' href={`/app/tasks?task=${item.id || item._id}`} key={item.id || item._id}><span className={`crmTaskDot crmTaskDot--${item.importance}`} /><span className='crmStackRow__main'><strong>{item.title}</strong><small>{formatShortDate(item.due_at)}</small></span><StatusBadge>{item.status.replaceAll('_', ' ')}</StatusBadge></LinkWrap>)}</div> : <EmptyState compact title='No CRM tasks' description='Create a linked founder task from the task workspace.' />}</section>}
     {tab === 'files' && <section className='appPanel'><CrmPanelHeader title='Private organization files' detail='Pictures, proposals, notes, and supporting documents visible only to founders.' /><CrmFilesPanel subject='organizations' subjectId={organization.id} /></section>}
+    {tab === 'assessments' && <section className='appPanel'><CrmPanelHeader eyebrow='Website qualification' title='Production Visibility Assessments' detail='Customer-facing visibility scores, internal qualification, every answer, and demo status in one place.' />{visibilityAssessments.length ? <div className='crmAssessmentRecords'>{visibilityAssessments.map(assessment => <article key={assessment.id}>
+      <header><span><ClipboardCheck /><strong>{formatShortDate(assessment.captured_at)}</strong></span><StatusBadge tone={assessment.scores.lead_classification === 'high_priority' ? 'warning' : assessment.scores.lead_classification === 'qualified' ? 'info' : 'neutral'}>{assessment.scores.lead_classification.replaceAll('_', ' ')}</StatusBadge></header>
+      <div className='crmAssessmentRecordScores'><div><strong>{assessment.scores.production_visibility}</strong><span>Production visibility</span></div><div><strong>{assessment.scores.lead}</strong><span>Internal lead score</span></div><div><strong>{assessment.booking.status.replaceAll('_', ' ')}</strong><span>{assessment.booking.starts_at ? formatDateTime(assessment.booking.starts_at) : 'Demo status'}</span></div></div>
+      <dl>{Object.entries(assessmentAnswerLabels).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{assessment.answers[key]}</dd></div>)}</dl>
+    </article>)}</div> : <EmptyState compact title='No visibility assessment' description='Completed website assessments will appear here automatically.' />}</section>}
     {tab === 'relationships' && <section className='appPanel'><CrmPanelHeader title='OEM ↔ Supplier connections' actions={<Button onClick={() => setModal('relationship')}><Link2 aria-hidden='true' /> Connect organization</Button>} />{links.length ? <div className='crmStackList'>{links.map(item => <article className='crmStackRow' key={item.id || item._id}><span className='crmStackRow__main'><strong>{item.oem_organization?.name} ↔ {item.supplier_organization?.name}</strong><small>{item.next_action || 'No next action'}</small></span><StatusBadge tone={item.status === 'active' ? 'success' : 'neutral'}>{item.status}</StatusBadge></article>)}</div> : <EmptyState compact title='No connected organizations' description='Connect this record to an OEM or supplier relationship.' />}</section>}
 
     <CrmModal open={modal === 'contact'} title='Add a contact' description={`Add someone at ${organization.name}.`} onClose={() => !saving && setModal('')} actions={<><Button variant='secondary' onClick={() => setModal('')}>Cancel</Button><Button type='submit' form='crm-contact-form' disabled={saving}>{saving ? 'Saving…' : 'Add contact'}</Button></>}><form id='crm-contact-form' onSubmit={addContact}><FieldGrid>

@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BellRing, Box, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, BellRing, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -17,15 +17,12 @@ import { Button } from '../../components/design-system'
 import { formatDate, formatDateTime, formatLabel, formatStorageStatus, statusTone } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
-import { getActiveMembership, getActiveOrganization, getFeatureEnabled } from '../../store/slices/appContext'
+import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
 import { loadProductionSummary, productionCollaborationSelectors } from '../../store/slices/entities/productionCollaboration'
 import { loadPlatformActionCenter, loadPlatformSummary, platformSelectors, trackProductEvent } from '../../store/slices/entities/platformAdministration'
 import { internalTaskSelectors, loadInternalTasks } from '../../store/slices/entities/internalTasks'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import PlatformActionQueue from '../../components/app/PlatformActionQueue'
-import { loadPartActionSummary, partSelectors } from '../../store/slices/entities/parts'
-import { inspectionSelectors, loadInspectionSummary } from '../../store/slices/entities/inspection'
-import LinkWrap from '../../components/LinkWrap'
 
 const metric = value => String(value ?? '—')
 const recordCompany = (record, organizationType) => organizationType === 'supplier'
@@ -141,17 +138,10 @@ const FounderDashboard = () => {
 
 const OperationalDashboard = ({ organization }) => {
   const dispatch = useDispatch()
-  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
   const summary = useSelector(productionCollaborationSelectors.getSummary)
   const loading = useSelector(productionCollaborationSelectors.getSummaryLoading)
   const error = useSelector(productionCollaborationSelectors.getSummaryError)
-  const partActions = useSelector(partSelectors.getActionSummary)
-  const inspectionActions = useSelector(inspectionSelectors.getSummary)
-  const refresh = useCallback(() => {
-    dispatch(loadPartActionSummary())
-    if (inspectionEnabled) dispatch(loadInspectionSummary())
-    return dispatch(loadProductionSummary())
-  }, [dispatch, inspectionEnabled])
+  const refresh = useCallback(() => dispatch(loadProductionSummary()), [dispatch])
   useEffect(() => { refresh() }, [refresh])
   useEffect(() => {
     const refreshWhenVisible = () => { if (document.visibilityState !== 'hidden') refresh() }
@@ -173,27 +163,11 @@ const OperationalDashboard = ({ organization }) => {
   return <>
     {error && <ErrorState title='Production overview could not refresh' description='Showing the last successful snapshot. Refresh before making a schedule decision.' onRetry={refresh} />}
     <section className='metricGrid metricGrid--priority' aria-label='Production priorities'>
-      <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail={supplier ? 'Tasks or shared issues requiring your response' : 'Records with unresolved attention reasons'} icon={AlertTriangle} tone='warning' href={supplier ? '/app/production?view=action_required' : '/app/production?view=active&attention=unresolved'} />
+      <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail='Production records with an action owned by your company' icon={AlertTriangle} tone='warning' href='/app/production?view=action_required' />
       <MetricCard label='Awaiting acceptance' value={metric(summary.counts?.awaiting_acceptance)} detail='Assignments awaiting supplier confirmation' icon={Clock3} href={supplier ? '/app/production?view=action_required&stage=assigned' : '/app/production?view=active&stage=assigned'} />
       <MetricCard label='At risk' value={metric(summary.counts?.at_risk)} detail='Active records with schedule risk' icon={AlertTriangle} tone='warning' href='/app/production?view=active&health=at_risk' />
       <MetricCard label='Delayed' value={metric(summary.counts?.delayed)} detail='Active records past a required date' icon={PackageCheck} tone='danger' href='/app/production?view=active&health=delayed' />
     </section>
-    {partActions && <section className='partActionBand' aria-label='Part Workspace actions'>
-      <div><Box aria-hidden='true' /><span><strong>Part Workspace</strong><small>Technical collaboration responsibility</small></span></div>
-      <LinkWrap href='/app/parts?view=needs_action'><strong>{partActions.needs_action || 0}</strong><span>Needs your action</span></LinkWrap>
-      <LinkWrap href='/app/parts?view=waiting'><strong>{partActions.waiting_on_other || 0}</strong><span>Waiting on other company</span></LinkWrap>
-      <LinkWrap href='/app/parts?view=overdue'><strong>{partActions.overdue || 0}</strong><span>Overdue</span></LinkWrap>
-      {supplier && <LinkWrap href='/app/parts?view=new_revisions'><strong>{partActions.new_revisions || 0}</strong><span>New revisions</span></LinkWrap>}
-      {supplier && <LinkWrap href='/app/parts?view=unacknowledged_requirements'><strong>{partActions.unacknowledged_requirements || 0}</strong><span>Requirements to acknowledge</span></LinkWrap>}
-    </section>}
-    {inspectionEnabled && inspectionActions && <section className='partActionBand' aria-label='Inspection and quality actions'>
-      <div><ListChecks aria-hidden='true' /><span><strong>Inspection &amp; quality</strong><small>Released checkpoints and package responsibility</small></span></div>
-      <LinkWrap href='/app/production?inspection=needs_action'><strong>{inspectionActions.needs_action || 0}</strong><span>Needs your action</span></LinkWrap>
-      <LinkWrap href='/app/production?inspection=waiting'><strong>{inspectionActions.waiting || 0}</strong><span>Waiting on other company</span></LinkWrap>
-      <LinkWrap href='/app/production?inspection=due_soon'><strong>{inspectionActions.due_soon || 0}</strong><span>Due in 24 hours</span></LinkWrap>
-      <LinkWrap href='/app/production?inspection=overdue'><strong>{inspectionActions.overdue || 0}</strong><span>Overdue</span></LinkWrap>
-      <LinkWrap href='/app/production?inspection=failed'><strong>{inspectionActions.failures || 0}</strong><span>Quality findings</span></LinkWrap>
-    </section>}
     <p className='dashboardMetricContext'><Factory aria-hidden='true' /> {metric(summary.counts?.active)} active production records <span aria-hidden='true'>·</span> <CircleCheck aria-hidden='true' /> {metric(summary.counts?.on_schedule)} on schedule</p>
     <div className='dashboardPriorityGrid'>
       <section className='appPanel dashboardPriorityGrid__primary'>

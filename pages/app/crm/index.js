@@ -2,8 +2,11 @@ import {
   AlertTriangle,
   CalendarDays,
   CircleDollarSign,
+  ClipboardCheck,
+  Eye,
   Inbox,
   ListTodo,
+  MousePointerClick,
   Target,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -34,6 +37,15 @@ const CrmDashboard = () => {
   const data = state.data
   const onboardingAttention = data.onboarding?.attention || []
   const taskRows = data.follow_ups?.tasks || []
+  const assessment = data.visibility_assessment || { funnel: {}, high_priority: [] }
+  const funnel = [
+    ['Visitors', assessment.funnel.visitors || 0],
+    ['Started', assessment.funnel.started || 0],
+    ['Completed', assessment.funnel.completed || 0],
+    ['Contact captured', assessment.funnel.contacts || 0],
+    ['Demo clicked', assessment.funnel.demo_clicked || 0],
+    ['Demo booked', assessment.funnel.demo_booked || 0],
+  ]
   return <>
     <Seo title='Founder CRM' description='Velakron founder customer relationship workspace.' path='/app/crm' noIndex />
     <AppPageHeader eyebrow='Founder CRM' title='Relationship command center' description='The current state of every prospect, customer, supplier relationship, follow-up, and founder-owned commitment.' />
@@ -44,6 +56,24 @@ const CrmDashboard = () => {
       <MetricCard label='Upcoming meetings' value={data.meetings?.upcoming?.length || 0} detail='Scheduled in the next seven days' icon={CalendarDays} href='/app/crm/calendar' />
       <MetricCard label='Unread messages' value={data.communications?.unread || 0} detail={`${data.communications?.needs_matching || 0} need contact matching`} icon={Inbox} tone={data.communications?.unread ? 'warning' : 'default'} href='/app/crm/inbox' />
       <MetricCard label='Onboarding attention' value={onboardingAttention.length} detail='Blocked, stalled, or follow-up due' icon={AlertTriangle} tone={onboardingAttention.length ? 'warning' : 'default'} href='/app/crm/onboarding' />
+    </section>
+    <section className='appPanel crmAssessmentOverview'>
+      <CrmPanelHeader eyebrow='Website qualification · Last 90 days' title='Production Visibility Assessment' detail='Prospect progress from assessment visit through a directly booked demo.' actions={<LinkWrap href='/visibility-assessment' target='_blank'>Open assessment →</LinkWrap>} />
+      <div className='crmAssessmentFunnel' aria-label='Visibility assessment funnel'>
+        {funnel.map(([label, value], index) => <div key={label}>
+          <span className='crmAssessmentFunnel__icon'>{index === 0 ? <Eye /> : index < 3 ? <ClipboardCheck /> : index === 4 ? <MousePointerClick /> : <CalendarDays />}</span>
+          <strong>{value}</strong>
+          <small>{label}</small>
+          {index < funnel.length - 1 && <i aria-hidden='true'>→</i>}
+        </div>)}
+      </div>
+      {(assessment.high_priority || []).length > 0 && <div className='crmAssessmentPriority'>
+        <strong>Recent high-priority assessments</strong>
+        <div>{assessment.high_priority.map(item => <LinkWrap href={`/app/crm/organizations/${item.crm_organization?.id}`} key={item.id}>
+          <span><strong>{item.company}</strong><small>{item.contact_name} · {formatShortDate(item.captured_at)}</small></span>
+          <span><b>{item.visibility_score}</b> visibility <b>{item.lead_score}</b> lead</span>
+        </LinkWrap>)}</div>
+      </div>}
     </section>
     <div className='crmDashboardGrid'>
       <section className='appPanel'>
