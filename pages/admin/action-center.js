@@ -30,8 +30,8 @@ const ActionCenter = () => {
     {loading && !actionCenter ? <section className='appPanel'><AppSkeleton lines={9} /></section> : <>
       <section className='metricGrid metricGrid--priority' aria-label='Action center summary'>
         <MetricCard label='Needs Velakron' value={String(counts.needs_velakron || 0)} detail='Approvals and operational intervention' icon={BellRing} tone={counts.needs_velakron ? 'warning' : 'success'} />
-        <MetricCard label='Organization approvals' value={String(counts.organization_reviews || 0)} detail='Activated OEM accounts ready for review' icon={Building2} />
-        <MetricCard label='Supplier reviews' value={String(counts.supplier_reviews || 0)} detail='Submitted onboarding profiles' icon={Factory} />
+        <MetricCard label='Organization approvals' value={String(counts.organization_reviews || 0)} detail='Activated OEM accounts ready for review' icon={Building2} tone={counts.organization_reviews ? 'accent' : 'success'} />
+        <MetricCard label='Supplier reviews' value={String(counts.supplier_reviews || 0)} detail='Submitted onboarding profiles' icon={Factory} tone={counts.supplier_reviews ? 'cyan' : 'success'} />
         <MetricCard label='System attention' value={String(counts.system_attention || 0)} detail='Delivery or file-security operations' icon={ShieldCheck} tone={counts.system_attention ? 'danger' : 'success'} />
       </section>
       <PlatformActionQueue

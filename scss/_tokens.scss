@@ -63,7 +63,21 @@ $laptop: 1280px;
   --vk-info-soft: #edf5ff;
   --vk-info-border: #bfd7fb;
 
-  --vk-shadow-surface: 0 8px 24px rgba(15, 28, 44, 0.055);
+  // Supporting accents are intentionally restrained. They give dense
+  // operational screens more visual rhythm without competing with semantic
+  // warning, danger, and success states.
+  --vk-violet: #6741c6;
+  --vk-violet-soft: #f3efff;
+  --vk-violet-border: #d8ccfa;
+  --vk-cyan: #087b8f;
+  --vk-cyan-soft: #eaf8fa;
+  --vk-cyan-border: #bce3e9;
+  --vk-orange: #c45a08;
+  --vk-orange-soft: #fff2e7;
+  --vk-orange-border: #f2c9a8;
+  --vk-brand-gradient: linear-gradient(135deg, #0063f7 0%, #287cf6 58%, #6057d9 100%);
+
+  --vk-shadow-surface: 0 8px 26px rgba(24, 54, 96, 0.07);
   --vk-shadow-elevated: 0 24px 70px rgba(15, 28, 44, 0.18);
   --vk-overlay: rgba(7, 16, 26, 0.56);
 }

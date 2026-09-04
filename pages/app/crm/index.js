@@ -50,12 +50,12 @@ const CrmDashboard = () => {
     <Seo title='Founder CRM' description='Velakron founder customer relationship workspace.' path='/app/crm' noIndex />
     <AppPageHeader eyebrow='Founder CRM' title='Relationship command center' description='The current state of every prospect, customer, supplier relationship, follow-up, and founder-owned commitment.' />
     <section className='metricGrid metricGrid--priority crmMetricGrid' aria-label='CRM totals'>
-      <MetricCard label='Active pipeline' value={data.opportunities?.active_count || 0} detail={`${formatMoney(data.opportunities?.unweighted_value)} expected first-year value`} icon={Target} href='/app/crm/opportunities' />
-      <MetricCard label='Weighted forecast' value={formatMoney(data.opportunities?.weighted_value)} detail='Probability-adjusted opportunity value' icon={CircleDollarSign} />
-      <MetricCard label='Overdue tasks' value={data.follow_ups?.overdue_task_count || 0} detail='Founder follow-ups past due' icon={ListTodo} tone={data.follow_ups?.overdue_task_count ? 'danger' : 'default'} href='/app/tasks' />
-      <MetricCard label='Upcoming meetings' value={data.meetings?.upcoming?.length || 0} detail='Scheduled in the next seven days' icon={CalendarDays} href='/app/crm/calendar' />
-      <MetricCard label='Unread messages' value={data.communications?.unread || 0} detail={`${data.communications?.needs_matching || 0} need contact matching`} icon={Inbox} tone={data.communications?.unread ? 'warning' : 'default'} href='/app/crm/inbox' />
-      <MetricCard label='Onboarding attention' value={onboardingAttention.length} detail='Blocked, stalled, or follow-up due' icon={AlertTriangle} tone={onboardingAttention.length ? 'warning' : 'default'} href='/app/crm/onboarding' />
+      <MetricCard label='Active pipeline' value={data.opportunities?.active_count || 0} detail={`${formatMoney(data.opportunities?.unweighted_value)} expected first-year value`} icon={Target} tone='info' href='/app/crm/opportunities' />
+      <MetricCard label='Weighted forecast' value={formatMoney(data.opportunities?.weighted_value)} detail='Probability-adjusted opportunity value' icon={CircleDollarSign} tone='accent' />
+      <MetricCard label='Overdue tasks' value={data.follow_ups?.overdue_task_count || 0} detail='Founder follow-ups past due' icon={ListTodo} tone={data.follow_ups?.overdue_task_count ? 'danger' : 'success'} href='/app/tasks' />
+      <MetricCard label='Upcoming meetings' value={data.meetings?.upcoming?.length || 0} detail='Scheduled in the next seven days' icon={CalendarDays} tone='cyan' href='/app/crm/calendar' />
+      <MetricCard label='Unread messages' value={data.communications?.unread || 0} detail={`${data.communications?.needs_matching || 0} need contact matching`} icon={Inbox} tone={data.communications?.unread ? 'warning' : 'success'} href='/app/crm/inbox' />
+      <MetricCard label='Onboarding attention' value={onboardingAttention.length} detail='Blocked, stalled, or follow-up due' icon={AlertTriangle} tone={onboardingAttention.length ? 'warning' : 'success'} href='/app/crm/onboarding' />
     </section>
     <section className='appPanel crmAssessmentOverview'>
       <CrmPanelHeader eyebrow='Website qualification · Last 90 days' title='Production Visibility Assessment' detail='Prospect progress from assessment visit through a directly booked demo.' actions={<LinkWrap href='/visibility-assessment' target='_blank'>Open assessment →</LinkWrap>} />

@@ -361,9 +361,9 @@ const FounderTasks = () => {
       actions={canCreate && <Button onClick={openCreate}><Plus aria-hidden='true' /> New task</Button>}
     />
     <section className='metricGrid founderTaskMetrics' aria-label='Task summary'>
-      <MetricCard label='Active tasks' value={tasks.filter(task => activeStatuses.includes(task.status)).length} detail='Open, in progress, or blocked' icon={ListChecks} />
-      <MetricCard label='Overdue' value={overdueCount} detail='Active tasks past their due date' icon={AlertTriangle} tone={overdueCount ? 'danger' : 'default'} />
-      <MetricCard label='Blocked' value={blockedCount} detail='Waiting on a decision or dependency' icon={CircleDot} tone={blockedCount ? 'warning' : 'default'} />
+      <MetricCard label='Active tasks' value={tasks.filter(task => activeStatuses.includes(task.status)).length} detail='Open, in progress, or blocked' icon={ListChecks} tone='info' />
+      <MetricCard label='Overdue' value={overdueCount} detail='Active tasks past their due date' icon={AlertTriangle} tone={overdueCount ? 'danger' : 'success'} />
+      <MetricCard label='Blocked' value={blockedCount} detail='Waiting on a decision or dependency' icon={CircleDot} tone={blockedCount ? 'warning' : 'success'} />
       <MetricCard label='Completed' value={tasks.filter(task => task.status === 'completed').length} detail='Finished work in this view' icon={CheckCircle2} tone='success' />
     </section>
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}

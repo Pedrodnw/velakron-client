@@ -11,9 +11,14 @@
   --app-border-strong: var(--vk-workspace-border-strong);
   --app-shadow: var(--vk-shadow-surface);
   min-height: 100vh;
-  background: var(--app-canvas);
+  background-color: var(--app-canvas);
+  background-image:
+    radial-gradient(circle at 9% 4%, rgba(0, 99, 247, 0.055), transparent 25rem),
+    radial-gradient(circle at 94% 23%, rgba(103, 65, 198, 0.04), transparent 28rem),
+    linear-gradient(rgba(16, 19, 25, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 19, 25, 0.035) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
   color: var(--app-text);
-  @include technical-grid-light;
 
   h1,
   h2,
@@ -30,11 +35,13 @@
   }
 
   .vk-button--primary {
-    background: var(--vk-action);
+    background: var(--vk-brand-gradient);
     color: #fff;
+    box-shadow: 0 7px 18px rgba(0, 99, 247, 0.18);
 
     &:hover {
-      background: var(--vk-action-hover);
+      background: linear-gradient(135deg, #0059df 0%, #1f6fe8 58%, #544bc9 100%);
+      box-shadow: 0 9px 22px rgba(0, 99, 247, 0.24);
     }
   }
 
@@ -277,7 +284,7 @@
   padding: 10px;
   border: 1px solid var(--app-border);
   border-radius: $radius;
-  background: var(--app-surface);
+  background: linear-gradient(145deg, rgba(0, 99, 247, 0.11), rgba(103, 65, 198, 0.065));
   color: var(--app-text);
   text-align: left;
 
@@ -288,8 +295,9 @@
     flex: 0 0 34px;
     place-items: center;
     border-radius: 6px;
-    background: rgba($primary, 0.16);
-    color: $primary;
+    border: 1px solid rgba(110, 168, 255, 0.22);
+    background: linear-gradient(145deg, rgba(0, 99, 247, 0.24), rgba(103, 65, 198, 0.2));
+    color: #8db8ff;
   }
 
   label {
@@ -376,11 +384,15 @@
     svg {
       width: 18px;
       height: 18px;
+      color: #7d8da3;
+      transition: color 160ms ease, transform 160ms ease;
     }
 
     &:hover {
       background: rgba(255, 255, 255, 0.035);
       color: var(--app-text);
+
+      svg { color: #b6c8df; transform: translateY(-1px); }
     }
 
     &.is-active {
@@ -389,10 +401,13 @@
       color: #8db8ff;
 
       svg {
-        color: $primary-hover;
+        color: #74aaff;
       }
     }
   }
+
+  a:nth-of-type(3n + 2):not(.is-active) svg { color: #78a9bd; }
+  a:nth-of-type(3n + 3):not(.is-active) svg { color: #9a8bc7; }
 
   &__count {
     min-width: 22px;
@@ -417,8 +432,8 @@
   min-height: 72px;
   padding: 0 36px;
   border-bottom: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 1px 0 rgba(15, 28, 44, 0.02);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.975), rgba(247, 250, 255, 0.965));
+  box-shadow: 0 1px 0 rgba(15, 28, 44, 0.025), 0 8px 24px rgba(31, 65, 110, 0.035);
 
   &__menu {
     display: none;
@@ -679,6 +694,7 @@
     h1 {
       margin-bottom: 12px;
       font-size: clamp(32px, 4vw, 46px);
+      letter-spacing: -0.045em;
     }
 
     > p:last-child {
@@ -736,6 +752,18 @@
     background: var(--vk-danger-soft);
     color: var(--vk-danger);
   }
+
+  &--accent {
+    border-color: var(--vk-violet-border);
+    background: var(--vk-violet-soft);
+    color: var(--vk-violet);
+  }
+
+  &--cyan {
+    border-color: var(--vk-cyan-border);
+    background: var(--vk-cyan-soft);
+    color: var(--vk-cyan);
+  }
 }
 
 .metricGrid {
@@ -754,9 +782,21 @@
 }
 
 .metricCard {
+  position: relative;
+  overflow: hidden;
   padding: 20px;
   color: inherit;
-  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  background: linear-gradient(145deg, #fff 54%, rgba(0, 99, 247, 0.04));
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+
+  &::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    border-radius: 10px 0 0 10px;
+    background: var(--vk-action);
+    content: '';
+  }
 
   &__top {
     @include flex-row(space-between, center, 12px);
@@ -768,9 +808,14 @@
     text-transform: uppercase;
 
     svg {
-      width: 18px;
-      height: 18px;
-      color: $primary;
+      box-sizing: border-box;
+      width: 36px;
+      height: 36px;
+      padding: 8px;
+      border: 1px solid var(--vk-info-border);
+      border-radius: 11px;
+      background: var(--vk-info-soft);
+      color: var(--vk-info);
     }
   }
 
@@ -787,9 +832,42 @@
     font-size: 12px;
   }
 
-  &--warning { border-color: var(--vk-warning-border); }
-  &--danger { border-color: var(--vk-danger-border); }
-  &--success { border-color: var(--vk-success-border); }
+  &--warning {
+    border-color: var(--vk-warning-border);
+    background: linear-gradient(145deg, #fff 52%, var(--vk-warning-soft));
+    &::before { background: var(--vk-orange); }
+    .metricCard__top svg { border-color: var(--vk-orange-border); background: var(--vk-orange-soft); color: var(--vk-orange); }
+  }
+
+  &--danger {
+    border-color: var(--vk-danger-border);
+    background: linear-gradient(145deg, #fff 52%, var(--vk-danger-soft));
+    &::before { background: var(--vk-danger); }
+    .metricCard__top svg { border-color: var(--vk-danger-border); background: var(--vk-danger-soft); color: var(--vk-danger); }
+  }
+
+  &--success {
+    border-color: var(--vk-success-border);
+    background: linear-gradient(145deg, #fff 52%, var(--vk-success-soft));
+    &::before { background: var(--vk-success); }
+    .metricCard__top svg { border-color: var(--vk-success-border); background: var(--vk-success-soft); color: var(--vk-success); }
+  }
+
+  &--accent {
+    border-color: var(--vk-violet-border);
+    background: linear-gradient(145deg, #fff 52%, var(--vk-violet-soft));
+    &::before { background: var(--vk-violet); }
+    .metricCard__top svg { border-color: var(--vk-violet-border); background: var(--vk-violet-soft); color: var(--vk-violet); }
+  }
+
+  &--cyan {
+    border-color: var(--vk-cyan-border);
+    background: linear-gradient(145deg, #fff 52%, var(--vk-cyan-soft));
+    &::before { background: var(--vk-cyan); }
+    .metricCard__top svg { border-color: var(--vk-cyan-border); background: var(--vk-cyan-soft); color: var(--vk-cyan); }
+  }
+
+  &--info { border-color: var(--vk-info-border); }
 
   &--linked {
     display: block;
@@ -797,7 +875,7 @@
     &:hover {
       transform: translateY(-2px);
       border-color: rgba($primary, 0.55);
-      background: var(--app-surface-hover);
+      box-shadow: 0 13px 28px rgba(21, 62, 118, 0.12);
     }
 
     &:focus-visible {
@@ -805,6 +883,22 @@
       outline-offset: 2px;
     }
   }
+}
+
+// Untoned summary metrics rotate through the calm supporting accents. Explicit
+// semantic tones always win, so risk and success meaning stays consistent.
+.metricGrid > .metricCard--default:nth-child(4n + 2) {
+  border-color: var(--vk-violet-border);
+  background: linear-gradient(145deg, #fff 52%, var(--vk-violet-soft));
+  &::before { background: var(--vk-violet); }
+  .metricCard__top svg { border-color: var(--vk-violet-border); background: var(--vk-violet-soft); color: var(--vk-violet); }
+}
+
+.metricGrid > .metricCard--default:nth-child(4n + 3) {
+  border-color: var(--vk-cyan-border);
+  background: linear-gradient(145deg, #fff 52%, var(--vk-cyan-soft));
+  &::before { background: var(--vk-cyan); }
+  .metricCard__top svg { border-color: var(--vk-cyan-border); background: var(--vk-cyan-soft); color: var(--vk-cyan); }
 }
 
 .appDashboardGrid {
@@ -816,6 +910,7 @@
 .appPanel {
   overflow: hidden;
   padding: 22px;
+  background: linear-gradient(180deg, rgba(249, 252, 255, 0.92), #fff 54px);
 
   &--table {
     padding: 8px;
@@ -1011,8 +1106,9 @@
     place-items: center;
     border: 1px solid rgba($primary, 0.22);
     border-radius: 12px;
-    background: rgba($primary, 0.08);
-    color: $primary-hover;
+    background: linear-gradient(145deg, var(--vk-info-soft), var(--vk-violet-soft));
+    color: var(--vk-info);
+    box-shadow: 0 8px 18px rgba(0, 99, 247, 0.08);
 
     svg {
       width: 23px;
@@ -1089,8 +1185,9 @@
     height: 32px;
     place-items: center;
     border-radius: 7px;
-    background: rgba($primary, 0.08);
-    color: $primary;
+    border: 1px solid var(--vk-info-border);
+    background: var(--vk-info-soft);
+    color: var(--vk-info);
 
     svg {
       width: 15px;
@@ -1117,6 +1214,9 @@
     padding: 7px 10px;
     font-size: 10px;
   }
+
+  &:nth-child(3n + 2) .timelineRow__icon { border-color: var(--vk-violet-border); background: var(--vk-violet-soft); color: var(--vk-violet); }
+  &:nth-child(3n + 3) .timelineRow__icon { border-color: var(--vk-cyan-border); background: var(--vk-cyan-soft); color: var(--vk-cyan); }
 }
 
 .dataTable__scroll {
@@ -1194,6 +1294,7 @@
   }
 
   th {
+    background: linear-gradient(180deg, rgba(237, 245, 255, 0.68), rgba(247, 249, 252, 0.5));
     color: var(--app-text-muted);
     font-size: 10px;
     letter-spacing: 0.08em;
@@ -1203,6 +1304,9 @@
   td {
     color: var(--app-text-secondary);
   }
+
+  tbody tr { transition: background-color 150ms ease; }
+  tbody tr:hover { background: rgba(234, 242, 255, 0.48); }
 }
 
 .appTabs {
@@ -1225,9 +1329,9 @@
     font-size: 11px;
 
     &.is-active {
-      background: var(--app-surface-raised);
-      color: var(--app-text);
-      box-shadow: inset 0 0 0 1px var(--app-border);
+      background: var(--vk-info-soft);
+      color: var(--vk-info);
+      box-shadow: inset 0 0 0 1px var(--vk-info-border), 0 3px 8px rgba(0, 99, 247, 0.07);
     }
 
     span {
@@ -3454,6 +3558,7 @@
   .productionFilters,
   .productionFormGrid,
   .productionStatusStrip { grid-template-columns: 1fr; }
+  .productionStatusStrip:has(.productionStatusStrip__itar) { grid-template-columns: 1fr; }
 
   .productionFormSteps {
     grid-template-columns: repeat(5, minmax(52px, 1fr));
@@ -3566,6 +3671,7 @@
 .recordCardGrid > div {
   overflow: hidden;
   border: 1px solid var(--app-border);
+  border-left: 3px solid var(--vk-info-border);
   border-radius: 9px;
 
   .recordCard { border: 0; border-radius: 0; }
@@ -3578,7 +3684,14 @@
   padding: 16px;
   border: 1px solid var(--app-border);
   border-radius: 9px;
-  background: var(--app-surface);
+  background: linear-gradient(145deg, var(--app-surface) 68%, rgba(234, 242, 255, 0.42));
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+
+  &:has(.recordCard__link):hover {
+    transform: translateY(-1px);
+    border-color: var(--vk-info-border);
+    box-shadow: 0 9px 20px rgba(24, 54, 96, 0.08);
+  }
 
   > header { @include flex-row(space-between, flex-start, 10px); }
   .technicalLabel { margin-bottom: 5px; }
@@ -3656,7 +3769,9 @@
     border-radius: 99px;
     background: var(--app-surface-subtle);
   }
-  > div > div > span { display: block; height: 100%; border-radius: inherit; background: $primary; }
+  > div > div > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--vk-action), #4d91fa); }
+  > div:nth-child(3n + 2) > div > span { background: linear-gradient(90deg, var(--vk-violet), #8a73dc); }
+  > div:nth-child(3n + 3) > div > span { background: linear-gradient(90deg, var(--vk-cyan), #33a6b8); }
 }
 
 .filterBar {

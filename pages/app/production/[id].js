@@ -2,7 +2,7 @@ import { AlertTriangle, Archive, ArrowLeft, CalendarCheck, Check, Cog, Edit3, Gi
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { AppPageHeader, AppSkeleton, ATTENTION_CATEGORIES, ErrorState, PermissionDenied, ProductionAttentionPanel, ProductionCollaborationPanel, ProductionStageStepper, ResponsiveDrawer, ScheduleHealthBadge, StatusBadge } from '../../../components/app'
+import { AppPageHeader, AppSkeleton, ATTENTION_CATEGORIES, ErrorState, PermissionDenied, ProductionAttentionPanel, ProductionCollaborationPanel, ProductionStageStepper, ResponsiveDrawer, ScheduleHealthBadge, StageBadge, StatusBadge } from '../../../components/app'
 import { formatDate, formatLabel, statusTone } from '../../../components/app/formatters'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
 import ProductionPartWorkspace, { ProductionPartThumbnail } from '../../../components/app/ProductionPartWorkspace'
@@ -448,7 +448,7 @@ const ProductionRecordDetail = () => {
     {error && <ErrorState description={error.message} onRetry={() => dispatch(loadProductionRecord(record.id))} />}
     <div className='productionStatusStrip'>
       <div><span>Lifecycle</span><StatusBadge tone={statusTone(record.lifecycle_state)}>{formatLabel(record.lifecycle_state)}</StatusBadge></div>
-      <div><span>Stage</span><StatusBadge tone='neutral'>{currentStageLabel}</StatusBadge></div>
+      <div><span>Stage</span><StageBadge value={record.current_stage} label={currentStageLabel} /></div>
       <div><span>Acceptance</span><StatusBadge tone={statusTone(record.acceptance_status)}>{formatLabel(record.acceptance_status)}</StatusBadge></div>
       <div><span>Quality</span><StatusBadge tone={qualityStatus === 'approved' ? 'success' : qualityStatus === 'issue_open' ? 'danger' : 'neutral'}>{qualityStatusLabel(qualityStatus)}</StatusBadge></div>
       <div><span>Schedule</span><ScheduleHealthBadge value={projectedLate ? 'at_risk' : record.schedule_health} /></div>

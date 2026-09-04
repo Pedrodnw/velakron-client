@@ -25,6 +25,7 @@ import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import PlatformActionQueue from '../../components/app/PlatformActionQueue'
 
 const metric = value => String(value ?? '—')
+const positiveTone = (value, activeTone) => Number(value || 0) > 0 ? activeTone : 'success'
 const recordCompany = (record, organizationType) => organizationType === 'supplier'
   ? record.oem_organization?.name || 'OEM customer'
   : record.supplier_organization?.name || 'Unassigned supplier'
@@ -74,8 +75,8 @@ const PlatformDashboard = ({ organization }) => {
     <section className='metricGrid metricGrid--priority' aria-label='Platform priorities'>
       <MetricCard label='Needs Velakron' value={metric(actionCenter?.counts?.needs_velakron)} detail='Approvals and operational intervention' icon={BellRing} tone={actionCenter?.counts?.needs_velakron ? 'warning' : 'success'} href='/admin/action-center' />
       <MetricCard label='Waiting on companies' value={metric(actionCenter?.counts?.waiting_external)} detail='Visible follow-up owned by an OEM or supplier' icon={Clock3} href='/admin/action-center' />
-      <MetricCard label='Active organizations' value={metric(summary.organizations?.by_status?.active)} detail={`${summary.organizations?.total || 0} total company records`} icon={Building2} href='/admin/organizations' />
-      <MetricCard label='Active relationships' value={metric(summary.relationships?.active)} detail='OEM–supplier connections' icon={Handshake} href='/admin/relationships' />
+      <MetricCard label='Active organizations' value={metric(summary.organizations?.by_status?.active)} detail={`${summary.organizations?.total || 0} total company records`} icon={Building2} tone='info' href='/admin/organizations' />
+      <MetricCard label='Active relationships' value={metric(summary.relationships?.active)} detail='OEM–supplier connections' icon={Handshake} tone='accent' href='/admin/relationships' />
     </section>
     {actionCenter && <PlatformActionQueue
       title='Needs Velakron now'
@@ -124,9 +125,9 @@ const FounderDashboard = () => {
   const dueNow = active.filter(task => task.urgency === 'high').sort((left, right) => new Date(left.due_at) - new Date(right.due_at))
   return <>
     <section className='metricGrid metricGrid--priority' aria-label='Founder task priorities'>
-      <MetricCard label='Active tasks' value={active.length} detail='Shared across the founder workspace' icon={ListChecks} href='/app/tasks?view=list' />
-      <MetricCard label='Do now' value={dueNow.length} detail='Overdue or due within two days' icon={Clock3} tone={dueNow.length ? 'warning' : 'default'} href='/app/tasks' />
-      <MetricCard label='Blocked' value={active.filter(task => task.status === 'blocked').length} detail='Waiting on a decision or dependency' icon={AlertTriangle} tone='warning' href='/app/tasks?view=list' />
+      <MetricCard label='Active tasks' value={active.length} detail='Shared across the founder workspace' icon={ListChecks} tone='info' href='/app/tasks?view=list' />
+      <MetricCard label='Do now' value={dueNow.length} detail='Overdue or due within two days' icon={Clock3} tone={positiveTone(dueNow.length, 'warning')} href='/app/tasks' />
+      <MetricCard label='Blocked' value={active.filter(task => task.status === 'blocked').length} detail='Waiting on a decision or dependency' icon={AlertTriangle} tone={positiveTone(active.filter(task => task.status === 'blocked').length, 'warning')} href='/app/tasks?view=list' />
       <MetricCard label='Completed' value={tasks.filter(task => task.status === 'completed').length} detail='Finished work in the current view' icon={CircleCheck} tone='success' href='/app/tasks?view=closed' />
     </section>
     <section className='appPanel'>
@@ -163,10 +164,10 @@ const OperationalDashboard = ({ organization }) => {
   return <>
     {error && <ErrorState title='Production overview could not refresh' description='Showing the last successful snapshot. Refresh before making a schedule decision.' onRetry={refresh} />}
     <section className='metricGrid metricGrid--priority' aria-label='Production priorities'>
-      <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail='Production records with an action owned by your company' icon={AlertTriangle} tone='warning' href='/app/production?view=action_required' />
-      <MetricCard label='Awaiting acceptance' value={metric(summary.counts?.awaiting_acceptance)} detail='Assignments awaiting supplier confirmation' icon={Clock3} href={supplier ? '/app/production?view=action_required&stage=assigned' : '/app/production?view=active&stage=assigned'} />
-      <MetricCard label='At risk' value={metric(summary.counts?.at_risk)} detail='Active records with schedule risk' icon={AlertTriangle} tone='warning' href='/app/production?view=active&health=at_risk' />
-      <MetricCard label='Delayed' value={metric(summary.counts?.delayed)} detail='Active records past a required date' icon={PackageCheck} tone='danger' href='/app/production?view=active&health=delayed' />
+      <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail='Production records with an action owned by your company' icon={AlertTriangle} tone={positiveTone(summary.counts?.action_required, 'warning')} href='/app/production?view=action_required' />
+      <MetricCard label='Awaiting acceptance' value={metric(summary.counts?.awaiting_acceptance)} detail='Assignments awaiting supplier confirmation' icon={Clock3} tone={positiveTone(summary.counts?.awaiting_acceptance, 'info')} href={supplier ? '/app/production?view=action_required&stage=assigned' : '/app/production?view=active&stage=assigned'} />
+      <MetricCard label='At risk' value={metric(summary.counts?.at_risk)} detail='Active records with schedule risk' icon={AlertTriangle} tone={positiveTone(summary.counts?.at_risk, 'warning')} href='/app/production?view=active&health=at_risk' />
+      <MetricCard label='Delayed' value={metric(summary.counts?.delayed)} detail='Active records past a required date' icon={PackageCheck} tone={positiveTone(summary.counts?.delayed, 'danger')} href='/app/production?view=active&health=delayed' />
     </section>
     <p className='dashboardMetricContext'><Factory aria-hidden='true' /> {metric(summary.counts?.active)} active production records <span aria-hidden='true'>·</span> <CircleCheck aria-hidden='true' /> {metric(summary.counts?.on_schedule)} on schedule</p>
     <div className='dashboardPriorityGrid'>
