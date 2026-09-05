@@ -7,6 +7,7 @@ const itemsByOrganizationType = {
     { href: '/app/production', label: 'Production', icon: 'production', permission: 'production_record.read' },
     { href: '/app/suppliers', label: 'Suppliers', icon: 'relationships', permission: 'relationship.read' },
     { href: '/app/team', label: 'Team', icon: 'team', permission: 'membership.read' },
+    { href: '/app/billing', label: 'Billing', icon: 'billing', permission: 'billing.read' },
   ],
   supplier: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
@@ -24,6 +25,7 @@ const itemsByOrganizationType = {
     { href: '/app/crm', label: 'CRM', icon: 'crm', permission: 'crm.dashboard.read' },
     { href: '/app/tasks', label: 'Tasks & priorities', icon: 'tasks', permission: 'internal_task.read' },
     { href: '/app/sales-demo', label: 'Sales Demo', icon: 'salesDemo', permission: 'sales_demo.read' },
+    { href: '/app/billing-admin', label: 'Billing', icon: 'billing', permission: 'billing.support' },
     { href: '/app/dynamic-endpoint', label: 'Dynamic Endpoint', icon: 'dynamic', permission: 'dynamic_endpoint.manage' },
     { href: '/app/team', label: 'Internal team', icon: 'team', permission: 'membership.read' },
     { href: '/admin/organizations', label: 'Organizations', icon: 'organization', permission: 'platform.support' },

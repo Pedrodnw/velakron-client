@@ -11,6 +11,7 @@ import {
   ListTodo,
   BriefcaseBusiness,
   QrCode,
+  CreditCard,
   MonitorPlay,
   MapPin,
   ScrollText,
@@ -44,6 +45,7 @@ const icons = {
   dynamic: QrCode,
   crm: BriefcaseBusiness,
   salesDemo: MonitorPlay,
+  billing: CreditCard,
 }
 
 const AppNavigation = ({ onNavigate }) => {

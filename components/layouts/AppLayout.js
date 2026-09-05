@@ -21,6 +21,7 @@ const roleLabels = {
   founder: 'Founder',
   oem_admin: 'Company administrator',
   oem_user: 'Company member',
+  oem_viewer: 'Company viewer',
   supplier_admin: 'Supplier administrator',
   supplier_user: 'Supplier member',
 }

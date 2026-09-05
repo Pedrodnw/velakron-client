@@ -11,6 +11,15 @@ describe('role-aware application navigation', () => {
       .toEqual(['Overview', 'Production', 'Suppliers', 'Account'])
   })
 
+  it('shows billing only to OEM members with billing visibility', () => {
+    expect(labels('oem', ['billing.read'])).toEqual(['Overview', 'Billing', 'Account'])
+    expect(labels('supplier', ['billing.read'])).not.toContain('Billing')
+  })
+
+  it('shows commercial billing operations only with billing support permission', () => {
+    expect(labels('velakron', ['billing.support'])).toEqual(['Overview', 'Billing', 'Account'])
+  })
+
   it('shows supplier-specific work, machines, and company profile navigation', () => {
     expect(labels('supplier', [
       'production_record.read',
