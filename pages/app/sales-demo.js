@@ -106,6 +106,7 @@ const templateChangeSummary = (draft, published) => {
     if (JSON.stringify(before) !== JSON.stringify(after)) changes.push(`${side.toUpperCase()} company or contact updated`)
   }
   if (JSON.stringify(draft.relationship) !== JSON.stringify(published.relationship)) changes.push('Starting relationship scenario updated')
+  if (JSON.stringify(draft.part_workspace) !== JSON.stringify(published.part_workspace)) changes.push('Part collaboration package or linked production story updated')
   if (JSON.stringify(draft.supplier_profile) !== JSON.stringify(published.supplier_profile)) changes.push('Supplier capabilities or profile updated')
   if (JSON.stringify(draft.facility) !== JSON.stringify(published.facility)) changes.push('Primary facility updated')
   if (JSON.stringify(draft.machines) !== JSON.stringify(published.machines)) changes.push(`Machine list updated (${draft.machines?.length || 0} total)`)
@@ -294,7 +295,7 @@ const SessionDetail = ({ sessionId, onClose }) => {
   </section>
 }
 
-const TemplateEditor = ({ templates, onRefresh }) => {
+const TemplateEditor = ({ defaultPartPresetKey, partPresets, templates, onRefresh }) => {
   const dispatch = useDispatch()
   const [selectedId, setSelectedId] = useState(idOf(templates[0]))
   const [template, setTemplate] = useState(null)
@@ -319,11 +320,22 @@ const TemplateEditor = ({ templates, onRefresh }) => {
     setTemplate(next)
     const nextPayload = editable?.payload ? clone(editable.payload) : null
     if (nextPayload && !nextPayload.supported_experiences) nextPayload.supported_experiences = next.supported_experiences?.length ? [...next.supported_experiences] : ['oem', 'supplier']
+    if (nextPayload && !nextPayload.part_workspace) nextPayload.part_workspace = {
+      preset_key: defaultPartPresetKey || partPresets[0]?.key || '',
+      production_record_key: nextPayload.production_records?.[0]?.key || '',
+    }
+    const selectedPreset = partPresets.find(item => item.key === nextPayload?.part_workspace?.preset_key)
+    if (nextPayload && selectedPreset) nextPayload.production_records = nextPayload.production_records.map(record => record.key === nextPayload.part_workspace.production_record_key ? {
+      ...record,
+      partNumber: selectedPreset.part_number,
+      partName: selectedPreset.name,
+      revision: selectedPreset.revision,
+    } : record)
     savedPayload.current = nextPayload ? JSON.stringify(nextPayload) : ''
     setPayload(nextPayload)
     setDraftVersion(next?.draft_version || null)
     setVersions(result.payload?.data?.versions || [])
-  }, [dispatch, selectedId])
+  }, [defaultPartPresetKey, dispatch, partPresets, selectedId])
   useEffect(() => { load() }, [load])
   const dirty = useMemo(() => Boolean(draftVersion && payload && JSON.stringify(payload) !== savedPayload.current), [draftVersion, payload])
   useEffect(() => {
@@ -348,6 +360,21 @@ const TemplateEditor = ({ templates, onRefresh }) => {
   const updateCompany = (side, field, value) => setPayload(current => ({ ...current, companies: { ...current.companies, [side]: { ...current.companies[side], [field]: value } } }))
   const updateContact = (side, field, value) => setPayload(current => ({ ...current, companies: { ...current.companies, [side]: { ...current.companies[side], contact: { ...current.companies[side].contact, [field]: value } } } }))
   const updateRecord = (index, field, value) => setPayload(current => ({ ...current, production_records: current.production_records.map((record, row) => row === index ? { ...record, [field]: value } : record) }))
+  const updatePartWorkspace = (field, value) => setPayload(current => {
+    const nextPartWorkspace = { ...(current.part_workspace || {}), [field]: value }
+    const preset = partPresets.find(item => item.key === nextPartWorkspace.preset_key)
+    if (!preset) return { ...current, part_workspace: nextPartWorkspace }
+    return {
+      ...current,
+      part_workspace: nextPartWorkspace,
+      production_records: current.production_records.map(record => record.key === nextPartWorkspace.production_record_key ? {
+        ...record,
+        partNumber: preset.part_number,
+        partName: preset.name,
+        revision: preset.revision,
+      } : record),
+    }
+  })
   const updateRecordAttention = (index, field, value) => setPayload(current => ({
     ...current,
     production_records: current.production_records.map((record, row) => {
@@ -447,6 +474,7 @@ const TemplateEditor = ({ templates, onRefresh }) => {
   if (!payload) return <AppSkeleton lines={10} />
   const validation = draftVersion?.validation
   const changeSummary = templateChangeSummary(payload, template?.published_version?.payload)
+  const selectedPartPreset = partPresets.find(item => item.key === payload.part_workspace?.preset_key) || partPresets[0]
   return <div className='salesDemoTemplateWorkspace'>
     <aside><p className='technicalLabel'>Baselines</p>{templates.map(item => <button type='button' className={idOf(item) === selectedId ? 'is-active' : ''} key={idOf(item)} onClick={() => selectTemplate(idOf(item))}><strong>{item.name}</strong><small>Published v{item.published_version?.version_number || '—'}{item.draft_version ? ' · draft open' : ''}</small></button>)}<button type='button' className='salesDemoTemplateWorkspace__new' onClick={() => setShowCreate(value => !value)}><Plus aria-hidden='true' /> New baseline</button>{showCreate && <form className='salesDemoTemplateCreate' onSubmit={createTemplate}><label><span>Name</span><input required minLength={2} value={newTemplate.name} onChange={event => setNewTemplate(value => ({ ...value, name: event.target.value, key: value.key || event.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))} /></label><label><span>URL-safe key</span><input required pattern='[a-z0-9]+(?:-[a-z0-9]+)*' value={newTemplate.key} onChange={event => setNewTemplate(value => ({ ...value, key: event.target.value.toLowerCase() }))} /></label><label><span>Purpose</span><textarea rows={2} value={newTemplate.description} onChange={event => setNewTemplate(value => ({ ...value, description: event.target.value }))} /></label><Button type='submit' disabled={working}>Create from current</Button></form>}</aside>
     <section>
@@ -459,6 +487,25 @@ const TemplateEditor = ({ templates, onRefresh }) => {
           <label className='salesDemoTemplateForm__wide'><span>Baseline name</span><input value={payload.name || ''} maxLength={180} onChange={event => setPayload(current => ({ ...current, name: event.target.value }))} /></label>
           <label className='salesDemoTemplateForm__wide'><span>Presenter description</span><textarea rows={3} value={payload.description || ''} maxLength={1000} onChange={event => setPayload(current => ({ ...current, description: event.target.value }))} /></label>
           <div className='salesDemoExperienceChoices salesDemoTemplateForm__wide'><span>Available guest experiences</span>{['oem', 'supplier'].map(experience => <label key={experience}><input type='checkbox' checked={(payload.supported_experiences || ['oem', 'supplier']).includes(experience)} onChange={event => setPayload(current => ({ ...current, supported_experiences: event.target.checked ? [...new Set([...(current.supported_experiences || ['oem', 'supplier']), experience])] : (current.supported_experiences || ['oem', 'supplier']).filter(item => item !== experience) }))} /> {formatLabel(experience)}</label>)}</div>
+        </fieldset>
+        <fieldset disabled={!draftVersion || working}>
+          <legend>Part collaboration package</legend>
+          <div className='salesDemoPartPresetIntro salesDemoTemplateForm__wide'>
+            <div><strong>Choose the model and matching drawing used in this demo</strong><span>Each package is synthetic and includes a verified STEP model, its drawing, realistic visual anchors, cases, and inspection context.</span></div>
+            <label><span>Linked production story</span><select value={payload.part_workspace?.production_record_key || payload.production_records?.[0]?.key || ''} onChange={event => updatePartWorkspace('production_record_key', event.target.value)}>{payload.production_records.map(record => <option value={record.key} key={record.key}>{record.partNumber} · {record.partName}</option>)}</select></label>
+          </div>
+          <div className='salesDemoPartPresetGrid salesDemoTemplateForm__wide' role='radiogroup' aria-label='Synthetic part package'>
+            {partPresets.map(preset => <label className={preset.key === selectedPartPreset?.key ? 'is-selected' : ''} key={preset.key}>
+              <input type='radio' name='sales-demo-part-preset' value={preset.key} checked={preset.key === selectedPartPreset?.key} onChange={() => updatePartWorkspace('preset_key', preset.key)} />
+              <span className='salesDemoPartPresetGrid__check' aria-hidden='true'><CheckCircle2 /></span>
+              <strong>{preset.part_number}</strong>
+              <b>{preset.name.replace(' [Synthetic]', '')}</b>
+              <small>{preset.material} · Rev {preset.revision}</small>
+              <small>{preset.model_filename}</small>
+              <small>{preset.drawing_filename}</small>
+            </label>)}
+          </div>
+          {selectedPartPreset && <div className='salesDemoPartPresetSummary salesDemoTemplateForm__wide'><strong>{selectedPartPreset.name.replace(' [Synthetic]', '')}</strong><span>{selectedPartPreset.description}</span><span>{selectedPartPreset.finish}</span></div>}
         </fieldset>
         <fieldset disabled={!draftVersion || working}>
           <legend>Presenter journey</legend>
@@ -598,6 +645,8 @@ const SalesDemoDashboard = () => {
   const summary = useSelector(salesDemoSelectors.getSummary)
   const sessions = useSelector(salesDemoSelectors.getSessions)
   const templates = useSelector(salesDemoSelectors.getTemplates)
+  const partPresets = useSelector(salesDemoSelectors.getPartPresets)
+  const defaultPartPresetKey = useSelector(salesDemoSelectors.getDefaultPartPresetKey)
   const campaigns = useSelector(salesDemoSelectors.getCampaigns)
   const loading = useSelector(salesDemoSelectors.getLoading)
   const error = useSelector(salesDemoSelectors.getError)
@@ -668,7 +717,7 @@ const SalesDemoDashboard = () => {
         <section className='appPanel salesDemoMix'><header className='appPanel__header'><div><p className='technicalLabel'>Experience mix</p><h2>How prospects explore</h2></div></header><div><article><Building2 aria-hidden='true' /><strong>{summary?.counts?.oem || 0}</strong><span>OEM sessions</span></article><article><Factory aria-hidden='true' /><strong>{summary?.counts?.supplier || 0}</strong><span>Supplier sessions</span></article><article><CheckCircle2 aria-hidden='true' /><strong>{summary?.counts?.ended || 0}</strong><span>Ended or expired</span></article></div></section>
       </div>}
       {tab === 'sessions' && (sessionId ? <SessionDetail sessionId={sessionId} onClose={closeSession} /> : <section className='appPanel salesDemoSessions'><header className='appPanel__header'><div><p className='technicalLabel'>Near-live monitoring</p><h2>Active Sales Demo sessions</h2><p>Presence and journey position refresh while this page stays open.</p></div></header>{liveSessions.length ? <div className='salesDemoSessionList'>{liveSessions.map(item => <SessionCard session={item} onOpen={openSession} key={idOf(item)} />)}</div> : <EmptyState icon={MonitorPlay} title='No active sessions' description='Start a founder preview or share a campaign link.' />}</section>)}
-      {tab === 'templates' && <section className='appPanel salesDemoTemplates'><TemplateEditor templates={templates} onRefresh={refresh} /></section>}
+      {tab === 'templates' && <section className='appPanel salesDemoTemplates'><TemplateEditor defaultPartPresetKey={defaultPartPresetKey} partPresets={partPresets} templates={templates} onRefresh={refresh} /></section>}
       {tab === 'campaigns' && <CampaignsPanel campaigns={campaigns} templates={templates} onRefresh={refresh} />}
       {tab === 'history' && (sessionId ? <SessionDetail sessionId={sessionId} onClose={closeSession} /> : <section className='appPanel salesDemoSessions'><header className='appPanel__header'><div><p className='technicalLabel'>Append-only history</p><h2>Completed Sales Demos</h2></div></header>{historySessions.length ? <div className='salesDemoSessionList'>{historySessions.map(item => <SessionCard session={item} onOpen={openSession} key={idOf(item)} />)}</div> : <EmptyState icon={History} title='No completed demos yet' description='Ended and expired Sales Demo sessions will remain visible here.' />}</section>)}
     </>}

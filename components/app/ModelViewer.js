@@ -1,16 +1,17 @@
 import { Focus, Layers3, LoaderCircle, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import { resolveFileTransferTarget } from '../../store/fileTransfer'
+import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { modelExtension, modelFormatLabel } from '../../store/modelFiles'
 import { captureVisualContextPreview } from './visualContextPreview'
 
 let occtRuntimePromise = null
 const modelBytesPromises = new Map()
+const EMPTY_ITEMS = Object.freeze([])
 
 const loadModelBytes = source => {
   const target = resolveFileTransferTarget(source)
   if (!modelBytesPromises.has(target)) {
-    const request = fetch(target, { credentials: /^https?:\/\//i.test(String(source || '')) ? 'omit' : 'include' })
+    const request = fetch(target, fileTransferFetchOptions(source))
       .then(async response => {
         if (response.status === 403) {
           throw new Error('The one-time protected access grant was refused or expired. Close the viewer and confirm access again.')
@@ -47,16 +48,61 @@ const loadOcctRuntime = () => {
   return occtRuntimePromise
 }
 
-const safeColor = (THREE, value) => {
+const cadSurfaceColor = (THREE, value) => {
+  const aluminum = new THREE.Color(0x929da9)
+  if (!Array.isArray(value) || value.length < 3) return aluminum
   const scale = Array.isArray(value) && value.some(channel => channel > 1) ? 255 : 1
-  const color = !Array.isArray(value) || value.length < 3
-    ? new THREE.Color(0x4f86c6)
-    : new THREE.Color(value[0] / scale, value[1] / scale, value[2] / scale)
+  const color = new THREE.Color(value[0] / scale, value[1] / scale, value[2] / scale)
   const hsl = {}
   color.getHSL(hsl)
-  const lightness = Math.min(Math.max(hsl.l, 0.32), 0.62)
-  color.setHSL(hsl.h, Math.min(hsl.s, 0.58), lightness)
-  return color
+  color.setHSL(hsl.h, Math.min(hsl.s, 0.5), Math.min(Math.max(hsl.l, 0.32), 0.68))
+  return aluminum.lerp(color, hsl.s > 0.12 ? 0.24 : 0.06)
+}
+
+const createCadMaterial = (THREE, color) => new THREE.MeshPhysicalMaterial({
+  color,
+  metalness: 0.66,
+  roughness: 0.34,
+  clearcoat: 0.16,
+  clearcoatRoughness: 0.46,
+  envMapIntensity: 1.05,
+  side: THREE.DoubleSide,
+})
+
+const addCadEdges = (THREE, geometry, mesh) => {
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geometry, 34),
+    new THREE.LineBasicMaterial({ color: 0x465565, transparent: true, opacity: 0.34 }),
+  )
+  edges.renderOrder = 2
+  mesh.add(edges)
+}
+
+const createStudioShadow = (THREE, modelMaximum) => {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 128
+  const context = canvas.getContext('2d')
+  context.translate(128, 64)
+  context.scale(1, 0.34)
+  const gradient = context.createRadialGradient(0, 0, 0, 0, 0, 116)
+  gradient.addColorStop(0, 'rgba(44, 62, 80, 0.48)')
+  gradient.addColorStop(0.46, 'rgba(71, 85, 105, 0.22)')
+  gradient.addColorStop(1, 'rgba(100, 116, 139, 0)')
+  context.fillStyle = gradient
+  context.fillRect(-128, -190, 256, 380)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  const shadow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: texture,
+    color: 0x64748b,
+    depthWrite: false,
+    opacity: 0.42,
+    transparent: true,
+  }))
+  shadow.scale.set(modelMaximum * 1.85, modelMaximum * 0.54, 1)
+  shadow.renderOrder = -1
+  return shadow
 }
 
 const buildStepGroup = (THREE, result) => {
@@ -76,20 +122,13 @@ const buildStepGroup = (THREE, result) => {
     }
     if (imported.index?.array?.length) geometry.setIndex(Array.from(imported.index.array))
     geometry.computeBoundingBox()
-    const material = new THREE.MeshStandardMaterial({
-      color: safeColor(THREE, imported.color),
-      metalness: 0.06,
-      roughness: 0.62,
-      side: THREE.DoubleSide,
-    })
+    const material = createCadMaterial(THREE, cadSurfaceColor(THREE, imported.color))
     const mesh = new THREE.Mesh(geometry, material)
     mesh.name = imported.name || 'STEP part'
     mesh.userData.velakronMeshIndex = meshIndex
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(geometry, 28),
-      new THREE.LineBasicMaterial({ color: 0x4f5f72, transparent: true, opacity: 0.48 }),
-    )
-    mesh.add(edges)
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    addCadEdges(THREE, geometry, mesh)
     group.add(mesh)
   }
   if (!group.children.length) throw new Error('This STEP file did not contain displayable surfaces.')
@@ -114,8 +153,8 @@ const ModelViewer = ({
   file,
   source,
   annotationMode = false,
-  anchors = [],
-  caseMarkers = [],
+  anchors = EMPTY_ITEMS,
+  caseMarkers = EMPTY_ITEMS,
   selectedAnchorId = '',
   selectedAnchor = null,
   onSelect,
@@ -157,6 +196,8 @@ const ModelViewer = ({
     let renderer = null
     let controls = null
     let model = null
+    let studioShadow = null
+    let environmentRenderTarget = null
     let keyboardMove = null
     let pointerDown = null
     let pointerUp = null
@@ -172,23 +213,25 @@ const ModelViewer = ({
         const parserPromise = extension === 'stl'
           ? import('three/addons/loaders/STLLoader.js')
           : loadOcctRuntime()
-        const [THREE, { OrbitControls }, parser, bytes] = await Promise.all([
+        const [THREE, { OrbitControls }, { RoomEnvironment }, parser, bytes] = await Promise.all([
           import('three'),
           import('three/addons/controls/OrbitControls.js'),
+          import('three/addons/environments/RoomEnvironment.js'),
           parserPromise,
           loadModelBytes(source),
         ])
         if (stopped || !mountRef.current) return
 
         const scene = new THREE.Scene()
-        scene.background = new THREE.Color(0xf7f9fc)
         const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 1000000)
         camera.up.set(0, 0, 1)
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+        renderer.setClearColor(0xffffff, 0)
         renderer.outputColorSpace = THREE.SRGBColorSpace
         renderer.toneMapping = THREE.ACESFilmicToneMapping
-        renderer.toneMappingExposure = 1.08
+        renderer.toneMappingExposure = 0.94
+        renderer.shadowMap.enabled = false
         mountRef.current.replaceChildren(renderer.domElement)
         renderer.domElement.setAttribute('aria-label', `Interactive ${modelFormatLabel(file)} viewer`)
         renderer.domElement.setAttribute('aria-describedby', guidanceId)
@@ -200,31 +243,30 @@ const ModelViewer = ({
         controls.dampingFactor = 0.08
         controls.screenSpacePanning = true
 
-        scene.add(new THREE.HemisphereLight(0xffffff, 0xb8c3d0, 2.15))
-        const keyLight = new THREE.DirectionalLight(0xffffff, 2.35)
-        keyLight.position.set(4, -5, 7)
+        const pmremGenerator = new THREE.PMREMGenerator(renderer)
+        const environmentScene = new RoomEnvironment()
+        environmentRenderTarget = pmremGenerator.fromScene(environmentScene, 0.04)
+        scene.environment = environmentRenderTarget.texture
+        environmentScene.dispose()
+        pmremGenerator.dispose()
+
+        scene.add(new THREE.HemisphereLight(0xf9fcff, 0x8d9baa, 0.82))
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2.25)
         scene.add(keyLight)
-        const fillLight = new THREE.DirectionalLight(0xc9ddf7, 1.25)
-        fillLight.position.set(-5, 3, 2)
+        scene.add(keyLight.target)
+        const fillLight = new THREE.DirectionalLight(0xcfe3fb, 0.82)
         scene.add(fillLight)
-        const rimLight = new THREE.DirectionalLight(0xffffff, 0.8)
-        rimLight.position.set(-2, -4, -3)
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.92)
         scene.add(rimLight)
 
         if (extension === 'stl') {
           const geometry = new parser.STLLoader().parse(bytes)
           geometry.computeVertexNormals()
-          model = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
-            color: 0x4f86c6,
-            metalness: 0.06,
-            roughness: 0.62,
-            side: THREE.DoubleSide,
-          }))
+          model = new THREE.Mesh(geometry, createCadMaterial(THREE, new THREE.Color(0x929da9)))
           model.userData.velakronMeshIndex = 0
-          model.add(new THREE.LineSegments(
-            new THREE.EdgesGeometry(geometry, 28),
-            new THREE.LineBasicMaterial({ color: 0x4f5f72, transparent: true, opacity: 0.48 }),
-          ))
+          model.castShadow = true
+          model.receiveShadow = true
+          addCadEdges(THREE, geometry, model)
         } else {
           const result = parser.ReadStepFile(new Uint8Array(bytes), {
             linearUnit: 'millimeter',
@@ -240,6 +282,23 @@ const ModelViewer = ({
         const modelBox = new THREE.Box3().setFromObject(model)
         const modelSize = modelBox.getSize(new THREE.Vector3())
         const modelMinimum = modelBox.min.clone()
+        const modelCenter = modelBox.getCenter(new THREE.Vector3())
+        const modelMaximum = Math.max(modelSize.x, modelSize.y, modelSize.z, 0.001)
+
+        keyLight.position.copy(modelCenter).add(new THREE.Vector3(modelMaximum * 1.8, -modelMaximum * 2.1, modelMaximum * 3.2))
+        keyLight.target.position.copy(modelCenter)
+        fillLight.position.copy(modelCenter).add(new THREE.Vector3(-modelMaximum * 2.4, modelMaximum * 1.8, modelMaximum * 1.3))
+        rimLight.position.copy(modelCenter).add(new THREE.Vector3(-modelMaximum * 1.6, -modelMaximum * 2.2, modelMaximum * 2.1))
+
+        studioShadow = createStudioShadow(THREE, modelMaximum)
+        scene.add(studioShadow)
+        const positionStudioShadow = () => {
+          const viewDirection = controls.target.clone().sub(camera.position).normalize()
+          const screenDown = new THREE.Vector3(0, -1, 0).applyQuaternion(camera.quaternion).normalize()
+          studioShadow.position.copy(modelCenter)
+            .addScaledVector(screenDown, modelMaximum * 0.62)
+            .addScaledVector(viewDirection, modelMaximum * 0.42)
+        }
         let activeCaseMarkers = caseMarkers
         projectCaseMarkers = () => {
           if (!renderer || !camera) return
@@ -427,6 +486,7 @@ const ModelViewer = ({
         const render = () => {
           if (stopped) return
           controls.update()
+          positionStudioShadow()
           renderer.render(scene, camera)
           animationFrame = requestAnimationFrame(render)
         }
@@ -457,6 +517,8 @@ const ModelViewer = ({
       controls?.removeEventListener('change', projectCaseMarkers)
       controls?.dispose()
       disposeObject(model)
+      disposeObject(studioShadow)
+      environmentRenderTarget?.dispose?.()
       renderer?.dispose()
       renderer?.domElement?.remove()
     }

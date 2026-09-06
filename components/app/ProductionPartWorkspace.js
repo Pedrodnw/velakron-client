@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { getFeatureEnabled, getHasPermission } from '../../store/slices/appContext'
-import { resolveFileTransferTarget } from '../../store/fileTransfer'
+import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { isViewableModel } from '../../store/modelFiles'
 import {
   acknowledgePartRequirement,
@@ -107,7 +107,7 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
       else {
         const target = result.payload.data.view.target
         if (/^https?:\/\//i.test(String(target || ''))) setSource(target)
-        else fetch(resolveFileTransferTarget(target), { credentials: 'include' })
+        else fetch(resolveFileTransferTarget(target), fileTransferFetchOptions(target))
           .then(response => {
             if (!response.ok) throw new Error('Thumbnail could not be opened')
             return response.blob()

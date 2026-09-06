@@ -1,5 +1,5 @@
-import { ArrowUpRight, CircleAlert, FileUp, LoaderCircle, MessageSquareText, Paperclip, Send, ShieldAlert, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowUpRight, CheckCircle2, CircleAlert, LoaderCircle, MessageSquareText, Paperclip, Search, Send, ShieldAlert, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
 import { Button } from '../design-system'
@@ -44,10 +44,12 @@ const PartCaseDrawer = ({
   const [form, setForm] = useState(emptyForm)
   const [replyMode, setReplyMode] = useState('message')
   const [replyBody, setReplyBody] = useState('')
+  const [conversationQuery, setConversationQuery] = useState('')
   const [workflowAction, setWorkflowAction] = useState('')
   const [promotion, setPromotion] = useState({ production_record_id: '', category: 'issue' })
   const [itarUploadAuthorized, setItarUploadAuthorized] = useState(false)
   const [assignment, setAssignment] = useState({ assignee_membership_id: '', watcher_membership_ids: [], due_at: '', priority: 'normal', schedule_effect: 'none' })
+  const attachmentInputRef = useRef(null)
   const item = itemDetail?.item
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }))
 
@@ -63,6 +65,7 @@ const PartCaseDrawer = ({
   useEffect(() => {
     if (!item) return
     setReplyBody('')
+    setConversationQuery('')
     setWorkflowAction(current => item.available_actions?.some(action => action.key === current) ? current : item.available_actions?.[0]?.key || '')
     if (item.available_actions?.some(action => action.key === 'reopen')) setReplyMode('workflow')
     setAssignment({
@@ -106,6 +109,17 @@ const PartCaseDrawer = ({
     : replyMode === 'attention'
       ? Boolean(promotion.production_record_id && replyBody.trim().length >= 8)
       : Boolean(replyBody.trim())
+  const conversationEntries = item ? [
+    ...(item.description ? [{ id: `case-${item.id || item._id}-opening`, body: item.description, author: item.created_by, created_at: item.created_at, opening: true }] : []),
+    ...(itemDetail?.messages || []),
+  ] : []
+  const normalizedConversationQuery = conversationQuery.trim().toLowerCase()
+  const visibleConversationEntries = normalizedConversationQuery
+    ? conversationEntries.filter(entry => [entry.body, entry.author?.display_name, entry.author?.organization_name]
+      .some(value => String(value || '').toLowerCase().includes(normalizedConversationQuery)))
+    : conversationEntries
+  const authorName = entry => entry.author?.display_name || entry.author?.name || 'Workspace member'
+  const authorInitials = entry => authorName(entry).split(/\s+/).filter(Boolean).slice(0, 2).map(value => value[0]).join('').toUpperCase()
 
   const submitReply = async event => {
     event.preventDefault()
@@ -166,7 +180,44 @@ const PartCaseDrawer = ({
         <div className={`partCaseNextAction${isMyAction || canReopen ? ' is-mine' : ''}`}><CircleAlert aria-hidden='true' /><div><p className='technicalLabel'>Current responsibility</p><strong>{canReopen ? 'This case is closed and can be reopened' : isMyAction ? 'Your company owns the next step' : item.current_actor_side === 'none' ? 'This workflow has no remaining action' : `Waiting on ${ownerLabel}`}</strong><span>{canReopen ? 'Review the discussion, add a reopening note, and use the prepared Reopen decision below.' : isMyAction ? 'Review the conversation, then use a workflow decision below or send a message if you need clarification.' : item.current_actor_side === 'none' ? 'The conversation and decision record remain available for reference.' : 'You can still add context to the conversation while the other company prepares its response.'}</span></div></div>
         <div className='partCaseDetail__summary'><div><p className='technicalLabel'>{formatLabel(item.type)}</p><h3>{item.title}</h3><p>{item.description}</p></div><div className='partCaseDetail__badges'><StatusBadge tone={statusTone(item.state)}>{formatLabel(item.state)}</StatusBadge><StatusBadge tone={item.priority === 'high' ? 'danger' : item.priority === 'normal' ? 'warning' : 'neutral'}>{formatLabel(item.priority)} priority</StatusBadge></div></div>
         <dl className='partCaseDetail__facts'><div><dt>Current owner</dt><dd>{ownerLabel}</dd></div><div><dt>Revision</dt><dd>{item.part_revision?.revision || 'Not available'}</dd></div><div><dt>Schedule effect</dt><dd>{formatLabel(item.schedule_effect)}</dd></div><div><dt>Due</dt><dd>{item.due_at ? formatDateTime(item.due_at) : 'No due date'}</dd></div><div><dt>Last activity</dt><dd>{formatDateTime(item.last_activity_at)}</dd></div></dl>
-        <section className='partCaseMessages'><h3><MessageSquareText aria-hidden='true' /> Conversation</h3>{itemDetail.messages?.length ? itemDetail.messages.map(entry => <article key={entry.id || entry._id}><header><strong>{entry.author?.name || 'Workspace member'}</strong><time>{formatDateTime(entry.created_at)}</time></header><p>{entry.body}</p></article>) : <p className='partCaseMessages__empty'>No replies yet. The initial description above starts the record.</p>}</section>
+        <section className='partCaseConversation' aria-label='Case conversation'>
+          <div className='partCaseMessages'>
+            <header className='partCaseMessages__header'>
+              <h3><MessageSquareText aria-hidden='true' /> Conversation <span>· {conversationEntries.length} {conversationEntries.length === 1 ? 'message' : 'messages'}</span></h3>
+              {conversationEntries.length > 2 && <label className='partCaseMessages__search'><Search aria-hidden='true' /><input aria-label='Search conversation' type='search' value={conversationQuery} onChange={event => setConversationQuery(event.target.value)} placeholder='Search conversation' /></label>}
+            </header>
+            <div className='partCaseMessages__thread'>
+              {visibleConversationEntries.length ? visibleConversationEntries.map(entry => {
+                const authorSide = entry.author?.organization_type
+                return <article className={`${authorSide === organizationType ? 'is-own' : ''}${entry.opening ? ' is-opening' : ''}`} key={entry.id || entry._id}>
+                  <span className='partCaseMessages__avatar' aria-hidden='true'>{authorInitials(entry)}</span>
+                  <div className='partCaseMessages__content'>
+                    <header><strong>{authorName(entry)}{entry.author?.organization_name && <small>{entry.author.organization_name}</small>}</strong><time>{formatDateTime(entry.created_at)}</time></header>
+                    <p>{entry.body}</p>
+                  </div>
+                </article>
+              }) : <p className='partCaseMessages__empty'>{normalizedConversationQuery ? 'No messages match your search.' : 'No messages yet.'}</p>}
+            </div>
+          </div>
+          {item.archived_at && <div className='partCaseArchived'><CircleAlert aria-hidden='true' /><div><strong>Archived case</strong><span>This discussion remains available as a read-only record.</span></div></div>}
+          {!item.archived_at && <form className='partCaseResponse' onSubmit={submitReply}>
+            {replyMode === 'workflow' && <label className='selectField'><span>Workflow decision</span><select value={workflowAction} onChange={event => setWorkflowAction(event.target.value)}>{item.available_actions.map(action => <option key={action.key} value={action.key}>{action.label}</option>)}</select></label>}
+            {replyMode === 'attention' && <div className='productionFormGrid'><label className='selectField'><span>Production record</span><select value={promotion.production_record_id} onChange={event => setPromotion(current => ({ ...current, production_record_id: event.target.value }))}><option value=''>Choose record</option>{productionRecords.map(record => <option key={record.id || record._id} value={record.id || record._id}>{record.public_reference || record.po_number}</option>)}</select></label><label className='selectField'><span>Attention type</span><select value={promotion.category} onChange={event => setPromotion(current => ({ ...current, category: event.target.value }))}><option value='information'>Information</option><option value='issue'>Issue</option><option value='production_block'>Production block</option><option value='non_conformance'>Non-conformance</option></select></label></div>}
+            <label className='textAreaField' htmlFor='part-case-response'><textarea aria-label={replyMode === 'workflow' ? 'Decision note' : replyMode === 'attention' ? 'Reason production attention is required' : 'Reply'} id='part-case-response' value={replyBody} onChange={event => setReplyBody(event.target.value)} maxLength={6000} placeholder={replyMode === 'workflow' ? 'Explain the decision or next expected action' : replyMode === 'attention' ? 'Explain the production risk and expected response' : 'Type a message…'} /></label>
+            <p className='partCaseResponse__description'>{replyDescription}</p>
+            {itarControlled && <label className='productionCheck partCaseResponse__itar'><input type='checkbox' checked={itarUploadAuthorized} onChange={event => setItarUploadAuthorized(event.target.checked)} /><ShieldAlert aria-hidden='true' /><span><strong>Authorize ITAR attachments</strong><small>I am authorized to attach controlled data to this case.</small></span></label>}
+            <footer>
+              <div className='partCaseResponse__actions' role='group' aria-label='Response type and attachments'>
+                <button type='button' className={replyMode === 'message' ? 'is-active' : ''} aria-pressed={replyMode === 'message'} onClick={() => setReplyMode('message')}><MessageSquareText aria-hidden='true' /> Reply</button>
+                {!!item.available_actions?.length && <button type='button' className={replyMode === 'workflow' ? 'is-active is-decision' : 'is-decision'} aria-pressed={replyMode === 'workflow'} onClick={() => setReplyMode('workflow')}><CheckCircle2 aria-hidden='true' /> Decide</button>}
+                {canPromote && <button type='button' className={replyMode === 'attention' ? 'is-active is-attention' : 'is-attention'} aria-pressed={replyMode === 'attention'} onClick={() => setReplyMode('attention')}><CircleAlert aria-hidden='true' /> Flag production</button>}
+                <button type='button' className='partCaseResponse__attach' disabled={itarControlled && !itarUploadAuthorized} onClick={() => attachmentInputRef.current?.click()}><Paperclip aria-hidden='true' /> Attach</button>
+                <input ref={attachmentInputRef} type='file' hidden disabled={itarControlled && !itarUploadAuthorized} onChange={event => { const file = event.target.files?.[0]; if (file) onUpload(file, { itar_upload_authorized: itarUploadAuthorized, synthetic_data_acknowledged: itarUploadAuthorized }); event.target.value = '' }} />
+              </div>
+              <Button type='submit' disabled={pending || !canSubmitReply}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Send aria-hidden='true' />}{replyMode === 'workflow' ? workflowSubmitLabel : replyMode === 'attention' ? 'Create flag' : 'Send'}</Button>
+            </footer>
+          </form>}
+        </section>
         {item.visual_anchor && <section className='partCaseVisual'>
           <header><div><p className='technicalLabel'>Linked visual · shown in context</p><h3>{item.visual_anchor.label || formatLabel(item.visual_anchor.anchor_kind || item.visual_anchor.kind)}</h3></div><Button type='button' variant='secondary' onClick={() => onOpenAnchor?.(item.visual_anchor)}><ArrowUpRight aria-hidden='true' /> Open full viewer</Button></header>
           <div className='partCaseVisual__preview'>
@@ -177,21 +228,7 @@ const PartCaseDrawer = ({
                 : <PartAssetViewer asset={linkedVisual?.asset} source={linkedVisual?.source} loading={linkedVisual?.loading} anchors={[item.visual_anchor]} selectedAnchorId={item.visual_anchor.id || item.visual_anchor._id} />}
           </div>
         </section>}
-        {item.archived_at && <div className='partCaseArchived'><CircleAlert aria-hidden='true' /><div><strong>Archived case</strong><span>This discussion remains available as a read-only record.</span></div></div>}
-        {!item.archived_at && <form className='partCaseResponse' onSubmit={submitReply}>
-          <header><div><p className='technicalLabel'>Respond</p><h3>Choose what this response should do</h3></div></header>
-          <div className='partCaseResponse__modes' role='tablist' aria-label='Response type'>
-            <button type='button' role='tab' aria-selected={replyMode === 'message'} className={replyMode === 'message' ? 'is-active' : ''} onClick={() => setReplyMode('message')}><strong>Reply</strong><small>Continue the conversation</small></button>
-            {!!item.available_actions?.length && <button type='button' role='tab' aria-selected={replyMode === 'workflow'} className={replyMode === 'workflow' ? 'is-active' : ''} onClick={() => setReplyMode('workflow')}><strong>Decide</strong><small>Advance responsibility</small></button>}
-            {canPromote && <button type='button' role='tab' aria-selected={replyMode === 'attention'} className={replyMode === 'attention' ? 'is-active' : ''} onClick={() => setReplyMode('attention')}><strong>Flag production</strong><small>Escalate schedule or quality risk</small></button>}
-          </div>
-          <p className='partCaseResponse__description'>{replyDescription}</p>
-          {replyMode === 'workflow' && <label className='selectField'><span>Decision</span><select value={workflowAction} onChange={event => setWorkflowAction(event.target.value)}>{item.available_actions.map(action => <option key={action.key} value={action.key}>{action.label}</option>)}</select></label>}
-          {replyMode === 'attention' && <div className='productionFormGrid'><label className='selectField'><span>Production record</span><select value={promotion.production_record_id} onChange={event => setPromotion(current => ({ ...current, production_record_id: event.target.value }))}><option value=''>Choose record</option>{productionRecords.map(record => <option key={record.id || record._id} value={record.id || record._id}>{record.public_reference || record.po_number}</option>)}</select></label><label className='selectField'><span>Attention type</span><select value={promotion.category} onChange={event => setPromotion(current => ({ ...current, category: event.target.value }))}><option value='information'>Information</option><option value='issue'>Issue</option><option value='production_block'>Production block</option><option value='non_conformance'>Non-conformance</option></select></label></div>}
-          <label className='textAreaField' htmlFor='part-case-response'><span>{replyMode === 'workflow' ? 'Decision note' : replyMode === 'attention' ? 'Reason production attention is required' : 'Reply'}</span><textarea id='part-case-response' value={replyBody} onChange={event => setReplyBody(event.target.value)} maxLength={6000} placeholder={replyMode === 'workflow' ? 'Explain the decision or next expected action' : replyMode === 'attention' ? 'Explain the production risk and expected response' : 'Add context or ask a follow-up question'} /></label>
-          <footer><Button type='submit' disabled={pending || !canSubmitReply}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Send aria-hidden='true' />}{replyMode === 'workflow' ? workflowSubmitLabel : replyMode === 'attention' ? 'Create attention flag' : 'Send reply'}</Button></footer>
-        </form>}
-        <section className='partCaseAttachments'><header><h3><Paperclip aria-hidden='true' /> Evidence and files</h3>{!item.archived_at && <label className={`button button--secondary${itarControlled && !itarUploadAuthorized ? ' is-disabled' : ''}`} aria-disabled={itarControlled && !itarUploadAuthorized}><FileUp aria-hidden='true' /> Attach file<input type='file' hidden disabled={itarControlled && !itarUploadAuthorized} onChange={event => { const file = event.target.files?.[0]; if (file) onUpload(file, { itar_upload_authorized: itarUploadAuthorized, synthetic_data_acknowledged: itarUploadAuthorized }); event.target.value = '' }} /></label>}</header>{itarControlled && !item.archived_at && <label className='productionCheck partCaseAttachments__itar'><input type='checkbox' checked={itarUploadAuthorized} onChange={event => setItarUploadAuthorized(event.target.checked)} /><ShieldAlert aria-hidden='true' /><span><strong>I am authorized to attach this ITAR-controlled data</strong><small>The evidence inherits the same protected handling and access rules as this revision.</small></span></label>}{upload && <p><LoaderCircle className='spin' aria-hidden='true' /> {upload.filename} · {upload.progress}%</p>}{itemDetail.attachments?.length ? <ul>{itemDetail.attachments.map(file => <li key={file.id || file._id}><span>{file.display_filename || file.original_filename}</span><div>{file.export_control === 'itar' && <ShieldAlert aria-hidden='true' />}<Button type='button' variant='secondary' onClick={() => onDownloadAttachment?.(file)}><Paperclip aria-hidden='true' /> Download</Button></div></li>)}</ul> : <p>No files attached.</p>}</section>
+        <section className='partCaseAttachments'><header><h3><Paperclip aria-hidden='true' /> Evidence and files</h3></header>{upload && <p><LoaderCircle className='spin' aria-hidden='true' /> {upload.filename} · {upload.progress}%</p>}{itemDetail.attachments?.length ? <ul>{itemDetail.attachments.map(file => <li key={file.id || file._id}><span>{file.display_filename || file.original_filename}</span><div>{file.export_control === 'itar' && <ShieldAlert aria-hidden='true' />}<Button type='button' variant='secondary' onClick={() => onDownloadAttachment?.(file)}><Paperclip aria-hidden='true' /> Download</Button></div></li>)}</ul> : <p>No files attached.</p>}</section>
         {!item.archived_at && <details className='partCaseAssignment'><summary>Assignment, watchers, and due date</summary><form onSubmit={event => { event.preventDefault(); onUpdate?.({ ...assignment, due_at: assignment.due_at || null, version: item.version }) }}><div className='productionFormGrid'><label className='selectField'><span>Assignee</span><select value={assignment.assignee_membership_id} onChange={event => setAssignment(value => ({ ...value, assignee_membership_id: event.target.value }))}><option value=''>Company queue</option>{(itemDetail.participants || []).map(person => <option key={person.id} value={person.id}>{person.name} · {formatLabel(person.side)}</option>)}</select></label><FormField id='part-case-assignment-due' label='Due date' type='date' value={assignment.due_at} onChange={event => setAssignment(value => ({ ...value, due_at: event.target.value }))} /><label className='selectField'><span>Priority</span><select value={assignment.priority} onChange={event => setAssignment(value => ({ ...value, priority: event.target.value }))}><option value='low'>Low</option><option value='normal'>Normal</option><option value='high'>High</option></select></label><label className='selectField'><span>Schedule effect</span><select value={assignment.schedule_effect} onChange={event => setAssignment(value => ({ ...value, schedule_effect: event.target.value }))}><option value='none'>No known effect</option><option value='possible'>Possible effect</option><option value='confirmed'>Confirmed effect</option></select></label></div><fieldset className='partCaseLinks'><legend>Watchers</legend>{(itemDetail.participants || []).map(person => <label key={person.id}><input type='checkbox' checked={assignment.watcher_membership_ids.includes(person.id)} onChange={event => setAssignment(value => ({ ...value, watcher_membership_ids: event.target.checked ? [...value.watcher_membership_ids, person.id] : value.watcher_membership_ids.filter(id => id !== person.id) }))} /><span>{person.name} · {formatLabel(person.side)}</span></label>)}</fieldset><Button type='submit' variant='secondary' disabled={pending}>Save responsibility</Button></form></details>}
         {item.can_archive && <div className='partCaseArchive'><Button type='button' variant='danger' disabled={pending} onClick={() => onArchive?.(item)}><Trash2 aria-hidden='true' /> Archive closed case</Button></div>}
       </>}

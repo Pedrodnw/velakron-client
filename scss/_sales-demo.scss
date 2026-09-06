@@ -472,6 +472,73 @@
   input[type='checkbox'] { width: 17px; min-height: 17px; }
 }
 
+.salesDemoPartPresetIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.42fr);
+  gap: 18px;
+  align-items: end;
+  padding: 14px 16px;
+  border: 1px solid var(--vk-info-border);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba($primary, 0.07), rgba(14, 165, 233, 0.035));
+
+  > div { display: grid; gap: 5px; }
+  > div strong { font-size: 13px; }
+  > div span { color: var(--app-text-secondary); font-size: 12px; line-height: 1.5; }
+}
+
+.salesDemoPartPresetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  > label {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 3px 12px;
+    min-width: 0;
+    padding: 15px 16px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    background: var(--app-surface-subtle);
+    cursor: pointer;
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+
+    &:hover { border-color: rgba($primary, 0.42); transform: translateY(-1px); }
+    &.is-selected { border-color: rgba($primary, 0.62); background: linear-gradient(145deg, rgba($primary, 0.09), rgba(14, 165, 233, 0.04)); box-shadow: 0 0 0 1px rgba($primary, 0.08); }
+    > input { position: absolute; width: 1px; min-height: 1px; opacity: 0; pointer-events: none; }
+    > strong { color: $primary; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; }
+    > b { grid-column: 1; color: var(--app-text); font-size: 14px; }
+    > small { grid-column: 1 / -1; overflow: hidden; color: var(--app-text-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  }
+
+  &__check {
+    display: grid;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: var(--app-text-muted);
+    place-items: center;
+    svg { width: 18px; height: 18px; }
+    .is-selected & { color: $primary; }
+  }
+}
+
+.salesDemoPartPresetSummary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-left: 3px solid $primary;
+  background: rgba($primary, 0.035);
+  color: var(--app-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  strong { color: var(--app-text); font-size: 12px; }
+}
+
 .salesDemoValidationPreview {
   display: grid;
   gap: 3px;
@@ -762,6 +829,7 @@
   .salesDemoAttentionEditor > div,
   .salesDemoCapabilityEditor article > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .salesDemoJourneyEditor article { grid-template-columns: 1fr; }
+  .salesDemoPartPresetIntro { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
@@ -769,6 +837,7 @@
   .salesDemoTemplateForm fieldset,
   .salesDemoCompanyEditor,
   .salesDemoCampaignCreate > div:not(.formMessage) { grid-template-columns: 1fr; }
+  .salesDemoPartPresetGrid { grid-template-columns: 1fr; }
   .salesDemoProductionEditor article > div,
   .salesDemoAttentionEditor > div,
   .salesDemoCapabilityEditor article > div { grid-template-columns: 1fr; }

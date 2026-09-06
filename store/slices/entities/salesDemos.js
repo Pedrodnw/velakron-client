@@ -7,6 +7,8 @@ const initialState = {
   sessions: [],
   sessionPagination: null,
   templates: [],
+  partPresets: [],
+  defaultPartPresetKey: '',
   campaigns: [],
   loading: false,
   error: null,
@@ -23,7 +25,12 @@ const slice = createSlice({
       state.sessionPagination = action.payload?.meta || null
       state.loading = false
     },
-    templatesReceived: (state, action) => { state.templates = action.payload?.data?.templates || []; state.loading = false },
+    templatesReceived: (state, action) => {
+      state.templates = action.payload?.data?.templates || []
+      state.partPresets = action.payload?.data?.part_presets || []
+      state.defaultPartPresetKey = action.payload?.data?.default_part_preset_key || ''
+      state.loading = false
+    },
     campaignsReceived: (state, action) => { state.campaigns = action.payload?.data?.campaigns || []; state.loading = false },
     failed: (state, action) => { state.loading = false; state.error = action.payload?.error || action.payload },
   },
@@ -65,6 +72,8 @@ export const salesDemoSelectors = {
   getSessions: state => root(state).sessions,
   getSessionPagination: state => root(state).sessionPagination,
   getTemplates: state => root(state).templates,
+  getPartPresets: state => root(state).partPresets,
+  getDefaultPartPresetKey: state => root(state).defaultPartPresetKey,
   getCampaigns: state => root(state).campaigns,
   getLoading: state => root(state).loading,
   getError: state => root(state).error,

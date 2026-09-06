@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Crosshair, FileWarning, Focus, LoaderCircle, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, RotateCw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { resolveFileTransferTarget } from '../../store/fileTransfer'
+import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { clampDrawingPage, drawingAnchorStyle, drawingFitScale, normalizedDrawingPoint } from '../../store/drawingViewer'
 import { captureVisualContextPreview } from './visualContextPreview'
 
@@ -97,10 +97,9 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
     setSelectionFeedback('')
 
     const open = async () => {
-      const response = await fetch(resolveFileTransferTarget(source), {
-        credentials: /^https?:\/\//i.test(String(source || '')) ? 'omit' : 'include',
+      const response = await fetch(resolveFileTransferTarget(source), fileTransferFetchOptions(source, {
         signal: controller.signal,
-      })
+      }))
       if (!response.ok) throw new Error(response.status === 403 ? 'The protected drawing access grant expired or was refused.' : 'Velakron could not securely load this drawing.')
       const buffer = await response.arrayBuffer()
       objectUrl = URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' }))

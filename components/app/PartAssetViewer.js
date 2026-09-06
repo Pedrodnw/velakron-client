@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic'
 import { Crosshair, FileText, Focus, LoaderCircle, MousePointer2, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { resolveFileTransferTarget } from '../../store/fileTransfer'
+import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { drawingAnchorStyle, normalizedDrawingPoint } from '../../store/drawingViewer'
 import { captureVisualContextPreview } from './visualContextPreview'
 
@@ -27,7 +27,7 @@ const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnc
     let objectUrl = ''
     setLocalSource('')
     setSourceState({ loading: true, error: '' })
-    fetch(resolveFileTransferTarget(source), { credentials: /^https?:\/\//i.test(String(source || '')) ? 'omit' : 'include', signal: controller.signal })
+    fetch(resolveFileTransferTarget(source), fileTransferFetchOptions(source, { signal: controller.signal }))
       .then(async response => {
         if (!response.ok) throw new Error(response.status === 403 ? 'The protected drawing access grant expired or was refused.' : 'Velakron could not securely load this drawing.')
         objectUrl = URL.createObjectURL(await response.blob())

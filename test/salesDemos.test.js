@@ -7,6 +7,7 @@ import {
 } from '../store/slices/entities/salesDemos'
 import salesDemoReducer from '../store/slices/entities/salesDemos'
 import { salesDemoPresenterHeaders } from '../store/middleware/api'
+import { fileTransferFetchOptions } from '../store/fileTransfer'
 
 describe('founder Sales Demo workspace', () => {
   it('shows the dashboard only when the founder Sales Demo permission is present', () => {
@@ -59,5 +60,23 @@ describe('founder Sales Demo workspace', () => {
       .toEqual({})
     expect(salesDemoPresenterHeaders({ url: '/sales-demos/presenter-grants/exchange', pathname: '/sales-demo/preview', presenterToken: 'stale-token' }))
       .toEqual({})
+  })
+
+  it('carries the presenter grant when a protected local asset is streamed', () => {
+    const previousWindow = global.window
+    global.window = {
+      sessionStorage: {
+        getItem: key => key === 'velakron_sales_demo_presenter' ? 'opaque-preview-token' : null,
+      },
+    }
+    expect(fileTransferFetchOptions('/parts/part-id/assets/asset-id/view-content')).toMatchObject({
+      credentials: 'include',
+      headers: { 'X-Velakron-Demo-Presenter': 'opaque-preview-token' },
+    })
+    expect(fileTransferFetchOptions('https://storage.example.test/signed-object')).toMatchObject({
+      credentials: 'omit',
+      headers: {},
+    })
+    global.window = previousWindow
   })
 })
