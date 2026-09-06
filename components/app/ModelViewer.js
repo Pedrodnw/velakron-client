@@ -159,6 +159,7 @@ const ModelViewer = ({
   selectedAnchor = null,
   onSelect,
   onOpenCase,
+  onPreviewReady,
   compact = false,
 }) => {
   const mountRef = useRef(null)
@@ -166,9 +167,13 @@ const ModelViewer = ({
   const zoomRef = useRef(() => {})
   const onSelectRef = useRef(onSelect)
   const onOpenCaseRef = useRef(onOpenCase)
+  const onPreviewReadyRef = useRef(onPreviewReady)
+  const selectedAnchorRef = useRef(selectedAnchor)
+  const capturedReferenceRef = useRef('')
   const annotationModeRef = useRef(annotationMode)
   const markerSyncRef = useRef(() => {})
   const restoreViewRef = useRef(() => {})
+  const captureReferenceRef = useRef(() => {})
   const orientationRef = useRef(() => {})
   const transparencyRef = useRef(() => {})
   const guidanceId = useId()
@@ -181,6 +186,7 @@ const ModelViewer = ({
 
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
   useEffect(() => { onOpenCaseRef.current = onOpenCase }, [onOpenCase])
+  useEffect(() => { onPreviewReadyRef.current = onPreviewReady }, [onPreviewReady])
   useEffect(() => {
     annotationModeRef.current = annotationMode
     setSelectionFeedback(annotationMode ? 'Click once on a visible model surface. Dragging changes the view without selecting.' : '')
@@ -188,7 +194,12 @@ const ModelViewer = ({
   useEffect(() => {
     markerSyncRef.current(anchors, caseMarkers, selectedAnchorId)
   }, [anchors, caseMarkers, selectedAnchorId])
-  useEffect(() => { if (selectedAnchor) restoreViewRef.current(selectedAnchor.view_state || {}) }, [selectedAnchor])
+  useEffect(() => {
+    selectedAnchorRef.current = selectedAnchor
+    if (!selectedAnchor) return
+    restoreViewRef.current(selectedAnchor.view_state || {})
+    window.requestAnimationFrame(() => captureReferenceRef.current(selectedAnchor))
+  }, [selectedAnchor])
 
   useEffect(() => {
     let stopped = false
@@ -226,7 +237,7 @@ const ModelViewer = ({
         const scene = new THREE.Scene()
         const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 1000000)
         camera.up.set(0, 0, 1)
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: compact || Boolean(onPreviewReadyRef.current) })
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact ? 1.5 : 2))
         renderer.setClearColor(0xffffff, 0)
         renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -351,6 +362,24 @@ const ModelViewer = ({
           camera.updateProjectionMatrix()
           controls.update()
           projectCaseMarkers()
+        }
+        captureReferenceRef.current = anchor => {
+          const anchorId = String(anchor?.id || anchor?._id || '')
+          const point = anchor?.anchor_data?.point
+          if (!onPreviewReadyRef.current || !anchorId || !Array.isArray(point) || point.length < 3) return
+          const captureKey = `${source}:${anchorId}`
+          if (capturedReferenceRef.current === captureKey) return
+          positionStudioShadow()
+          renderer.render(scene, camera)
+          const projectedPoint = new THREE.Vector3(...point).project(camera)
+          const preview = captureVisualContextPreview(renderer.domElement, {
+            kind: 'point',
+            x: (projectedPoint.x + 1) / 2,
+            y: (1 - projectedPoint.y) / 2,
+          })
+          if (!preview) return
+          capturedReferenceRef.current = captureKey
+          onPreviewReadyRef.current(preview)
         }
         orientationRef.current = orientation => {
           const center = modelBox.getCenter(new THREE.Vector3())
@@ -486,6 +515,7 @@ const ModelViewer = ({
         resizeObserver.observe(mountRef.current)
         resize()
         fit()
+        if (selectedAnchorRef.current) restoreViewRef.current(selectedAnchorRef.current.view_state || {})
 
         const render = () => {
           if (stopped) return
@@ -495,6 +525,20 @@ const ModelViewer = ({
           if (!compact) animationFrame = requestAnimationFrame(render)
         }
         render()
+        if (!compact && selectedAnchorRef.current && onPreviewReadyRef.current) {
+          animationFrame = requestAnimationFrame(() => captureReferenceRef.current(selectedAnchorRef.current))
+        }
+        if (compact && onPreviewReadyRef.current) {
+          animationFrame = requestAnimationFrame(() => {
+            if (stopped || !renderer?.domElement) return
+            positionStudioShadow()
+            renderer.render(scene, camera)
+            const { width, height } = renderer.domElement
+            renderer.domElement.toBlob(blob => {
+              if (!stopped && blob?.size) onPreviewReadyRef.current?.({ blob, width, height })
+            }, 'image/png')
+          })
+        }
         setStatus('ready')
       } catch (viewerError) {
         if (!stopped) {
@@ -511,6 +555,7 @@ const ModelViewer = ({
       zoomRef.current = () => {}
       markerSyncRef.current = () => {}
       restoreViewRef.current = () => {}
+      captureReferenceRef.current = () => {}
       orientationRef.current = () => {}
       transparencyRef.current = () => {}
       if (animationFrame) cancelAnimationFrame(animationFrame)

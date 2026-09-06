@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckCircle2, CircleAlert, LoaderCircle, MessageSquareText, Paperclip, Search, Send, ShieldAlert, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
 import { Button } from '../design-system'
@@ -12,6 +13,42 @@ const emptyForm = {
   type: 'clarification', title: '', description: '', priority: 'normal', schedule_effect: 'none', due_at: '', effectivity: '', share_id: '', production_record_ids: [],
 }
 const emptyProductionRecordIds = Object.freeze([])
+
+const StoredVisualReference = ({ source, alt }) => {
+  const [image, setImage] = useState({ source: '', loading: true, error: '' })
+
+  useEffect(() => {
+    if (!source) {
+      setImage({ source: '', loading: false, error: 'The saved reference is not available.' })
+      return undefined
+    }
+    if (String(source).startsWith('data:image/png;base64,')) {
+      setImage({ source, loading: false, error: '' })
+      return undefined
+    }
+    const controller = new AbortController()
+    let objectUrl = ''
+    setImage({ source: '', loading: true, error: '' })
+    fetch(resolveFileTransferTarget(source), fileTransferFetchOptions(source, { signal: controller.signal }))
+      .then(async response => {
+        if (!response.ok) throw new Error('The saved reference could not be loaded.')
+        objectUrl = URL.createObjectURL(await response.blob())
+        setImage({ source: objectUrl, loading: false, error: '' })
+      })
+      .catch(error => {
+        if (error.name === 'AbortError') return
+        setImage({ source: '', loading: false, error: error.message || 'The saved reference could not be loaded.' })
+      })
+    return () => {
+      controller.abort()
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [source])
+
+  if (image.loading) return <div className='partCaseVisual__notice'><LoaderCircle className='spin' aria-hidden='true' /><strong>Opening saved reference</strong></div>
+  if (image.error) return <div className='partCaseVisual__notice'><CircleAlert aria-hidden='true' /><strong>Visual preview unavailable</strong><span>{image.error}</span></div>
+  return <img className='partCaseVisual__image' src={image.source} alt={alt} />
+}
 
 const PartCaseDrawer = ({
   open,
@@ -38,6 +75,7 @@ const PartCaseDrawer = ({
   onUpload,
   onDownloadAttachment,
   onOpenAnchor,
+  onVisualPreviewReady,
   onArchive,
   onPromote,
 }) => {
@@ -149,16 +187,7 @@ const PartCaseDrawer = ({
         <div className='partCaseForm__contextCopy'><p className='technicalLabel'>{selectedAnchor ? 'Captured visual context' : 'Revision context'}</p><strong>{selectedAnchor ? selectedAnchor.label || formatLabel(selectedAnchor.anchor_kind || selectedAnchor.kind) : 'Revision-level case'}</strong><span>{selectedAnchor ? `${sourceAsset?.attachment?.display_filename || sourceAsset?.attachment?.original_filename || 'Selected technical file'} · The saved view will open with the case.` : 'No drawing or model selection is attached.'}</span></div>
         {selectedAnchor?.visual_preview?.data_url && <figure className='partCaseForm__visualPreview'>
           <img src={selectedAnchor.visual_preview.data_url} alt='Thumbnail of the selected visual context' />
-          {selectedAnchor.visual_preview.selection && <span
-            className={`partCaseForm__visualMarker is-${selectedAnchor.visual_preview.selection.kind}`}
-            style={{
-              left: `${selectedAnchor.visual_preview.selection.x * 100}%`,
-              top: `${selectedAnchor.visual_preview.selection.y * 100}%`,
-              width: selectedAnchor.visual_preview.selection.kind === 'region' ? `${selectedAnchor.visual_preview.selection.width * 100}%` : undefined,
-              height: selectedAnchor.visual_preview.selection.kind === 'region' ? `${selectedAnchor.visual_preview.selection.height * 100}%` : undefined,
-            }}
-          />}
-          <figcaption>Selected view</figcaption>
+          <figcaption>Saved reference</figcaption>
         </figure>}
       </div>
       {lockProductionContext && productionRecords[0] && <div className='partCaseLockedContext'><div><p className='technicalLabel'>Recipient</p><strong>{relatedCompanyName || (organizationType === 'supplier' ? 'OEM customer' : 'Supplier')}</strong><span>This case is shared with the company connected to this production.</span></div><div><p className='technicalLabel'>Linked production</p><strong>{productionRecords[0].public_reference || productionRecords[0].po_number}</strong><span>The case will remain visible in this production record and timeline.</span></div></div>}
@@ -225,7 +254,12 @@ const PartCaseDrawer = ({
               ? <div className='partCaseVisual__notice'><ShieldAlert aria-hidden='true' /><strong>ITAR verification required</strong><span>Open this reference in the workspace and complete the required citizenship and handling confirmation.</span></div>
               : linkedVisual?.error
                 ? <div className='partCaseVisual__notice'><CircleAlert aria-hidden='true' /><strong>Visual preview unavailable</strong><span>{linkedVisual.error}</span></div>
-                : <PartAssetViewer asset={linkedVisual?.asset} source={linkedVisual?.source} loading={linkedVisual?.loading} anchors={[item.visual_anchor]} selectedAnchorId={item.visual_anchor.id || item.visual_anchor._id} />}
+                : linkedVisual?.preview
+                  ? <StoredVisualReference source={linkedVisual.source} alt={`Saved visual reference for ${item.title}`} />
+                  : <div className='partCaseVisual__legacyCapture'>
+                    <PartAssetViewer asset={linkedVisual?.asset} source={linkedVisual?.source} loading={linkedVisual?.loading} anchors={[item.visual_anchor]} selectedAnchorId={item.visual_anchor.id || item.visual_anchor._id} onPreviewReady={onVisualPreviewReady} />
+                    {!linkedVisual?.loading && <span>Saving this visual reference…</span>}
+                  </div>}
           </div>
         </section>}
         <section className='partCaseAttachments'><header><h3><Paperclip aria-hidden='true' /> Evidence and files</h3></header>{upload && <p><LoaderCircle className='spin' aria-hidden='true' /> {upload.filename} · {upload.progress}%</p>}{itemDetail.attachments?.length ? <ul>{itemDetail.attachments.map(file => <li key={file.id || file._id}><span>{file.display_filename || file.original_filename}</span><div>{file.export_control === 'itar' && <ShieldAlert aria-hidden='true' />}<Button type='button' variant='secondary' onClick={() => onDownloadAttachment?.(file)}><Paperclip aria-hidden='true' /> Download</Button></div></li>)}</ul> : <p>No files attached.</p>}</section>

@@ -15,6 +15,7 @@ import { formatDate, formatLabel, statusTone } from '../../../components/app/for
 import ItarAccessDialog from '../../../components/app/ItarAccessDialog'
 import InspectionPlanPanel from '../../../components/app/InspectionPlanPanel'
 import PartAssetViewer from '../../../components/app/PartAssetViewer'
+import { visualPreviewToBlob } from '../../../components/app/visualContextPreview'
 import PortalPageLayout from '../../../components/app/PortalPageLayout'
 import Seo from '../../../components/Seo'
 import FormField from '../../../components/auth/FormField'
@@ -26,6 +27,7 @@ import { isViewableModel, suggestedPartAssetRole } from '../../../store/modelFil
 import {
   addPartRequirement,
   archivePart,
+  cacheVisualAnchorPreview,
   clonePartRevision,
   createVisualAnchor,
   exportPartDecisionRegister,
@@ -254,6 +256,18 @@ const PartWorkspace = () => {
     if (!anchorResult?.ok) {
       setFeedback({ type: 'error', message: resultError(anchorResult, 'The inspection reference could not be saved.') })
       return anchorResult
+    }
+    if (anchor.visual_preview && revision.export_control !== 'itar') {
+      const blob = visualPreviewToBlob(anchor.visual_preview)
+      const previewResult = blob && await dispatch(cacheVisualAnchorPreview(id, revisionId, anchorResult.payload.data.anchor.id, {
+        blob,
+        width: anchor.visual_preview.width,
+        height: anchor.visual_preview.height,
+      }))
+      if (!previewResult?.ok) {
+        setFeedback({ type: 'error', message: resultError(previewResult, 'The inspection visual reference could not be stored. Please capture it again.') })
+        return previewResult
+      }
     }
     setInspectionAnchor(anchorResult.payload.data.anchor)
     setInspectionAnchorRequest(false)

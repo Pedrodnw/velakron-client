@@ -1,5 +1,5 @@
-const DEFAULT_WIDTH = 360
-const DEFAULT_HEIGHT = 202
+const DEFAULT_WIDTH = 720
+const DEFAULT_HEIGHT = 405
 
 const clamp = value => Math.min(1, Math.max(0, Number(value) || 0))
 
@@ -20,6 +20,58 @@ export const mapVisualPreviewSelection = (selection = {}, contentBounds = {}) =>
     width: Math.min(bounds.x + bounds.width - x, clamp(selection.width) * bounds.width),
     height: Math.min(bounds.y + bounds.height - y, clamp(selection.height) * bounds.height),
   }
+}
+
+const drawPointMarker = (context, selection, width, height) => {
+  const x = selection.x * width
+  const y = selection.y * height
+  const radius = Math.max(8, Math.round(Math.min(width, height) * 0.025))
+
+  context.save()
+  context.shadowColor = 'rgba(6, 20, 38, 0.34)'
+  context.shadowBlur = Math.max(7, radius * 0.8)
+  context.beginPath()
+  context.arc(x, y, radius + 5, 0, Math.PI * 2)
+  context.fillStyle = 'rgba(255, 255, 255, 0.96)'
+  context.fill()
+  context.shadowBlur = 0
+  context.beginPath()
+  context.arc(x, y, radius, 0, Math.PI * 2)
+  context.fillStyle = '#0969ff'
+  context.fill()
+  context.lineWidth = Math.max(2, radius * 0.22)
+  context.strokeStyle = '#ffffff'
+  context.stroke()
+  context.beginPath()
+  context.arc(x, y, Math.max(2.5, radius * 0.25), 0, Math.PI * 2)
+  context.fillStyle = '#ffffff'
+  context.fill()
+  context.restore()
+}
+
+const drawRegionMarker = (context, selection, width, height) => {
+  const x = selection.x * width
+  const y = selection.y * height
+  const regionWidth = Math.max(8, selection.width * width)
+  const regionHeight = Math.max(8, selection.height * height)
+  const lineWidth = Math.max(3, Math.round(Math.min(width, height) * 0.008))
+
+  context.save()
+  context.fillStyle = 'rgba(9, 105, 255, 0.18)'
+  context.fillRect(x, y, regionWidth, regionHeight)
+  context.lineWidth = lineWidth + 4
+  context.strokeStyle = 'rgba(255, 255, 255, 0.96)'
+  context.strokeRect(x, y, regionWidth, regionHeight)
+  context.lineWidth = lineWidth
+  context.strokeStyle = '#0969ff'
+  context.strokeRect(x, y, regionWidth, regionHeight)
+  context.restore()
+}
+
+export const drawVisualPreviewSelection = (context, selection, width, height) => {
+  if (!context || !selection) return
+  if (selection.kind === 'region') drawRegionMarker(context, selection, width, height)
+  else drawPointMarker(context, selection, width, height)
 }
 
 export const captureVisualContextPreview = (source, selection, options = {}) => {
@@ -50,10 +102,28 @@ export const captureVisualContextPreview = (source, selection, options = {}) => 
       width: drawnWidth / width,
       height: drawnHeight / height,
     }
+    const mappedSelection = mapVisualPreviewSelection(selection, contentBounds)
+    drawVisualPreviewSelection(context, mappedSelection, width, height)
     return {
-      data_url: canvas.toDataURL('image/jpeg', 0.84),
-      selection: mapVisualPreviewSelection(selection, contentBounds),
+      data_url: canvas.toDataURL('image/png'),
+      mime_type: 'image/png',
+      width,
+      height,
+      selection: mappedSelection,
     }
+  } catch {
+    return null
+  }
+}
+
+export const visualPreviewToBlob = preview => {
+  if (!preview?.data_url || !String(preview.data_url).startsWith('data:image/png;base64,')) return null
+  const encoded = String(preview.data_url).slice('data:image/png;base64,'.length)
+  try {
+    const binary = globalThis.atob(encoded)
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+    return new Blob([bytes], { type: 'image/png' })
   } catch {
     return null
   }

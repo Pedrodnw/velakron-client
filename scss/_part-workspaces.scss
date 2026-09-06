@@ -531,6 +531,12 @@
 .partCaseVisual > header h3 { margin-top: 3px; font-size: 13px; }
 .partCaseVisual > header .vk-button { min-height: 34px; }
 .partCaseVisual__preview { position: relative; min-height: 300px; background: var(--app-canvas); }
+.partCaseVisual__image { display: block; width: 100%; height: clamp(280px, 40vh, 440px); object-fit: contain; background: linear-gradient(145deg, #f9fbfe, #eef3f9); }
+.partCaseVisual__legacyCapture { position: relative; overflow: hidden; min-height: 300px; pointer-events: none; }
+.partCaseVisual__legacyCapture > span { position: absolute; z-index: 4; top: 50%; left: 50%; padding: 8px 12px; border: 1px solid var(--vk-info-border); border-radius: 999px; background: rgba(255, 255, 255, .94); box-shadow: 0 6px 20px rgba(6, 20, 38, .14); color: var(--vk-info); font-size: 10px; font-weight: 750; transform: translate(-50%, -50%); }
+.partCaseVisual__legacyCapture .modelViewer,
+.partCaseVisual__legacyCapture .partPdfDrawing,
+.partCaseVisual__legacyCapture .partDrawingSurface { opacity: .42; }
 .partCaseVisual__preview .partViewerEmpty { min-height: 300px; }
 .partCaseVisual__preview .modelViewer__viewport { height: 330px; }
 .partCaseVisual__preview .partPdfDrawing { border: 0; border-radius: 0; }

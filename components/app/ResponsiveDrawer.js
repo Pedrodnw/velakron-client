@@ -9,6 +9,22 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
   useEffect(() => {
     if (!open) return undefined
     const previousFocus = document.activeElement
+    const scrollPosition = window.scrollY
+    const previousBody = {
+      overflow: document.body.style.overflow,
+      paddingRight: document.body.style.paddingRight,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width,
+    }
+    const previousRootOverflow = document.documentElement.style.overflow
+    const scrollbarGap = Math.max(0, window.innerWidth - document.documentElement.clientWidth)
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.top = `-${scrollPosition}px`
+    document.body.style.width = '100%'
+    if (scrollbarGap) document.body.style.paddingRight = `${scrollbarGap}px`
     const handleKeyDown = event => {
       if (event.key === 'Escape') onCloseRef.current()
       if (event.key !== 'Tab') return
@@ -24,6 +40,9 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      document.documentElement.style.overflow = previousRootOverflow
+      Object.assign(document.body.style, previousBody)
+      window.scrollTo(0, scrollPosition)
       previousFocus?.focus?.()
     }
   }, [open])
@@ -38,7 +57,7 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
         <h2 id='drawer-title'>{title}</h2>
         <button type='button' aria-label='Close panel' onClick={onClose}><X aria-hidden='true' /></button>
       </header>
-      <div className='responsiveDrawer__body'>{children}</div>
+      <div className='responsiveDrawer__body' onWheel={event => event.stopPropagation()} onTouchMove={event => event.stopPropagation()}>{children}</div>
     </aside>
   </div>
 }

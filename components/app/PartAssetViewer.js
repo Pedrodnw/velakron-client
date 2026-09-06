@@ -13,9 +13,10 @@ const PdfDrawingViewer = dynamic(() => import('./PdfDrawingViewer'), {
 
 const extensionFor = file => String(file?.display_filename || file?.original_filename || '').split('.').pop().toLowerCase()
 
-const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnchorId, selectedAnchor, onSelect }) => {
+const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnchorId, selectedAnchor, onSelect, onPreviewReady }) => {
   const frameRef = useRef(null)
   const imageRef = useRef(null)
+  const capturedReferenceRef = useRef('')
   const [origin, setOrigin] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -83,6 +84,22 @@ const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnc
     })
     setOrigin(null)
   }
+  const captureReference = () => {
+    const anchorId = String(selectedAnchor?.id || selectedAnchor?._id || '')
+    const kind = selectedAnchor?.anchor_kind || selectedAnchor?.kind
+    const captureKey = `${source}:${anchorId}`
+    if (!onPreviewReady || !anchorId || capturedReferenceRef.current === captureKey || !['drawing_point', 'drawing_region'].includes(kind)) return
+    const preview = captureVisualContextPreview(imageRef.current, {
+      kind: kind === 'drawing_region' ? 'region' : 'point',
+      x: selectedAnchor.anchor_data?.x,
+      y: selectedAnchor.anchor_data?.y,
+      width: selectedAnchor.anchor_data?.width,
+      height: selectedAnchor.anchor_data?.height,
+    })
+    if (!preview) return
+    capturedReferenceRef.current = captureKey
+    onPreviewReady(preview)
+  }
   return <section className='partDrawingSurface'>
     <div className='partDrawingToolbar' aria-label='Drawing controls'>
       <button type='button' aria-label='Zoom drawing in' onClick={() => setZoom(value => Math.min(3, Number((value + 0.2).toFixed(1))))}><ZoomIn aria-hidden='true' /></button>
@@ -96,7 +113,7 @@ const ImageDrawingViewer = ({ file, source, annotationMode, anchors, selectedAnc
     onPointerDown={event => annotationMode && setOrigin(normalizedPoint(event))}
     onPointerUp={select}
   >
-    <img ref={imageRef} src={localSource} alt={file?.display_filename || file?.original_filename || 'Technical drawing'} style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }} />
+    <img ref={imageRef} src={localSource} alt={file?.display_filename || file?.original_filename || 'Technical drawing'} style={{ transform: `scale(${zoom}) rotate(${rotation}deg)` }} onLoad={captureReference} />
     <div className='partDrawingViewer__anchors' aria-hidden='true'>
       {anchors.filter(anchor => ['drawing_point', 'drawing_region'].includes(anchor.anchor_kind || anchor.kind) && Number(anchor.anchor_data?.page || 1) === 1).map((anchor, index) => {
         const selected = String(anchor.id || anchor._id) === String(selectedAnchorId)
@@ -117,14 +134,14 @@ const DrawingViewer = props => extensionFor(props.file) === 'pdf'
   ? <PdfDrawingViewer {...props} />
   : <ImageDrawingViewer {...props} />
 
-const PartAssetViewer = ({ asset, source, loading, annotationMode = false, anchors = [], caseMarkers = [], selectedAnchorId = '', onSelect, onOpenCase }) => {
+const PartAssetViewer = ({ asset, source, loading, annotationMode = false, anchors = [], caseMarkers = [], selectedAnchorId = '', onSelect, onOpenCase, onPreviewReady }) => {
   const file = asset?.attachment || asset
   const extension = useMemo(() => extensionFor(file), [file])
   const selectedAnchor = anchors.find(anchor => String(anchor.id || anchor._id) === String(selectedAnchorId)) || null
   if (loading) return <div className='partViewerEmpty'><LoaderCircle className='spin' aria-hidden='true' /><strong>Opening protected file</strong></div>
   if (!asset || !source) return <div className='partViewerEmpty'><FileText aria-hidden='true' /><strong>Select a viewable file</strong><span>Models and drawings remain private until you explicitly open them.</span></div>
-  if (['step', 'stp', 'stl'].includes(extension)) return <ModelViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} caseMarkers={caseMarkers} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} onOpenCase={onOpenCase} />
-  if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(extension)) return <DrawingViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} />
+  if (['step', 'stp', 'stl'].includes(extension)) return <ModelViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} caseMarkers={caseMarkers} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} onOpenCase={onOpenCase} onPreviewReady={onPreviewReady} />
+  if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(extension)) return <DrawingViewer file={file} source={source} annotationMode={annotationMode} anchors={anchors} selectedAnchorId={selectedAnchorId} selectedAnchor={selectedAnchor} onSelect={onSelect} onPreviewReady={onPreviewReady} />
   return <div className='partViewerEmpty'><MousePointer2 aria-hidden='true' /><strong>Preview unavailable</strong><span>Download this file to inspect it in its native application.</span></div>
 }
 

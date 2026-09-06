@@ -11,6 +11,8 @@ import {
   acknowledgePartRevision,
   applyPartCollaborationAction,
   archivePartCollaboration,
+  cachePartModelPreview,
+  cacheVisualAnchorPreview,
   createPartCollaboration,
   createVisualAnchor,
   loadPart,
@@ -23,6 +25,8 @@ import {
   requestCollaborationAttachmentDownload,
   requestPartAssetDownload,
   requestPartAssetView,
+  requestPartModelPreviewView,
+  requestVisualAnchorPreviewView,
   requestPartReviewChanges,
   startPartReview,
   updatePartCollaboration,
@@ -41,6 +45,7 @@ import ResponsiveDrawer from './ResponsiveDrawer'
 import StatusBadge from './StatusBadge'
 import { formatDate, formatDateTime, formatLabel, statusTone } from './formatters'
 import { inspectionSelectors, loadInspectionPlan, loadInspectionRuns } from '../../store/slices/entities/inspection'
+import { visualPreviewToBlob } from './visualContextPreview'
 
 const TABS = [
   ['overview', 'Overview', Box],
@@ -90,8 +95,10 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
   const dispatch = useDispatch()
   const revisionDetail = useSelector(partSelectors.getRevisionDetail(revisionId))
   const [source, setSource] = useState('')
+  const [sourceKind, setSourceKind] = useState('')
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
+  const cacheAttemptedRef = useRef('')
   const preview = useMemo(() => preferredPartThumbnailAsset(revisionDetail?.assets), [revisionDetail?.assets])
   const previewAsset = preview?.asset || null
   const previewKind = preview?.kind || ''
@@ -104,6 +111,7 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
   useEffect(() => {
     if (!partId || !revisionId || !previewAssetId || exportControl === 'itar') {
       setSource('')
+      setSourceKind('')
       setLoading(false)
       setFailed(false)
       return
@@ -111,37 +119,45 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
     let cancelled = false
     let objectUrl = ''
     setSource('')
+    setSourceKind('')
     setLoading(true)
     setFailed(false)
-    dispatch(requestPartAssetView(partId, revisionId, previewAssetId, {})).then(result => {
+    const openImageTarget = async target => {
+      if (/^https?:\/\//i.test(String(target || ''))) return target
+      const response = await fetch(resolveFileTransferTarget(target), fileTransferFetchOptions(target))
+      if (!response.ok) throw new Error('Thumbnail could not be opened')
+      const blob = await response.blob()
+      if (cancelled) return ''
+      objectUrl = window.URL.createObjectURL(blob)
+      return objectUrl
+    }
+    const openPreview = async () => {
+      if (previewKind === 'model') {
+        const cached = await dispatch(requestPartModelPreviewView(partId, revisionId, previewAssetId))
+        if (cancelled) return
+        if (cached?.ok) {
+          const imageSource = await openImageTarget(cached.payload.data.view.target)
+          if (cancelled) return
+          setSource(imageSource)
+          setSourceKind('image')
+          setLoading(false)
+          return
+        }
+      }
+      const result = await dispatch(requestPartAssetView(partId, revisionId, previewAssetId, {}))
       if (cancelled) return
-      if (!result?.ok) {
+      if (!result?.ok) throw new Error('Thumbnail source could not be opened')
+      const target = result.payload.data.view.target
+      const nextSource = previewKind === 'model' ? target : await openImageTarget(target)
+      if (cancelled) return
+      setSource(nextSource)
+      setSourceKind(previewKind)
+      setLoading(false)
+    }
+    openPreview().catch(() => {
+      if (!cancelled) {
         setLoading(false)
         setFailed(true)
-      }
-      else {
-        const target = result.payload.data.view.target
-        if (previewKind === 'model' || /^https?:\/\//i.test(String(target || ''))) {
-          setSource(target)
-          setLoading(false)
-        }
-        else fetch(resolveFileTransferTarget(target), fileTransferFetchOptions(target))
-          .then(response => {
-            if (!response.ok) throw new Error('Thumbnail could not be opened')
-            return response.blob()
-          })
-          .then(blob => {
-            if (cancelled) return
-            objectUrl = window.URL.createObjectURL(blob)
-            setSource(objectUrl)
-            setLoading(false)
-          })
-          .catch(() => {
-            if (!cancelled) {
-              setLoading(false)
-              setFailed(true)
-            }
-          })
       }
     })
     return () => {
@@ -150,10 +166,18 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
     }
   }, [dispatch, exportControl, partId, previewAssetId, previewKind, revisionId])
 
+  const cacheRenderedPreview = useCallback(({ blob, width, height }) => {
+    if (previewKind !== 'model' || exportControl === 'itar' || !previewAssetId) return
+    const cacheKey = `${revisionId}:${previewAssetId}`
+    if (cacheAttemptedRef.current === cacheKey) return
+    cacheAttemptedRef.current = cacheKey
+    dispatch(cachePartModelPreview(partId, revisionId, previewAssetId, { blob, width, height }))
+  }, [dispatch, exportControl, partId, previewAssetId, previewKind, revisionId])
+
   const showingPreview = Boolean(source && !failed)
   return <div className={`productionPartThumbnail${showingPreview ? ' has-image' : ''}`} aria-label={showingPreview ? 'Isometric part thumbnail' : 'Part thumbnail placeholder'}>
-    {showingPreview && previewKind === 'model'
-      ? <ThumbnailModelViewer file={previewAsset?.attachment || previewAsset} source={source} compact />
+    {showingPreview && sourceKind === 'model'
+      ? <ThumbnailModelViewer file={previewAsset?.attachment || previewAsset} source={source} compact onPreviewReady={cacheRenderedPreview} />
       : showingPreview
         ? <img src={source} alt='' onError={() => setFailed(true)} />
         : exportControl === 'itar'
@@ -182,7 +206,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
   const [tab, setTab] = useState('overview')
   const [caseScope, setCaseScope] = useState('production')
   const [viewer, setViewer] = useState({ asset: null, source: '', loading: false })
-  const [caseVisual, setCaseVisual] = useState({ asset: null, source: '', loading: false, error: '', protected: false })
+  const [caseVisual, setCaseVisual] = useState({ asset: null, source: '', loading: false, error: '', protected: false, preview: false })
   const [selectedAnchorId, setSelectedAnchorId] = useState('')
   const [pendingAnchor, setPendingAnchor] = useState(null)
   const [annotationMode, setAnnotationMode] = useState(false)
@@ -194,6 +218,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
   const [reviewChangesOpen, setReviewChangesOpen] = useState(false)
   const autoOpenedAssetRef = useRef('')
   const caseVisualRequestRef = useRef('')
+  const caseVisualCaptureRef = useRef('')
   const caseDetail = useSelector(partSelectors.getCollaborationDetail(caseDrawer.id))
   const defaultProductionRecordIds = useMemo(() => [String(record.id)], [record.id])
   const tabs = useMemo(() => TABS.filter(([key]) => key !== 'inspection' || inspectionEnabled), [inspectionEnabled])
@@ -325,25 +350,51 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
   useEffect(() => {
     if (!caseDrawer.open || caseDrawer.mode !== 'detail' || !caseVisualAnchorId || !caseVisualAssetId || !caseVisualRevisionId) {
       caseVisualRequestRef.current = ''
-      setCaseVisual({ asset: null, source: '', loading: false, error: '', protected: false })
+      caseVisualCaptureRef.current = ''
+      setCaseVisual({ asset: null, source: '', loading: false, error: '', protected: false, preview: false })
       return
     }
     if (caseVisualRequestRef.current === caseVisualKey) return
     caseVisualRequestRef.current = caseVisualKey
     if ((caseVisualItem?.part_revision?.export_control || 'none') === 'itar') {
-      setCaseVisual({ asset: caseVisualAsset, source: '', loading: false, error: '', protected: true })
+      setCaseVisual({ asset: caseVisualAsset, source: '', loading: false, error: '', protected: true, preview: false })
       return
     }
     let cancelled = false
-    setCaseVisual({ asset: caseVisualAsset, source: '', loading: true, error: '', protected: false })
-    dispatch(requestPartAssetView(partId, caseVisualRevisionId, caseVisualAssetId, {})).then(result => {
+    setCaseVisual({ asset: caseVisualAsset, source: '', loading: true, error: '', protected: false, preview: false })
+    const openReference = async () => {
+      const previewResult = await dispatch(requestVisualAnchorPreviewView(partId, caseVisualRevisionId, caseVisualAnchorId))
       if (cancelled) return
-      setCaseVisual(result?.ok
-        ? { asset: caseVisualAsset, source: result.payload.data.view.target, loading: false, error: '', protected: false }
-        : { asset: caseVisualAsset, source: '', loading: false, error: resultError(result, 'The linked visual could not be displayed.'), protected: false })
-    })
+      if (previewResult?.ok) {
+        setCaseVisual({ asset: caseVisualAsset, source: previewResult.payload.data.view.target, loading: false, error: '', protected: false, preview: true })
+        return
+      }
+      const sourceResult = await dispatch(requestPartAssetView(partId, caseVisualRevisionId, caseVisualAssetId, {}))
+      if (cancelled) return
+      setCaseVisual(sourceResult?.ok
+        ? { asset: caseVisualAsset, source: sourceResult.payload.data.view.target, loading: false, error: '', protected: false, preview: false }
+        : { asset: caseVisualAsset, source: '', loading: false, error: resultError(sourceResult, 'The linked visual could not be displayed.'), protected: false, preview: false })
+    }
+    openReference()
     return () => { cancelled = true }
   }, [caseDrawer.mode, caseDrawer.open, caseVisualAnchorId, caseVisualAsset, caseVisualAssetId, caseVisualItem?.part_revision?.export_control, caseVisualKey, caseVisualRevisionId, dispatch, partId])
+
+  const saveCaseVisualPreview = useCallback(async preview => {
+    if (!preview?.data_url || !caseVisualAnchorId || !caseVisualRevisionId) return null
+    const captureKey = `${caseVisualRevisionId}:${caseVisualAnchorId}`
+    if (caseVisualCaptureRef.current === captureKey) return null
+    const blob = visualPreviewToBlob(preview)
+    if (!blob) return null
+    caseVisualCaptureRef.current = captureKey
+    setCaseVisual(current => ({ ...current, source: preview.data_url, loading: false, error: '', preview: true }))
+    const result = await dispatch(cacheVisualAnchorPreview(partId, caseVisualRevisionId, caseVisualAnchorId, {
+      blob,
+      width: preview.width,
+      height: preview.height,
+    }))
+    if (!result?.ok) caseVisualCaptureRef.current = ''
+    return result
+  }, [caseVisualAnchorId, caseVisualRevisionId, dispatch, partId])
 
   const run = async (operation, success) => {
     setFeedback(null)
@@ -398,6 +449,18 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
         return anchorResult
       }
       anchorId = idOf(anchorResult.payload.data.anchor)
+      if (pendingAnchor.visual_preview && revision.export_control !== 'itar') {
+        const blob = visualPreviewToBlob(pendingAnchor.visual_preview)
+        const previewResult = blob && await dispatch(cacheVisualAnchorPreview(partId, revisionId, anchorId, {
+          blob,
+          width: pendingAnchor.visual_preview.width,
+          height: pendingAnchor.visual_preview.height,
+        }))
+        if (!previewResult?.ok) {
+          setCaseFeedback({ type: 'error', message: resultError(previewResult, 'The saved visual reference could not be stored. Please capture the feature again.') })
+          return previewResult
+        }
+      }
     }
     const result = await dispatch(createPartCollaboration({
       ...form,
@@ -512,7 +575,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
       {tab === 'files' && <section className='partWorkspacePanel'><header><div><p className='technicalLabel'>Released technical package</p><h2>Files for revision {revision.revision}</h2><p>File authoring remains in the OEM Part Workspace. Both companies can view the released package here.</p></div></header>{assets.length ? <div className='partFileList'>{assets.map(asset => <article key={idOf(asset)}><FileBox aria-hidden='true' /><div><strong>{attachmentName(asset)}</strong><span>{formatLabel(asset.role)} · {((asset.attachment?.byte_size || 0) / 1024).toFixed(1)} KB</span>{asset.attachment?.state !== 'available' && <StatusBadge tone='warning'>{formatLabel(asset.attachment?.state)}</StatusBadge>}</div><div>{(isViewableModel(asset) || asset.role === 'drawing') && <Button variant='secondary' onClick={() => { selectTab(asset.role === 'drawing' ? 'drawing' : 'model'); openAsset(asset) }}>View</Button>}<Button variant='secondary' onClick={() => downloadAsset(asset)}><Download aria-hidden='true' /> Download</Button></div></article>)}</div> : <div className='partWorkspaceEmpty'><FileUp aria-hidden='true' /><h3>No files on this released revision</h3></div>}</section>}
     </section>
 
-    <PartCaseDrawer open={caseDrawer.open} mode={caseDrawer.mode} itemDetail={caseDetail} shares={currentShare ? [currentShare] : []} productionRecords={productionRecords} defaultProductionRecordIds={defaultProductionRecordIds} lockProductionContext selectedAnchor={pendingAnchor} sourceAsset={viewer.asset} linkedVisual={caseVisual} itarControlled={revision.export_control === 'itar'} pending={mutating} upload={upload} feedback={caseFeedback} organizationType={organization?.type} relatedCompanyName={relatedCompanyName} onClose={closeCase} onOpenAnchor={focusAnchor} onCreate={createCase} onMessage={body => runCase(() => dispatch(postPartCollaborationMessage(caseDrawer.id, body)), 'Reply added.')} onUpdate={payload => runCase(() => dispatch(updatePartCollaboration(caseDrawer.id, payload)), 'Responsibility updated.')} onAction={(action, note) => runCase(() => dispatch(applyPartCollaborationAction(caseDrawer.id, { action, note, version: caseDetail.item.version })), 'Workflow decision recorded.')} onUpload={(file, itar) => runCase(() => dispatch(uploadPartCollaborationAttachment(caseDrawer.id, { file, itar: revision.export_control === 'itar' ? itar : {} })), 'Evidence attached.')} onDownloadAttachment={downloadCaseAttachment} onArchive={item => { const reason = window.prompt('Why is this closed case being archived?'); if (!reason) return null; return runCase(() => dispatch(archivePartCollaboration(idOf(item), { reason, version: item.version })), 'Closed case archived.').then(result => { if (result?.ok) closeCase(); return result }) }} onPromote={payload => runCase(() => dispatch(promotePartCollaboration(caseDrawer.id, { ...payload, production_record_id: String(record.id) })), 'Case promoted to production attention.')} />
+    <PartCaseDrawer open={caseDrawer.open} mode={caseDrawer.mode} itemDetail={caseDetail} shares={currentShare ? [currentShare] : []} productionRecords={productionRecords} defaultProductionRecordIds={defaultProductionRecordIds} lockProductionContext selectedAnchor={pendingAnchor} sourceAsset={viewer.asset} linkedVisual={caseVisual} itarControlled={revision.export_control === 'itar'} pending={mutating} upload={upload} feedback={caseFeedback} organizationType={organization?.type} relatedCompanyName={relatedCompanyName} onClose={closeCase} onOpenAnchor={focusAnchor} onVisualPreviewReady={saveCaseVisualPreview} onCreate={createCase} onMessage={body => runCase(() => dispatch(postPartCollaborationMessage(caseDrawer.id, body)), 'Reply added.')} onUpdate={payload => runCase(() => dispatch(updatePartCollaboration(caseDrawer.id, payload)), 'Responsibility updated.')} onAction={(action, note) => runCase(() => dispatch(applyPartCollaborationAction(caseDrawer.id, { action, note, version: caseDetail.item.version })), 'Workflow decision recorded.')} onUpload={(file, itar) => runCase(() => dispatch(uploadPartCollaborationAttachment(caseDrawer.id, { file, itar: revision.export_control === 'itar' ? itar : {} })), 'Evidence attached.')} onDownloadAttachment={downloadCaseAttachment} onArchive={item => { const reason = window.prompt('Why is this closed case being archived?'); if (!reason) return null; return runCase(() => dispatch(archivePartCollaboration(idOf(item), { reason, version: item.version })), 'Closed case archived.').then(result => { if (result?.ok) closeCase(); return result }) }} onPromote={payload => runCase(() => dispatch(promotePartCollaboration(caseDrawer.id, { ...payload, production_record_id: String(record.id) })), 'Case promoted to production attention.')} />
     <ResponsiveDrawer open={reviewChangesOpen} title='Request revision changes' onClose={() => setReviewChangesOpen(false)}><form className='partDrawerForm' onSubmit={event => { event.preventDefault(); const note = event.currentTarget.elements.note.value; run(() => dispatch(requestPartReviewChanges(revisionDetail.review.id, note)), 'Change request sent to the OEM.').then(result => { if (result?.ok) setReviewChangesOpen(false) }) }}><label className='textAreaField' htmlFor='production-review-note'><span>Requested change</span><textarea id='production-review-note' name='note' required minLength={3} /></label><footer><Button variant='secondary' onClick={() => setReviewChangesOpen(false)}>Cancel</Button><Button type='submit' disabled={mutating}>Send request</Button></footer></form></ResponsiveDrawer>
     <ItarAccessDialog file={itarRequest?.asset?.attachment || itarRequest?.asset} purpose={itarRequest?.purpose} open={Boolean(itarRequest)} pending={itarPending} feedback={feedback?.type === 'error' ? feedback : null} onClose={() => setItarRequest(null)} onConfirm={async attestation => { setItarPending(true); const result = itarRequest.collaborationAttachment ? await downloadCaseAttachment(itarRequest.asset, attestation) : itarRequest.purpose === 'view' ? await openAsset(itarRequest.asset, attestation) : await downloadAsset(itarRequest.asset, attestation); setItarPending(false); return result }} />
   </>

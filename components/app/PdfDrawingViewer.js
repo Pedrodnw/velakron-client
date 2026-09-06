@@ -56,10 +56,12 @@ const PdfPageThumbnail = ({ pdfDocument, pageNumber, label, active, onOpen }) =>
   </button>
 }
 
-const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selectedAnchorId = '', selectedAnchor, onSelect }) => {
+const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selectedAnchorId = '', selectedAnchor, onSelect, onPreviewReady }) => {
   const viewportRef = useRef(null)
   const sheetRef = useRef(null)
   const canvasRef = useRef(null)
+  const onPreviewReadyRef = useRef(onPreviewReady)
+  const capturedReferenceRef = useRef('')
   const [pdfDocument, setPdfDocument] = useState(null)
   const [pageCount, setPageCount] = useState(1)
   const [pageLabels, setPageLabels] = useState([])
@@ -79,6 +81,8 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
   const [selectionCurrent, setSelectionCurrent] = useState(null)
   const [selectionFeedback, setSelectionFeedback] = useState('')
   const filename = file?.display_filename || file?.original_filename || 'Technical drawing'
+
+  useEffect(() => { onPreviewReadyRef.current = onPreviewReady }, [onPreviewReady])
 
   useEffect(() => {
     if (!source) return undefined
@@ -236,7 +240,26 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
         transform: outputScale === 1 ? null : [outputScale, 0, 0, outputScale, 0, 0],
       })
       await renderTask.promise
-      if (!disposed) setDocumentState(current => ({ ...current, loading: false, rendering: false, error: '' }))
+      if (!disposed) {
+        setDocumentState(current => ({ ...current, loading: false, rendering: false, error: '' }))
+        const anchorPage = Number(selectedAnchor?.anchor_data?.page || selectedAnchor?.view_state?.page || 1)
+        const anchorId = String(selectedAnchor?.id || selectedAnchor?._id || '')
+        const kind = selectedAnchor?.anchor_kind || selectedAnchor?.kind
+        const captureKey = `${source}:${anchorId}:${page}:${rotation}:${scale}`
+        if (onPreviewReadyRef.current && anchorId && anchorPage === page && ['drawing_point', 'drawing_region'].includes(kind) && capturedReferenceRef.current !== captureKey) {
+          const preview = captureVisualContextPreview(canvas, {
+            kind: kind === 'drawing_region' ? 'region' : 'point',
+            x: selectedAnchor.anchor_data.x,
+            y: selectedAnchor.anchor_data.y,
+            width: selectedAnchor.anchor_data.width,
+            height: selectedAnchor.anchor_data.height,
+          })
+          if (preview) {
+            capturedReferenceRef.current = captureKey
+            onPreviewReadyRef.current(preview)
+          }
+        }
+      }
     }
     render().catch(error => {
       if (disposed || error?.name === 'RenderingCancelledException') return
@@ -246,7 +269,7 @@ const PdfDrawingViewer = ({ file, source, annotationMode, anchors = [], selected
       disposed = true
       renderTask?.cancel()
     }
-  }, [customScale, fitMode, page, pageCount, pdfDocument, rotation, viewportSize.height, viewportSize.width])
+  }, [customScale, fitMode, page, pageCount, pdfDocument, rotation, selectedAnchor, source, viewportSize.height, viewportSize.width])
 
   const changePage = value => setPage(clampDrawingPage(value, pageCount))
   const zoom = direction => {

@@ -4,6 +4,9 @@ import { openDownloadTarget, uploadFileToIntent } from '../../fileTransfer'
 import { uploadMimeForFile } from '../../modelFiles'
 import { organizationContextCleared, organizationSwitchRequested } from '../appContext'
 
+export const PART_MODEL_PREVIEW_RENDERER_VERSION = 'cad-isometric-v1'
+export const PART_LINKED_VISUAL_RENDERER_VERSION = 'linked-visual-v1'
+
 const initialState = {
   ids: [],
   byId: {},
@@ -270,6 +273,66 @@ export const uploadPartCollaborationAttachment = (itemId, { file, caption = '', 
 })
 
 export const requestPartAssetView = (partId, revisionId, assetId, attestation = {}) => call({ url: `/parts/${partId}/revisions/${revisionId}/assets/${assetId}/view-intent`, method: 'post', data: attestation })
+export const requestPartModelPreviewView = (partId, revisionId, assetId) => call({
+  url: `/parts/${partId}/revisions/${revisionId}/assets/${assetId}/model-preview-view-intent`,
+  method: 'post',
+  data: {},
+})
+export const cachePartModelPreview = (partId, revisionId, assetId, { blob, width, height }) => async dispatch => {
+  const intent = await dispatch(call({
+    url: `/parts/${partId}/revisions/${revisionId}/assets/${assetId}/model-preview-intents`,
+    method: 'post',
+    data: {
+      byte_size: blob.size,
+      width,
+      height,
+      renderer_version: PART_MODEL_PREVIEW_RENDERER_VERSION,
+    },
+  }))
+  if (!intent?.ok || intent.payload?.data?.existing) return intent
+  try {
+    await uploadFileToIntent({ file: blob, upload: intent.payload.data.upload })
+  } catch (error) {
+    return { ok: false, error: error.response?.data?.error || { message: error.message } }
+  }
+  const previewId = intent.payload?.data?.preview?.id
+  if (!previewId) return { ok: false, error: { message: 'The generated preview upload could not be finalized.' } }
+  return dispatch(call({
+    url: `/parts/${partId}/revisions/${revisionId}/assets/${assetId}/model-previews/${previewId}/finalize`,
+    method: 'post',
+    data: {},
+  }))
+}
+export const requestVisualAnchorPreviewView = (partId, revisionId, anchorId) => call({
+  url: `/parts/${partId}/revisions/${revisionId}/anchors/${anchorId}/preview-view-intent`,
+  method: 'post',
+  data: {},
+})
+export const cacheVisualAnchorPreview = (partId, revisionId, anchorId, { blob, width, height }) => async dispatch => {
+  const intent = await dispatch(call({
+    url: `/parts/${partId}/revisions/${revisionId}/anchors/${anchorId}/preview-intents`,
+    method: 'post',
+    data: {
+      byte_size: blob.size,
+      width,
+      height,
+      renderer_version: PART_LINKED_VISUAL_RENDERER_VERSION,
+    },
+  }))
+  if (!intent?.ok || intent.payload?.data?.existing) return intent
+  try {
+    await uploadFileToIntent({ file: blob, upload: intent.payload.data.upload })
+  } catch (error) {
+    return { ok: false, error: error.response?.data?.error || { message: error.message } }
+  }
+  const previewId = intent.payload?.data?.preview?.id
+  if (!previewId) return { ok: false, error: { message: 'The linked visual upload could not be finalized.' } }
+  return dispatch(call({
+    url: `/parts/${partId}/revisions/${revisionId}/anchors/${anchorId}/previews/${previewId}/finalize`,
+    method: 'post',
+    data: {},
+  }))
+}
 export const requestPartAssetDownload = (partId, revisionId, assetId, attestation = {}) => async dispatch => {
   const result = await dispatch(call({ url: `/parts/${partId}/revisions/${revisionId}/assets/${assetId}/download-intent`, method: 'post', data: attestation }))
   if (result?.ok) openDownloadTarget(result.payload.data.download.target)

@@ -1467,6 +1467,8 @@
 .drawerBackdrop {
   align-items: stretch;
   justify-items: end;
+  overflow: hidden;
+  overscroll-behavior: none;
   padding: 0;
 }
 
@@ -1475,6 +1477,7 @@
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
+  overscroll-behavior: contain;
   border-left: 1px solid var(--app-border);
   background: var(--app-surface);
   box-shadow: -24px 0 70px rgba(15, 28, 44, 0.18);
@@ -1519,6 +1522,8 @@
 
   &__body {
     overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     height: calc(100dvh - 70px);
     padding: 22px;
   }
