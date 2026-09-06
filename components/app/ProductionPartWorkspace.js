@@ -377,7 +377,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
     }
     openReference()
     return () => { cancelled = true }
-  }, [caseDrawer.mode, caseDrawer.open, caseVisualAnchorId, caseVisualAsset, caseVisualAssetId, caseVisualItem?.part_revision?.export_control, caseVisualKey, caseVisualRevisionId, dispatch, partId])
+  }, [caseDrawer.mode, caseDrawer.open, caseVisualAnchorId, caseVisualAssetId, caseVisualItem?.part_revision?.export_control, caseVisualKey, caseVisualRevisionId, dispatch, partId])
 
   const saveCaseVisualPreview = useCallback(async preview => {
     if (!preview?.data_url || !caseVisualAnchorId || !caseVisualRevisionId) return null
