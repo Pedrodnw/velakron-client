@@ -30,7 +30,6 @@ const PlanCard = ({ plan, currentPlanCode, scheduledPlanCode, canManage, enrollm
     {plan.code === 'professional' && !current && <span className='billingPlanCard__recommended'><Crown aria-hidden='true' /> Built for scale</span>}
     <header>
       <div>
-        <p className='technicalLabel'>{plan.code.replace('_', ' ')}</p>
         <h3>{plan.name}</h3>
       </div>
       {current && <StatusBadge tone='success'><Check aria-hidden='true' /> Current</StatusBadge>}

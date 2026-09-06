@@ -3440,6 +3440,8 @@
 .productionPartWorkspaceFallback,
 .productionPartWorkspaceLoading { grid-column: 1 / -1; }
 
+.productionProgress { grid-column: 1 / -1; }
+
 .productionPartWorkspaceLoading {
   display: flex;
   min-height: 180px;
@@ -3467,9 +3469,37 @@
   }
 }
 
+.productionStageTracker { display: grid; gap: 18px; }
+
+.productionStageSummary {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(280px, 1.3fr);
+  gap: 24px;
+  align-items: end;
+  padding: 15px 17px;
+  border: 1px solid var(--vk-info-border);
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--vk-info-soft), rgba(255, 255, 255, 0.82));
+
+  > div:first-child {
+    > span { display: block; margin-bottom: 4px; color: var(--vk-info); font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    > strong { display: block; font-size: 17px; letter-spacing: -.02em; }
+  }
+
+  &__progress {
+    display: grid;
+    gap: 7px;
+
+    > span { color: var(--app-text-muted); font-size: 10px; font-weight: 650; text-align: right; }
+    > div { height: 6px; overflow: hidden; border-radius: 999px; background: rgba(116, 137, 166, .17); }
+    > div > span { display: block; height: 100%; border-radius: inherit; background: var(--vk-brand-gradient); transition: width 180ms ease; }
+  }
+}
+
 .productionStages {
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -3477,48 +3507,53 @@
   li {
     position: relative;
     display: grid;
-    grid-template-columns: 26px minmax(0, 1fr);
-    gap: 10px;
-    min-height: 45px;
+    min-width: 0;
+    min-height: 86px;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 11px;
+    align-items: start;
+    padding: 13px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    background: var(--app-surface-subtle);
     color: var(--app-text-muted);
 
-    &::after {
-      position: absolute;
-      top: 24px;
-      bottom: 0;
-      left: 12px;
-      width: 1px;
-      background: var(--app-border-strong);
-      content: '';
-    }
-
-    &:last-child::after { display: none; }
-
-    > span {
-      position: relative;
-      z-index: 1;
+    .productionStageMarker {
       display: grid;
-      width: 25px;
-      height: 25px;
+      width: 30px;
+      height: 30px;
       place-items: center;
       border: 1px solid var(--app-border-strong);
       border-radius: 50%;
       background: var(--app-surface);
+      color: var(--app-text-muted);
+      font-size: 10px;
+      font-style: normal;
+      font-weight: 800;
     }
 
     svg { width: 12px; height: 12px; }
-    strong { display: block; padding-top: 3px; font-size: 12px; }
-    small { display: block; margin-top: 2px; color: var(--app-text-muted); font-size: 10px; text-transform: uppercase; }
+    div { min-width: 0; }
+    strong { display: block; overflow-wrap: anywhere; font-size: 12px; line-height: 1.35; }
+    small { display: block; margin-bottom: 3px; color: var(--app-text-faint); font-size: 8px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; }
+    div > span { display: block; margin-top: 4px; color: var(--app-text-muted); font-size: 9px; font-weight: 650; text-transform: uppercase; }
+    em { padding: 4px 6px; border-radius: 999px; background: var(--app-surface); color: var(--app-text-faint); font-size: 8px; font-style: normal; font-weight: 750; text-transform: uppercase; }
 
     &.is-complete {
       color: var(--app-text-secondary);
-      &::after { background: var(--app-border-strong); }
-      > span { border-color: var(--app-border-strong); background: var(--app-surface-subtle); }
+      border-color: var(--vk-success-border);
+      background: linear-gradient(145deg, var(--vk-success-soft), var(--app-surface));
+      .productionStageMarker { border-color: var(--vk-success-border); background: var(--vk-success-soft); color: var(--vk-success); }
+      em { background: var(--vk-success-soft); color: var(--vk-success); }
     }
 
     &.is-current {
       color: var(--app-text-secondary);
-      > span { border-color: var(--vk-info); background: var(--vk-info-soft); color: var(--vk-info); box-shadow: 0 0 0 2px var(--vk-focus-ring); }
+      border-color: var(--vk-info);
+      background: linear-gradient(145deg, var(--vk-info-soft), var(--app-surface));
+      box-shadow: 0 0 0 2px var(--vk-focus-ring);
+      .productionStageMarker { border-color: var(--vk-info); background: var(--vk-info); color: #fff; }
+      em { background: var(--vk-info-soft); color: var(--vk-info); }
     }
 
     &.is-cancelled { color: var(--app-text-secondary); }
@@ -3555,6 +3590,7 @@
   .productionFacts { grid-row: auto; }
   .productionTimelinePanel,
   .productionLifecycleActions { grid-column: auto; }
+  .productionStages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .productionStatusStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .productionStatusStrip:has(.productionStatusStrip__itar) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -3563,6 +3599,9 @@
   .productionFilters,
   .productionFormGrid,
   .productionStatusStrip { grid-template-columns: 1fr; }
+  .productionStageSummary,
+  .productionStages { grid-template-columns: 1fr; }
+  .productionStageSummary__progress > span { text-align: left; }
   .productionStatusStrip:has(.productionStatusStrip__itar) { grid-template-columns: 1fr; }
 
   .productionFormSteps {
