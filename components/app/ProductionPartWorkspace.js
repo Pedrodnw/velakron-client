@@ -1,10 +1,11 @@
 import { AlertTriangle, Box, Check, CheckCircle2, ChevronRight, ClipboardCheck, CircleDot, Clock3, Download, Edit3, FileBox, FileText, FileUp, Info, MessageSquareText, PackageCheck, Plus, RefreshCw, ShieldAlert, Truck } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { getFeatureEnabled, getHasPermission } from '../../store/slices/appContext'
 import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
-import { isViewableModel } from '../../store/modelFiles'
+import { isViewableModel, preferredPartThumbnailAsset } from '../../store/modelFiles'
 import {
   acknowledgePartRequirement,
   acknowledgePartRevision,
@@ -52,6 +53,8 @@ const TABS = [
   ['files', 'Files', FileUp],
 ]
 
+const ThumbnailModelViewer = dynamic(() => import('./ModelViewer'), { ssr: false })
+
 const idOf = value => String(value?.id || value?._id || value || '')
 const revisionIdOf = value => idOf(value?.part_revision || value)
 const shareIdOf = value => idOf(value)
@@ -87,26 +90,41 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
   const dispatch = useDispatch()
   const revisionDetail = useSelector(partSelectors.getRevisionDetail(revisionId))
   const [source, setSource] = useState('')
+  const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
-  const thumbnail = (revisionDetail?.assets || []).find(asset => asset.role === 'thumbnail' && asset.is_primary)
-    || (revisionDetail?.assets || []).find(asset => asset.role === 'thumbnail')
+  const preview = useMemo(() => preferredPartThumbnailAsset(revisionDetail?.assets), [revisionDetail?.assets])
+  const previewAsset = preview?.asset || null
+  const previewKind = preview?.kind || ''
+  const previewAssetId = idOf(previewAsset)
 
   useEffect(() => {
     if (!partId || !revisionId || revisionDetail || exportControl === 'itar') return
     dispatch(loadPartRevision(partId, revisionId))
   }, [dispatch, exportControl, partId, revisionDetail, revisionId])
   useEffect(() => {
-    const assetId = idOf(thumbnail)
-    if (!partId || !revisionId || !assetId || exportControl === 'itar') return
+    if (!partId || !revisionId || !previewAssetId || exportControl === 'itar') {
+      setSource('')
+      setLoading(false)
+      setFailed(false)
+      return
+    }
     let cancelled = false
     let objectUrl = ''
+    setSource('')
+    setLoading(true)
     setFailed(false)
-    dispatch(requestPartAssetView(partId, revisionId, assetId, {})).then(result => {
+    dispatch(requestPartAssetView(partId, revisionId, previewAssetId, {})).then(result => {
       if (cancelled) return
-      if (!result?.ok) setFailed(true)
+      if (!result?.ok) {
+        setLoading(false)
+        setFailed(true)
+      }
       else {
         const target = result.payload.data.view.target
-        if (/^https?:\/\//i.test(String(target || ''))) setSource(target)
+        if (previewKind === 'model' || /^https?:\/\//i.test(String(target || ''))) {
+          setSource(target)
+          setLoading(false)
+        }
         else fetch(resolveFileTransferTarget(target), fileTransferFetchOptions(target))
           .then(response => {
             if (!response.ok) throw new Error('Thumbnail could not be opened')
@@ -116,18 +134,33 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
             if (cancelled) return
             objectUrl = window.URL.createObjectURL(blob)
             setSource(objectUrl)
+            setLoading(false)
           })
-          .catch(() => { if (!cancelled) setFailed(true) })
+          .catch(() => {
+            if (!cancelled) {
+              setLoading(false)
+              setFailed(true)
+            }
+          })
       }
     })
     return () => {
       cancelled = true
       if (objectUrl) window.URL.revokeObjectURL(objectUrl)
     }
-  }, [dispatch, exportControl, partId, revisionId, thumbnail])
+  }, [dispatch, exportControl, partId, previewAssetId, previewKind, revisionId])
 
-  return <div className={`productionPartThumbnail${source && !failed ? ' has-image' : ''}`} aria-label={source && !failed ? 'Isometric part thumbnail' : 'Part thumbnail placeholder'}>
-    {source && !failed ? <img src={source} alt='' /> : exportControl === 'itar' ? <ShieldAlert aria-hidden='true' /> : <Box aria-hidden='true' />}
+  const showingPreview = Boolean(source && !failed)
+  return <div className={`productionPartThumbnail${showingPreview ? ' has-image' : ''}`} aria-label={showingPreview ? 'Isometric part thumbnail' : 'Part thumbnail placeholder'}>
+    {showingPreview && previewKind === 'model'
+      ? <ThumbnailModelViewer file={previewAsset?.attachment || previewAsset} source={source} compact />
+      : showingPreview
+        ? <img src={source} alt='' onError={() => setFailed(true)} />
+        : exportControl === 'itar'
+          ? <ShieldAlert aria-hidden='true' />
+          : loading
+            ? <RefreshCw className='spin' aria-hidden='true' />
+            : <Box aria-hidden='true' />}
   </div>
 }
 

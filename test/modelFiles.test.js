@@ -4,6 +4,7 @@ import {
   modelExtension,
   modelFormatLabel,
   modelMimeForFilename,
+  preferredPartThumbnailAsset,
   suggestedPartAssetRole,
   uploadMimeForFile,
 } from '../store/modelFiles'
@@ -37,5 +38,15 @@ describe('3D model file helpers', () => {
     expect(suggestedPartAssetRole({ name: 'inspection.txt' })).toMatchObject({
       role: '', isPrimary: false, confidence: 'choice_required',
     })
+  })
+
+  it('prefers a dedicated production thumbnail and falls back to the primary 3D model', () => {
+    const primaryModel = { id: 'model-primary', role: 'primary_model', is_primary: true, attachment: { display_filename: 'part.step', mime_type: 'model/step' } }
+    const alternateModel = { id: 'model-alternate', role: 'alternate_model', attachment: { display_filename: 'alternate.stl', mime_type: 'model/stl' } }
+    const thumbnail = { id: 'thumbnail', role: 'thumbnail', is_primary: true, attachment: { display_filename: 'part.png', mime_type: 'image/png' } }
+
+    expect(preferredPartThumbnailAsset([alternateModel, primaryModel])).toEqual({ asset: primaryModel, kind: 'model' })
+    expect(preferredPartThumbnailAsset([primaryModel, thumbnail])).toEqual({ asset: thumbnail, kind: 'image' })
+    expect(preferredPartThumbnailAsset([{ role: 'drawing', attachment: { display_filename: 'part.pdf', mime_type: 'application/pdf' } }])).toBeNull()
   })
 })

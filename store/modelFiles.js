@@ -49,6 +49,18 @@ export const isViewableModel = file => {
     || modelMimeForFilename(filename) === mimeType
 }
 
+export const preferredPartThumbnailAsset = assets => {
+  const candidates = Array.isArray(assets) ? assets : []
+  const thumbnail = candidates.find(asset => asset?.role === 'thumbnail' && asset?.is_primary)
+    || candidates.find(asset => asset?.role === 'thumbnail')
+  if (thumbnail) return { asset: thumbnail, kind: 'image' }
+
+  const model = candidates.find(asset => asset?.role === 'primary_model' && asset?.is_primary && isViewableModel(asset))
+    || candidates.find(asset => asset?.role === 'primary_model' && isViewableModel(asset))
+    || candidates.find(isViewableModel)
+  return model ? { asset: model, kind: 'model' } : null
+}
+
 export const modelFormatLabel = file => {
   const extension = modelExtension(file?.display_filename || file?.original_filename)
   return extension === 'stl' ? 'STL' : extension ? 'STEP' : '3D model'

@@ -1,4 +1,4 @@
-import { Focus, Layers3, LoaderCircle, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react'
+import { Box, Focus, Layers3, LoaderCircle, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { modelExtension, modelFormatLabel } from '../../store/modelFiles'
@@ -159,6 +159,7 @@ const ModelViewer = ({
   selectedAnchor = null,
   onSelect,
   onOpenCase,
+  compact = false,
 }) => {
   const mountRef = useRef(null)
   const fitRef = useRef(() => {})
@@ -226,19 +227,20 @@ const ModelViewer = ({
         const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 1000000)
         camera.up.set(0, 0, 1)
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact ? 1.5 : 2))
         renderer.setClearColor(0xffffff, 0)
         renderer.outputColorSpace = THREE.SRGBColorSpace
         renderer.toneMapping = THREE.ACESFilmicToneMapping
         renderer.toneMappingExposure = 0.94
         renderer.shadowMap.enabled = false
         mountRef.current.replaceChildren(renderer.domElement)
-        renderer.domElement.setAttribute('aria-label', `Interactive ${modelFormatLabel(file)} viewer`)
-        renderer.domElement.setAttribute('aria-describedby', guidanceId)
-        renderer.domElement.setAttribute('role', 'application')
-        renderer.domElement.tabIndex = 0
+        renderer.domElement.setAttribute('aria-label', compact ? `${modelFormatLabel(file)} isometric preview` : `Interactive ${modelFormatLabel(file)} viewer`)
+        if (!compact) renderer.domElement.setAttribute('aria-describedby', guidanceId)
+        renderer.domElement.setAttribute('role', compact ? 'img' : 'application')
+        renderer.domElement.tabIndex = compact ? -1 : 0
 
         controls = new OrbitControls(camera, renderer.domElement)
+        controls.enabled = !compact
         controls.enableDamping = true
         controls.dampingFactor = 0.08
         controls.screenSpacePanning = true
@@ -396,7 +398,7 @@ const ModelViewer = ({
           camera.lookAt(controls.target)
           controls.update()
         }
-        renderer.domElement.addEventListener('keydown', keyboardMove)
+        if (!compact) renderer.domElement.addEventListener('keydown', keyboardMove)
 
         const raycaster = new THREE.Raycaster()
         const pointer = new THREE.Vector2()
@@ -460,9 +462,11 @@ const ModelViewer = ({
             visual_preview: visualPreview,
           })
         }
-        renderer.domElement.addEventListener('pointerdown', pointerDown)
-        renderer.domElement.addEventListener('pointerup', pointerUp)
-        controls.addEventListener('change', projectCaseMarkers)
+        if (!compact) {
+          renderer.domElement.addEventListener('pointerdown', pointerDown)
+          renderer.domElement.addEventListener('pointerup', pointerUp)
+          controls.addEventListener('change', projectCaseMarkers)
+        }
         fitRef.current = fit
         zoomRef.current = factor => {
           const offset = camera.position.clone().sub(controls.target).multiplyScalar(factor)
@@ -488,7 +492,7 @@ const ModelViewer = ({
           controls.update()
           positionStudioShadow()
           renderer.render(scene, camera)
-          animationFrame = requestAnimationFrame(render)
+          if (!compact) animationFrame = requestAnimationFrame(render)
         }
         render()
         setStatus('ready')
@@ -522,7 +526,15 @@ const ModelViewer = ({
       renderer?.dispose()
       renderer?.domElement?.remove()
     }
-  }, [file, guidanceId, source])
+  }, [compact, file, guidanceId, source])
+
+  if (compact) return <div className='modelViewer modelViewer--thumbnail'>
+    <div className='modelViewer__viewport'>
+      <div className='modelViewer__canvas' ref={mountRef} />
+      {status === 'loading' && <div className='modelViewer__state' aria-label='Preparing part thumbnail'><LoaderCircle className='spin' aria-hidden='true' /></div>}
+      {status === 'error' && <div className='modelViewer__state modelViewer__state--error' aria-label={error || 'Part thumbnail unavailable'}><Box aria-hidden='true' /></div>}
+    </div>
+  </div>
 
   return <section className='modelViewer'>
     <div className='modelViewer__toolbar'>

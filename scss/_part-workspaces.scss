@@ -128,9 +128,13 @@
 .partWorkspaceActionsMenu > div button strong { font-size: 11px; }
 .partWorkspaceActionsMenu > div button small { margin-top: 2px; color: var(--app-text-muted); font-size: 9px; line-height: 1.4; }
 
-.productionPartThumbnail { display: grid; width: 100%; height: 100%; place-items: center; color: var(--vk-info); }
+.productionPartThumbnail { display: grid; overflow: hidden; width: 100%; height: 100%; place-items: center; color: var(--vk-info); }
 .productionPartThumbnail svg { width: 32px; height: 32px; stroke-width: 1.4; }
 .productionPartThumbnail img { display: block; width: 100%; height: 100%; padding: 6px; object-fit: contain; }
+.productionPartThumbnail .modelViewer--thumbnail { width: 100%; height: 100%; gap: 0; }
+.productionPartThumbnail .modelViewer--thumbnail .modelViewer__viewport { height: 100%; border: 0; border-radius: 0; box-shadow: none; }
+.productionPartThumbnail .modelViewer--thumbnail .modelViewer__state { padding: 0; background: rgba(255, 255, 255, .6); }
+.productionPartThumbnail .modelViewer--thumbnail .modelViewer__state svg { width: 22px; height: 22px; }
 .productionPartWorkspace { min-width: 0; margin-bottom: 0; }
 .productionPartWorkspace > .partNextStep { margin: 0; border: 0; border-bottom: 1px solid var(--app-border); border-radius: 0; }
 .partWorkspaceTabs.productionPartWorkspace__tabs { grid-template-columns: repeat(8, minmax(96px, 1fr)); overflow-x: hidden; }
