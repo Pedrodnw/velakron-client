@@ -17,17 +17,17 @@ describe('visual context preview', () => {
   })
 
   it('zooms a linked visual around its selected point', () => {
-    const crop = focusedVisualPreviewCrop(720, 405, { kind: 'point', x: 0.5, y: 0.5 }, { zoom: 1.45 })
+    const crop = focusedVisualPreviewCrop(720, 405, { kind: 'point', x: 0.5, y: 0.5 }, { zoom: 1.7 })
 
-    expect(crop.width).toBeCloseTo(496.55, 1)
-    expect(crop.height).toBeCloseTo(279.31, 1)
+    expect(crop.width).toBeCloseTo(423.53, 1)
+    expect(crop.height).toBeCloseTo(238.24, 1)
     expect(crop.selection).toEqual({ kind: 'point', x: 0.5, y: 0.5 })
   })
 
   it('keeps an edge selection visible when focusing the linked visual', () => {
-    const crop = focusedVisualPreviewCrop(720, 405, { kind: 'point', x: 0.96, y: 0.08 }, { zoom: 1.45 })
+    const crop = focusedVisualPreviewCrop(720, 405, { kind: 'point', x: 0.96, y: 0.08 }, { zoom: 1.7 })
 
-    expect(crop.x).toBeCloseTo(223.45, 1)
+    expect(crop.x).toBeCloseTo(296.47, 1)
     expect(crop.y).toBe(0)
     expect(crop.selection.x).toBeGreaterThan(0.9)
     expect(crop.selection.y).toBeGreaterThan(0)

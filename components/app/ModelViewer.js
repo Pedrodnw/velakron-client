@@ -484,7 +484,7 @@ const ModelViewer = ({
             kind: 'point',
             x: (projectedPoint.x + 1) / 2,
             y: (1 - projectedPoint.y) / 2,
-          }, { zoom: 1.45 })
+          }, { zoom: 1.7 })
           if (!preview) return
           capturedReferenceRef.current = captureKey
           onPreviewReadyRef.current(preview)
@@ -576,7 +576,7 @@ const ModelViewer = ({
             kind: 'point',
             x: (projectedPoint.x + 1) / 2,
             y: (1 - projectedPoint.y) / 2,
-          }, { zoom: 1.45 })
+          }, { zoom: 1.7 })
           setSelectionFeedback('Surface captured. Opening the case form with this visual context.')
           onSelectRef.current({
             anchor_kind: 'model_face',
