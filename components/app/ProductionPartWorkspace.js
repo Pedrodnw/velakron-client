@@ -99,6 +99,7 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const cacheAttemptedRef = useRef('')
+  const renderedPreviewUrlRef = useRef('')
   const preview = useMemo(() => preferredPartThumbnailAsset(revisionDetail?.assets), [revisionDetail?.assets])
   const previewAsset = preview?.asset || null
   const previewKind = preview?.kind || ''
@@ -108,6 +109,9 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
     if (!partId || !revisionId || revisionDetail || exportControl === 'itar') return
     dispatch(loadPartRevision(partId, revisionId))
   }, [dispatch, exportControl, partId, revisionDetail, revisionId])
+  useEffect(() => () => {
+    if (renderedPreviewUrlRef.current) window.URL.revokeObjectURL(renderedPreviewUrlRef.current)
+  }, [])
   useEffect(() => {
     if (!partId || !revisionId || !previewAssetId || exportControl === 'itar') {
       setSource('')
@@ -168,6 +172,11 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
 
   const cacheRenderedPreview = useCallback(({ blob, width, height }) => {
     if (previewKind !== 'model' || exportControl === 'itar' || !previewAssetId) return
+    if (renderedPreviewUrlRef.current) window.URL.revokeObjectURL(renderedPreviewUrlRef.current)
+    renderedPreviewUrlRef.current = window.URL.createObjectURL(blob)
+    setSource(renderedPreviewUrlRef.current)
+    setSourceKind('image')
+    setFailed(false)
     const cacheKey = `${revisionId}:${previewAssetId}`
     if (cacheAttemptedRef.current === cacheKey) return
     cacheAttemptedRef.current = cacheKey
@@ -340,6 +349,13 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
     autoOpenedAssetRef.current = key
     openAsset(primary)
   }, [openAsset, revisionId, selectedVisualAssets, tab, viewer.asset])
+  useEffect(() => {
+    if (['model', 'drawing'].includes(tab)) return
+    autoOpenedAssetRef.current = ''
+    setViewer(current => current.asset || current.source || current.loading
+      ? { asset: null, source: '', loading: false }
+      : current)
+  }, [tab])
 
   const caseVisualItem = caseDetail?.item
   const caseVisualAnchorId = idOf(caseVisualItem?.visual_anchor)
