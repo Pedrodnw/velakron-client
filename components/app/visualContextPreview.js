@@ -2,6 +2,7 @@ const DEFAULT_WIDTH = 720
 const DEFAULT_HEIGHT = 405
 
 const clamp = value => Math.min(1, Math.max(0, Number(value) || 0))
+const clampRange = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value))
 
 export const mapVisualPreviewSelection = (selection = {}, contentBounds = {}) => {
   const bounds = {
@@ -20,6 +21,40 @@ export const mapVisualPreviewSelection = (selection = {}, contentBounds = {}) =>
     width: Math.min(bounds.x + bounds.width - x, clamp(selection.width) * bounds.width),
     height: Math.min(bounds.y + bounds.height - y, clamp(selection.height) * bounds.height),
   }
+}
+
+export const focusedVisualPreviewCrop = (sourceWidth, sourceHeight, selection = {}, options = {}) => {
+  const width = Math.max(1, Number(sourceWidth) || 1)
+  const height = Math.max(1, Number(sourceHeight) || 1)
+  const outputAspect = Math.max(0.1, Number(options.outputAspect) || (DEFAULT_WIDTH / DEFAULT_HEIGHT))
+  const zoom = clampRange(Number(options.zoom) || 1, 1, 2)
+  const sourceAspect = width / height
+  const baseWidth = sourceAspect > outputAspect ? height * outputAspect : width
+  const baseHeight = sourceAspect > outputAspect ? height : width / outputAspect
+  const cropWidth = baseWidth / zoom
+  const cropHeight = baseHeight / zoom
+  const selectionWidth = selection.kind === 'region' ? clamp(selection.width) : 0
+  const selectionHeight = selection.kind === 'region' ? clamp(selection.height) : 0
+  const focusX = (clamp(selection.x) + (selectionWidth / 2)) * width
+  const focusY = (clamp(selection.y) + (selectionHeight / 2)) * height
+  const x = clampRange(focusX - (cropWidth / 2), 0, width - cropWidth)
+  const y = clampRange(focusY - (cropHeight / 2), 0, height - cropHeight)
+  const mappedX = clamp(((clamp(selection.x) * width) - x) / cropWidth)
+  const mappedY = clamp(((clamp(selection.y) * height) - y) / cropHeight)
+  const mappedSelection = selection.kind === 'region'
+    ? {
+        kind: 'region',
+        x: mappedX,
+        y: mappedY,
+        width: Math.min(1 - mappedX, (selectionWidth * width) / cropWidth),
+        height: Math.min(1 - mappedY, (selectionHeight * height) / cropHeight),
+      }
+    : {
+        kind: 'point',
+        x: mappedX,
+        y: mappedY,
+      }
+  return { x, y, width: cropWidth, height: cropHeight, selection: mappedSelection }
 }
 
 const drawPointMarker = (context, selection, width, height) => {
@@ -83,11 +118,6 @@ export const captureVisualContextPreview = (source, selection, options = {}) => 
   try {
     const width = Math.max(1, Number(options.width) || DEFAULT_WIDTH)
     const height = Math.max(1, Number(options.height) || DEFAULT_HEIGHT)
-    const scale = Math.min(width / sourceWidth, height / sourceHeight)
-    const drawnWidth = sourceWidth * scale
-    const drawnHeight = sourceHeight * scale
-    const offsetX = (width - drawnWidth) / 2
-    const offsetY = (height - drawnHeight) / 2
     const canvas = document.createElement('canvas')
     canvas.width = width
     canvas.height = height
@@ -95,14 +125,29 @@ export const captureVisualContextPreview = (source, selection, options = {}) => 
     if (!context) return null
     context.fillStyle = '#f7f9fc'
     context.fillRect(0, 0, width, height)
-    context.drawImage(source, offsetX, offsetY, drawnWidth, drawnHeight)
-    const contentBounds = {
-      x: offsetX / width,
-      y: offsetY / height,
-      width: drawnWidth / width,
-      height: drawnHeight / height,
+    const zoom = Math.max(1, Number(options.zoom) || 1)
+    let mappedSelection
+    if (zoom > 1) {
+      const crop = focusedVisualPreviewCrop(sourceWidth, sourceHeight, selection, {
+        outputAspect: width / height,
+        zoom,
+      })
+      context.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, width, height)
+      mappedSelection = crop.selection
+    } else {
+      const scale = Math.min(width / sourceWidth, height / sourceHeight)
+      const drawnWidth = sourceWidth * scale
+      const drawnHeight = sourceHeight * scale
+      const offsetX = (width - drawnWidth) / 2
+      const offsetY = (height - drawnHeight) / 2
+      context.drawImage(source, offsetX, offsetY, drawnWidth, drawnHeight)
+      mappedSelection = mapVisualPreviewSelection(selection, {
+        x: offsetX / width,
+        y: offsetY / height,
+        width: drawnWidth / width,
+        height: drawnHeight / height,
+      })
     }
-    const mappedSelection = mapVisualPreviewSelection(selection, contentBounds)
     drawVisualPreviewSelection(context, mappedSelection, width, height)
     return {
       data_url: canvas.toDataURL('image/png'),

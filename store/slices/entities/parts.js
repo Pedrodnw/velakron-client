@@ -5,7 +5,7 @@ import { uploadMimeForFile } from '../../modelFiles'
 import { organizationContextCleared, organizationSwitchRequested } from '../appContext'
 
 export const PART_MODEL_PREVIEW_RENDERER_VERSION = 'cad-isometric-v1'
-export const PART_LINKED_VISUAL_RENDERER_VERSION = 'linked-visual-v1'
+export const PART_LINKED_VISUAL_RENDERER_VERSION = 'linked-visual-v2-focused'
 
 const initialState = {
   ids: [],
