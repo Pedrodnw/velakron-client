@@ -172,6 +172,27 @@ const disposeObject = object => {
 
 const humanize = value => String(value || '').replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase())
 
+const captureIsometricThumbnail = (sourceCanvas, callback) => {
+  if (!sourceCanvas || !callback) return
+  const size = 256
+  const previewCanvas = document.createElement('canvas')
+  previewCanvas.width = size
+  previewCanvas.height = size
+  const context = previewCanvas.getContext('2d')
+  if (!context) return
+  context.fillStyle = '#f5f8fc'
+  context.fillRect(0, 0, size, size)
+  const sourceWidth = Math.max(Number(sourceCanvas.width) || 1, 1)
+  const sourceHeight = Math.max(Number(sourceCanvas.height) || 1, 1)
+  const scale = Math.min(size / sourceWidth, size / sourceHeight)
+  const width = sourceWidth * scale
+  const height = sourceHeight * scale
+  context.drawImage(sourceCanvas, (size - width) / 2, (size - height) / 2, width, height)
+  previewCanvas.toBlob(blob => {
+    if (blob?.size) callback({ blob, width: size, height: size })
+  }, 'image/png')
+}
+
 const ModelViewer = ({
   file,
   source,
@@ -183,6 +204,7 @@ const ModelViewer = ({
   onSelect,
   onOpenCase,
   onPreviewReady,
+  onThumbnailReady,
   compact = false,
 }) => {
   const dispatch = useDispatch()
@@ -193,6 +215,7 @@ const ModelViewer = ({
   const onSelectRef = useRef(onSelect)
   const onOpenCaseRef = useRef(onOpenCase)
   const onPreviewReadyRef = useRef(onPreviewReady)
+  const onThumbnailReadyRef = useRef(onThumbnailReady)
   const selectedAnchorRef = useRef(selectedAnchor)
   const capturedReferenceRef = useRef('')
   const trackedEventsRef = useRef(new Set())
@@ -226,6 +249,7 @@ const ModelViewer = ({
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
   useEffect(() => { onOpenCaseRef.current = onOpenCase }, [onOpenCase])
   useEffect(() => { onPreviewReadyRef.current = onPreviewReady }, [onPreviewReady])
+  useEffect(() => { onThumbnailReadyRef.current = onThumbnailReady }, [onThumbnailReady])
   useEffect(() => {
     annotationModeRef.current = annotationMode
     setSelectionFeedback(annotationMode ? 'Click once on a visible model surface. Dragging changes the view without selecting.' : '')
@@ -614,22 +638,19 @@ const ModelViewer = ({
         document.addEventListener('visibilitychange', documentVisibilityChanged)
         resize()
         fit()
+        const thumbnailCallback = compact ? onPreviewReadyRef.current : onThumbnailReadyRef.current
+        if (thumbnailCallback) {
+          positionStudioShadow()
+          renderer.render(scene, camera)
+          captureIsometricThumbnail(renderer.domElement, preview => {
+            if (!stopped) thumbnailCallback(preview)
+          })
+        }
         if (selectedAnchorRef.current) restoreViewRef.current(selectedAnchorRef.current.view_state || {})
 
         requestRender()
         if (!compact && selectedAnchorRef.current && onPreviewReadyRef.current) {
           captureFrame = requestAnimationFrame(() => captureReferenceRef.current(selectedAnchorRef.current))
-        }
-        if (compact && onPreviewReadyRef.current) {
-          captureFrame = requestAnimationFrame(() => {
-            if (stopped || !renderer?.domElement) return
-            positionStudioShadow()
-            renderer.render(scene, camera)
-            const { width, height } = renderer.domElement
-            renderer.domElement.toBlob(blob => {
-              if (!stopped && blob?.size) onPreviewReadyRef.current?.({ blob, width, height })
-            }, 'image/png')
-          })
         }
         trackViewerEventRef.current('model.viewer_loaded', bucketViewerMetrics({ byteLength: bytes.byteLength, compact, extension, stats: model.userData.velakronStats }))
         setStatus('ready')

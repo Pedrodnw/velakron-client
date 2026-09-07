@@ -323,6 +323,7 @@ const ProductionRecordDetail = () => {
   const revisionChanges = useSelector(state => router.query.id ? productionRecordSelectors.getRevisionChanges(router.query.id)(state) : [])
   const revisionImpact = useSelector(state => router.query.id ? productionRecordSelectors.getRevisionImpact(router.query.id)(state) : null)
   const partId = String(record?.part?.id || record?.part?._id || record?.part || '')
+  const partRevisionId = String(record?.part_revision?.id || record?.part_revision?._id || record?.part_revision || '')
   const linkedPartDetail = useSelector(partSelectors.getDetailById(partId))
   const canArchiveNote = useSelector(getHasPermission('note.archive'))
   const canArchiveAttachment = useSelector(getHasPermission('attachment.archive'))
@@ -332,6 +333,7 @@ const ProductionRecordDetail = () => {
   const [drawer, setDrawer] = useState(null)
   const [feedback, setFeedback] = useState(null)
   const [actionTarget, setActionTarget] = useState(null)
+  const [modelThumbnailPreview, setModelThumbnailPreview] = useState(null)
   const trackedRecordId = useRef(null)
 
   useEffect(() => {
@@ -348,6 +350,9 @@ const ProductionRecordDetail = () => {
   useEffect(() => {
     if (partId) dispatch(loadPart(partId))
   }, [dispatch, partId])
+  useEffect(() => {
+    setModelThumbnailPreview(null)
+  }, [partId, partRevisionId])
   useEffect(() => {
     if (!organization?.id) return
     if (organization.type === 'supplier') dispatch(loadMachines({ status: 'active', page_size: 100 }))
@@ -443,7 +448,7 @@ const ProductionRecordDetail = () => {
   return <>
     <Seo title={`${record.public_reference} production record`} description='Production commitment detail.' path={`/app/production/${record.id}`} noIndex />
     <Button href={returnPath} variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Production</Button>
-    <AppPageHeader eyebrow={record.public_reference} title={record.part_number || 'Draft production record'} description={record.part_name || 'Complete the draft before assigning it to a supplier.'} media={partId && record.part_revision ? <ProductionPartThumbnail partId={partId} revisionId={String(record.part_revision?.id || record.part_revision?._id || record.part_revision)} exportControl={record.export_control} /> : null} actions={actionButtons} />
+    <AppPageHeader eyebrow={record.public_reference} title={record.part_number || 'Draft production record'} description={record.part_name || 'Complete the draft before assigning it to a supplier.'} media={partId && partRevisionId ? <ProductionPartThumbnail partId={partId} revisionId={partRevisionId} exportControl={record.export_control} capturedPreview={modelThumbnailPreview} /> : null} actions={actionButtons} />
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     {error && <ErrorState description={error.message} onRetry={() => dispatch(loadProductionRecord(record.id))} />}
     <div className='productionStatusStrip'>
@@ -463,7 +468,7 @@ const ProductionRecordDetail = () => {
     {projectedLate && <div className='supplierStateNotice supplierStateNotice--changes_requested'><CalendarCheck aria-hidden='true' /><div><strong>The current forecast arrives after the required date</strong><p>The forecast remains visible instead of blocking acceptance so both companies can act on the real schedule.</p></div></div>}
     <ProductionAttentionPanel conditions={collaboration?.attention || []} canAcknowledge={canAcknowledgeAttention} canResolve={item => canResolveAttention && (item.workflow?.managed || organization.type !== 'supplier' || item.source === 'supplier')} pending={collaboration?.mutating} onAcknowledge={item => runInline(() => dispatch(acknowledgeProductionAttention(record.id, item.id)), 'Attention reason acknowledged.')} onResolve={item => { setActionTarget(item); setDrawer('resolve-attention') }} onWorkflowAction={(item, action) => { setActionTarget({ item, action }); setDrawer('attention-workflow-action') }} />
     <div className='productionDetailGrid'>
-      <ProductionPartWorkspace record={record} organization={organization} onEditDetails={detail?.actions?.edit ? () => setDrawer('edit') : null} />
+      <ProductionPartWorkspace record={record} organization={organization} onEditDetails={detail?.actions?.edit ? () => setDrawer('edit') : null} onModelThumbnailReady={setModelThumbnailPreview} />
       <section className='appPanel productionProgress'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Current workflow</p><h2>Production progress</h2></div></header>
         <ProductionStageStepper stages={workflow?.stages || []} currentStage={record.current_stage} currentStepId={record.current_workflow_step_id} lifecycleState={record.lifecycle_state} />

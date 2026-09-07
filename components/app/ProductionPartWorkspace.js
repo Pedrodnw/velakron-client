@@ -91,7 +91,7 @@ const ProductionFacts = ({ record, onEdit }) => <section className='partWorkspac
   </dl>
 </section>
 
-export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'none' }) => {
+export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'none', capturedPreview = null }) => {
   const dispatch = useDispatch()
   const revisionDetail = useSelector(partSelectors.getRevisionDetail(revisionId))
   const [source, setSource] = useState('')
@@ -99,11 +99,27 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
   const [loading, setLoading] = useState(false)
   const [failed, setFailed] = useState(false)
   const cacheAttemptedRef = useRef('')
+  const capturedPreviewKeyRef = useRef('')
   const renderedPreviewUrlRef = useRef('')
   const preview = useMemo(() => preferredPartThumbnailAsset(revisionDetail?.assets), [revisionDetail?.assets])
   const previewAsset = preview?.asset || null
   const previewKind = preview?.kind || ''
   const previewAssetId = idOf(previewAsset)
+
+  const cacheRenderedPreview = useCallback(({ blob, width, height }) => {
+    if (previewKind !== 'model' || exportControl === 'itar' || !previewAssetId || !blob?.size) return
+    if (renderedPreviewUrlRef.current) window.URL.revokeObjectURL(renderedPreviewUrlRef.current)
+    renderedPreviewUrlRef.current = window.URL.createObjectURL(blob)
+    setSource(renderedPreviewUrlRef.current)
+    setSourceKind('image')
+    setLoading(false)
+    setFailed(false)
+    const cacheKey = `${revisionId}:${previewAssetId}`
+    capturedPreviewKeyRef.current = cacheKey
+    if (cacheAttemptedRef.current === cacheKey) return
+    cacheAttemptedRef.current = cacheKey
+    dispatch(cachePartModelPreview(partId, revisionId, previewAssetId, { blob, width, height }))
+  }, [dispatch, exportControl, partId, previewAssetId, previewKind, revisionId])
 
   useEffect(() => {
     if (!partId || !revisionId || revisionDetail || exportControl === 'itar') return
@@ -113,11 +129,23 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
     if (renderedPreviewUrlRef.current) window.URL.revokeObjectURL(renderedPreviewUrlRef.current)
   }, [])
   useEffect(() => {
+    if (!capturedPreview?.blob?.size) return
+    if (String(capturedPreview.partId) !== String(partId)
+      || String(capturedPreview.revisionId) !== String(revisionId)
+      || String(capturedPreview.assetId) !== String(previewAssetId)) return
+    cacheRenderedPreview(capturedPreview)
+  }, [cacheRenderedPreview, capturedPreview, partId, previewAssetId, revisionId])
+  useEffect(() => {
     if (!partId || !revisionId || !previewAssetId || exportControl === 'itar') {
       setSource('')
       setSourceKind('')
       setLoading(false)
       setFailed(false)
+      return
+    }
+    const previewKey = `${revisionId}:${previewAssetId}`
+    if (capturedPreviewKeyRef.current === previewKey) {
+      setLoading(false)
       return
     }
     let cancelled = false
@@ -141,7 +169,7 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
         if (cancelled) return
         if (cached?.ok) {
           const imageSource = await openImageTarget(cached.payload.data.view.target)
-          if (cancelled) return
+          if (cancelled || capturedPreviewKeyRef.current === previewKey) return
           setSource(imageSource)
           setSourceKind('image')
           setLoading(false)
@@ -149,11 +177,11 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
         }
       }
       const result = await dispatch(requestPartAssetView(partId, revisionId, previewAssetId, {}))
-      if (cancelled) return
+      if (cancelled || capturedPreviewKeyRef.current === previewKey) return
       if (!result?.ok) throw new Error('Thumbnail source could not be opened')
       const target = result.payload.data.view.target
       const nextSource = previewKind === 'model' ? target : await openImageTarget(target)
-      if (cancelled) return
+      if (cancelled || capturedPreviewKeyRef.current === previewKey) return
       setSource(nextSource)
       setSourceKind(previewKind)
       setLoading(false)
@@ -170,19 +198,6 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
     }
   }, [dispatch, exportControl, partId, previewAssetId, previewKind, revisionId])
 
-  const cacheRenderedPreview = useCallback(({ blob, width, height }) => {
-    if (previewKind !== 'model' || exportControl === 'itar' || !previewAssetId) return
-    if (renderedPreviewUrlRef.current) window.URL.revokeObjectURL(renderedPreviewUrlRef.current)
-    renderedPreviewUrlRef.current = window.URL.createObjectURL(blob)
-    setSource(renderedPreviewUrlRef.current)
-    setSourceKind('image')
-    setFailed(false)
-    const cacheKey = `${revisionId}:${previewAssetId}`
-    if (cacheAttemptedRef.current === cacheKey) return
-    cacheAttemptedRef.current = cacheKey
-    dispatch(cachePartModelPreview(partId, revisionId, previewAssetId, { blob, width, height }))
-  }, [dispatch, exportControl, partId, previewAssetId, previewKind, revisionId])
-
   const showingPreview = Boolean(source && !failed)
   return <div className={`productionPartThumbnail${showingPreview ? ' has-image' : ''}`} aria-label={showingPreview ? 'Isometric part thumbnail' : 'Part thumbnail placeholder'}>
     {showingPreview && sourceKind === 'model'
@@ -197,7 +212,7 @@ export const ProductionPartThumbnail = ({ partId, revisionId, exportControl = 'n
   </div>
 }
 
-const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
+const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelThumbnailReady }) => {
   const router = useRouter()
   const dispatch = useDispatch()
   const partId = idOf(record.part)
@@ -253,6 +268,15 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
   const revisionCases = useMemo(() => cases.filter(item => revisionIdOf(item) === revisionId && (!currentShareId || idOf(item.share) === currentShareId)), [cases, currentShareId, revisionId])
   const modelCaseMarkers = useMemo(() => buildModelCaseMarkers(anchors, revisionCases), [anchors, revisionCases])
   const viewerCaseMarkers = useMemo(() => modelCaseMarkersForAsset(modelCaseMarkers, viewer.asset), [modelCaseMarkers, viewer.asset])
+  const captureModelThumbnail = useCallback(previewData => {
+    if (!previewData?.blob?.size || !viewer.asset || !onModelThumbnailReady) return
+    onModelThumbnailReady({
+      ...previewData,
+      partId,
+      revisionId,
+      assetId: idOf(viewer.asset),
+    })
+  }, [onModelThumbnailReady, partId, revisionId, viewer.asset])
   const productionCases = useMemo(() => revisionCases.filter(item => (item.production_records || []).some(value => idOf(value) === String(record.id))), [record.id, revisionCases])
   const visibleCases = caseScope === 'production' ? productionCases : revisionCases
   const openCases = visibleCases.filter(item => item.state !== 'closed')
@@ -576,7 +600,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails }) => {
 
       {['model', 'drawing'].includes(tab) && <div className='partVisualWorkspace'>
         <aside className='partAssetRail'><header><p className='technicalLabel'>{tab === 'model' ? 'Model files' : 'Drawing files'}</p><span>{selectedVisualAssets.length}</span></header>{selectedVisualAssets.length ? selectedVisualAssets.map(asset => <button type='button' key={idOf(asset)} className={idOf(viewer.asset) === idOf(asset) ? 'is-active' : ''} onClick={() => openAsset(asset)}><span><strong>{attachmentName(asset)}</strong><small>{formatLabel(asset.role)}{asset.is_primary ? ' · Primary' : ''}</small></span><ChevronRight aria-hidden='true' /></button>) : <div className='partAssetRail__empty'><FileBox aria-hidden='true' /><p>No {tab === 'model' ? 'viewable models' : 'drawings'} on this revision.</p></div>}<footer><button type='button' onClick={() => selectTab('files')}>View every file</button></footer></aside>
-        <main className='partViewerStage'><div className='partViewerStage__toolbar'><div><p className='technicalLabel'>Production technical review</p><strong>{viewer.asset ? attachmentName(viewer.asset) : `Open a ${tab}`}</strong></div>{viewer.asset && <div><Button variant={annotationMode ? 'primary' : 'secondary'} onClick={() => setAnnotationMode(value => !value)}><CircleDot aria-hidden='true' /> {annotationMode ? 'Cancel selection' : tab === 'drawing' ? 'Mark drawing area' : 'Select model feature'}</Button><Button variant='secondary' onClick={() => downloadAsset(viewer.asset)}><Download aria-hidden='true' /> Download</Button></div>}</div>{annotationMode && <div className='partViewerSelectionGuide' role='status'><CircleDot aria-hidden='true' /><div><strong>{tab === 'drawing' ? 'Mark the exact drawing context' : 'Select the exact model feature'}</strong><span>{tab === 'drawing' ? 'Click a point or drag a rectangle around the dimension, note, or feature. Velakron will attach the sheet and view to the new case.' : 'Rotate to the relevant area, then click the visible surface. Velakron will preserve the camera and feature reference.'}</span></div><button type='button' onClick={() => setAnnotationMode(false)}>Cancel</button></div>}<PartAssetViewer asset={viewer.asset} source={viewer.source} loading={viewer.loading} annotationMode={annotationMode} anchors={anchors.filter(anchor => !anchor.source_asset || idOf(anchor.source_asset) === idOf(viewer.asset))} caseMarkers={viewerCaseMarkers} selectedAnchorId={selectedAnchorId} onSelect={chooseVisualAnchor} onOpenCase={openCase} /></main>
+        <main className='partViewerStage'><div className='partViewerStage__toolbar'><div><p className='technicalLabel'>Production technical review</p><strong>{viewer.asset ? attachmentName(viewer.asset) : `Open a ${tab}`}</strong></div>{viewer.asset && <div><Button variant={annotationMode ? 'primary' : 'secondary'} onClick={() => setAnnotationMode(value => !value)}><CircleDot aria-hidden='true' /> {annotationMode ? 'Cancel selection' : tab === 'drawing' ? 'Mark drawing area' : 'Select model feature'}</Button><Button variant='secondary' onClick={() => downloadAsset(viewer.asset)}><Download aria-hidden='true' /> Download</Button></div>}</div>{annotationMode && <div className='partViewerSelectionGuide' role='status'><CircleDot aria-hidden='true' /><div><strong>{tab === 'drawing' ? 'Mark the exact drawing context' : 'Select the exact model feature'}</strong><span>{tab === 'drawing' ? 'Click a point or drag a rectangle around the dimension, note, or feature. Velakron will attach the sheet and view to the new case.' : 'Rotate to the relevant area, then click the visible surface. Velakron will preserve the camera and feature reference.'}</span></div><button type='button' onClick={() => setAnnotationMode(false)}>Cancel</button></div>}<PartAssetViewer asset={viewer.asset} source={viewer.source} loading={viewer.loading} annotationMode={annotationMode} anchors={anchors.filter(anchor => !anchor.source_asset || idOf(anchor.source_asset) === idOf(viewer.asset))} caseMarkers={viewerCaseMarkers} selectedAnchorId={selectedAnchorId} onSelect={chooseVisualAnchor} onOpenCase={openCase} onThumbnailReady={captureModelThumbnail} /></main>
         <aside className='partContextRail'><section><p className='technicalLabel'>Production snapshot</p><dl><div><dt>Revision</dt><dd>{revision.revision}</dd></div><div><dt>Quantity</dt><dd>{record.quantity} {record.unit === 'other' ? record.unit_other : formatLabel(record.unit)}</dd></div><div><dt>Required arrival</dt><dd>{formatDate(record.required_delivery_date)}</dd></div><div><dt>{organization?.type === 'supplier' ? 'OEM customer' : 'Supplier'}</dt><dd>{relatedCompanyName || 'Not assigned'}</dd></div></dl></section><section><p className='technicalLabel'>Visual references</p>{anchors.length ? <ul>{anchors.map(anchor => <li key={idOf(anchor)}><button type='button' onClick={() => focusAnchor(anchor)} aria-current={selectedAnchorId === idOf(anchor) ? 'true' : undefined}>{anchor.label || formatLabel(anchor.kind)}</button></li>)}</ul> : <p>No anchored cases yet.</p>}</section></aside>
       </div>}
 
