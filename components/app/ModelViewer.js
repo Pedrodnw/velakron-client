@@ -1,12 +1,51 @@
 import { Box, Focus, Layers3, LoaderCircle, MousePointer2, ZoomIn, ZoomOut } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { modelExtension, modelFormatLabel } from '../../store/modelFiles'
+import { trackProductEvent } from '../../store/slices/entities/platformAdministration'
+import { getAuthStatus } from '../../store/slices/auth'
 import { captureVisualContextPreview } from './visualContextPreview'
+import { importStepInDisposableWorker } from './stepImportClient'
+import { registerModelViewer, requestModelViewer } from './modelViewerLease'
 
-let occtRuntimePromise = null
 const modelBytesPromises = new Map()
 const EMPTY_ITEMS = Object.freeze([])
+const MAX_EDGE_TRIANGLES = 250_000
+const MAX_DISPLAY_TRIANGLES = 2_500_000
+const MAX_DISPLAY_VERTICES = 5_000_000
+
+const deviceMemory = () => Number(globalThis.navigator?.deviceMemory || 0)
+
+const tessellationFor = (byteLength, compact) => {
+  if (compact || (deviceMemory() && deviceMemory() <= 4)) return 0.002
+  if (byteLength >= 12 * 1024 * 1024) return 0.0025
+  if (byteLength >= 6 * 1024 * 1024) return 0.0015
+  return 0.001
+}
+
+const pixelRatioFor = (width, height, compact) => {
+  const ratioCap = compact ? 1.25 : (deviceMemory() && deviceMemory() <= 4) ? 1.25 : 1.5
+  const pixelBudget = compact ? 300_000 : 3_000_000
+  const budgetRatio = Math.sqrt(pixelBudget / Math.max(width * height, 1))
+  return Math.max(0.75, Math.min(globalThis.devicePixelRatio || 1, ratioCap, budgetRatio))
+}
+
+const assertDisplayComplexity = ({ triangleCount = 0, vertexCount = 0 }) => {
+  if (triangleCount > MAX_DISPLAY_TRIANGLES || vertexCount > MAX_DISPLAY_VERTICES) {
+    throw new Error('This model is too detailed for a stable browser preview. Upload a simplified STEP or STL visualization while keeping the original file in the technical record.')
+  }
+}
+
+const bucketViewerMetrics = ({ byteLength = 0, compact, extension, stats = {} }) => ({
+  source_size_bucket: byteLength < 1024 * 1024 ? 'small' : byteLength < 6 * 1024 * 1024 ? 'medium' : byteLength < 12 * 1024 * 1024 ? 'large' : 'very_large',
+  conversion_duration_bucket: Number(stats.conversionMs || 0) < 1000 ? 'under_1s' : Number(stats.conversionMs) < 3000 ? '1_3s' : Number(stats.conversionMs) < 10_000 ? '3_10s' : 'over_10s',
+  triangle_count_bucket: Number(stats.triangleCount || 0) < 50_000 ? 'under_50k' : Number(stats.triangleCount) < 250_000 ? '50k_250k' : Number(stats.triangleCount) < 1_000_000 ? '250k_1m' : 'over_1m',
+  viewer_mode: compact ? 'thumbnail' : 'full',
+  edge_mode: stats.edgeMode === 'skipped' ? 'skipped' : 'full',
+  device_memory_bucket: !deviceMemory() ? 'unknown' : deviceMemory() <= 4 ? 'low' : deviceMemory() <= 8 ? 'standard' : 'high',
+  worker_used: extension === 'step' || extension === 'stp',
+})
 
 const loadModelBytes = source => {
   const target = resolveFileTransferTarget(source)
@@ -27,25 +66,6 @@ const loadModelBytes = source => {
     request.then(() => setTimeout(() => modelBytesPromises.delete(target), 10_000)).catch(() => {})
   }
   return modelBytesPromises.get(target)
-}
-
-const loadOcctRuntime = () => {
-  if (!occtRuntimePromise) {
-    occtRuntimePromise = import('occt-import-js')
-      .then(importedModule => {
-        const createOcct = importedModule.default || importedModule
-        return createOcct({
-          locateFile: filename => filename.endsWith('.wasm')
-            ? '/vendor/occt-import-js/occt-import-js.wasm'
-            : filename,
-        })
-      })
-      .catch(error => {
-        occtRuntimePromise = null
-        throw error
-      })
-  }
-  return occtRuntimePromise
 }
 
 const cadSurfaceColor = (THREE, value) => {
@@ -109,18 +129,20 @@ const buildStepGroup = (THREE, result) => {
   if (!result?.success || !Array.isArray(result.meshes) || !result.meshes.length) {
     throw new Error('This STEP file did not contain displayable 3D geometry.')
   }
+  assertDisplayComplexity(result.stats || {})
+  const includeEdges = Number(result.stats?.triangleCount || 0) <= MAX_EDGE_TRIANGLES
   const group = new THREE.Group()
   for (const [meshIndex, imported] of result.meshes.entries()) {
-    const positions = imported.attributes?.position?.array
+    const positions = imported.positions
     if (!positions?.length) continue
     const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-    if (imported.attributes?.normal?.array?.length) {
-      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(imported.attributes.normal.array, 3))
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    if (imported.normals?.length) {
+      geometry.setAttribute('normal', new THREE.BufferAttribute(imported.normals, 3))
     } else {
       geometry.computeVertexNormals()
     }
-    if (imported.index?.array?.length) geometry.setIndex(Array.from(imported.index.array))
+    if (imported.indices?.length) geometry.setIndex(new THREE.BufferAttribute(imported.indices, 1))
     geometry.computeBoundingBox()
     const material = createCadMaterial(THREE, cadSurfaceColor(THREE, imported.color))
     const mesh = new THREE.Mesh(geometry, material)
@@ -128,10 +150,11 @@ const buildStepGroup = (THREE, result) => {
     mesh.userData.velakronMeshIndex = meshIndex
     mesh.castShadow = true
     mesh.receiveShadow = true
-    addCadEdges(THREE, geometry, mesh)
+    if (includeEdges) addCadEdges(THREE, geometry, mesh)
     group.add(mesh)
   }
   if (!group.children.length) throw new Error('This STEP file did not contain displayable surfaces.')
+  group.userData.velakronStats = { ...result.stats, edgeMode: includeEdges ? 'full' : 'skipped' }
   return group
 }
 
@@ -162,6 +185,8 @@ const ModelViewer = ({
   onPreviewReady,
   compact = false,
 }) => {
+  const dispatch = useDispatch()
+  const authenticated = useSelector(getAuthStatus) === 'authenticated'
   const mountRef = useRef(null)
   const fitRef = useRef(() => {})
   const zoomRef = useRef(() => {})
@@ -170,6 +195,8 @@ const ModelViewer = ({
   const onPreviewReadyRef = useRef(onPreviewReady)
   const selectedAnchorRef = useRef(selectedAnchor)
   const capturedReferenceRef = useRef('')
+  const trackedEventsRef = useRef(new Set())
+  const trackViewerEventRef = useRef(() => {})
   const annotationModeRef = useRef(annotationMode)
   const markerSyncRef = useRef(() => {})
   const restoreViewRef = useRef(() => {})
@@ -177,12 +204,24 @@ const ModelViewer = ({
   const orientationRef = useRef(() => {})
   const transparencyRef = useRef(() => {})
   const guidanceId = useId()
-  const [status, setStatus] = useState('loading')
+  const viewerId = useId()
+  const [leaseActive, setLeaseActive] = useState(false)
+  const [status, setStatus] = useState('suspended')
   const [error, setError] = useState('')
   const [transparent, setTransparent] = useState(false)
   const [selectionFeedback, setSelectionFeedback] = useState('')
   const [hoveredMarker, setHoveredMarker] = useState(null)
   const [projectedMarkers, setProjectedMarkers] = useState([])
+
+  trackViewerEventRef.current = (eventName, metrics) => {
+    if (!authenticated) return
+    const key = `${eventName}:${source}:${compact ? 'thumbnail' : 'full'}`
+    if (trackedEventsRef.current.has(key)) return
+    trackedEventsRef.current.add(key)
+    dispatch(trackProductEvent(eventName, 'part_model_viewer', metrics))
+  }
+
+  useEffect(() => registerModelViewer({ id: viewerId, compact, onChange: setLeaseActive }), [compact, viewerId])
 
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
   useEffect(() => { onOpenCaseRef.current = onOpenCase }, [onOpenCase])
@@ -202,9 +241,18 @@ const ModelViewer = ({
   }, [selectedAnchor])
 
   useEffect(() => {
+    if (!leaseActive) {
+      setStatus('suspended')
+      setHoveredMarker(null)
+      setProjectedMarkers([])
+      mountRef.current?.replaceChildren()
+      return undefined
+    }
     let stopped = false
     let animationFrame = null
+    let captureFrame = null
     let resizeObserver = null
+    let intersectionObserver = null
     let renderer = null
     let controls = null
     let model = null
@@ -213,7 +261,12 @@ const ModelViewer = ({
     let keyboardMove = null
     let pointerDown = null
     let pointerUp = null
+    let contextLost = null
     let projectCaseMarkers = () => {}
+    let requestRender = () => {}
+    let documentVisibilityChanged = null
+    let isIntersecting = true
+    const importController = new AbortController()
 
     const start = async () => {
       setStatus('loading')
@@ -222,9 +275,7 @@ const ModelViewer = ({
       setProjectedMarkers([])
       try {
         const extension = modelExtension(file?.display_filename || file?.original_filename)
-        const parserPromise = extension === 'stl'
-          ? import('three/addons/loaders/STLLoader.js')
-          : loadOcctRuntime()
+        const parserPromise = extension === 'stl' ? import('three/addons/loaders/STLLoader.js') : Promise.resolve(null)
         const [THREE, { OrbitControls }, { RoomEnvironment }, parser, bytes] = await Promise.all([
           import('three'),
           import('three/addons/controls/OrbitControls.js'),
@@ -237,8 +288,7 @@ const ModelViewer = ({
         const scene = new THREE.Scene()
         const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 1000000)
         camera.up.set(0, 0, 1)
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: compact || Boolean(onPreviewReadyRef.current) })
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact ? 1.5 : 2))
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
         renderer.setClearColor(0xffffff, 0)
         renderer.outputColorSpace = THREE.SRGBColorSpace
         renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -249,6 +299,15 @@ const ModelViewer = ({
         if (!compact) renderer.domElement.setAttribute('aria-describedby', guidanceId)
         renderer.domElement.setAttribute('role', compact ? 'img' : 'application')
         renderer.domElement.tabIndex = compact ? -1 : 0
+        contextLost = event => {
+          event.preventDefault()
+          if (!stopped) {
+            setError('The browser paused this 3D view to protect memory. Reload the view to continue.')
+            setStatus('error')
+            trackViewerEventRef.current('model.viewer_context_lost', bucketViewerMetrics({ compact, extension }))
+          }
+        }
+        renderer.domElement.addEventListener('webglcontextlost', contextLost, false)
 
         controls = new OrbitControls(camera, renderer.domElement)
         controls.enabled = !compact
@@ -275,18 +334,28 @@ const ModelViewer = ({
         if (extension === 'stl') {
           const geometry = new parser.STLLoader().parse(bytes)
           geometry.computeVertexNormals()
+          const vertexCount = geometry.getAttribute('position')?.count || 0
+          const triangleCount = (geometry.index?.count || vertexCount) / 3
+          assertDisplayComplexity({ triangleCount, vertexCount })
           model = new THREE.Mesh(geometry, createCadMaterial(THREE, new THREE.Color(0x929da9)))
           model.userData.velakronMeshIndex = 0
           model.castShadow = true
           model.receiveShadow = true
-          addCadEdges(THREE, geometry, model)
+          const includeEdges = triangleCount <= MAX_EDGE_TRIANGLES
+          if (includeEdges) addCadEdges(THREE, geometry, model)
+          model.userData.velakronStats = { meshCount: 1, vertexCount, triangleCount, conversionMs: 0, edgeMode: includeEdges ? 'full' : 'skipped' }
         } else {
-          const result = parser.ReadStepFile(new Uint8Array(bytes), {
-            linearUnit: 'millimeter',
-            linearDeflectionType: 'bounding_box_ratio',
-            linearDeflection: 0.001,
-            angularDeflection: 0.5,
+          const result = await importStepInDisposableWorker({
+            bytes: bytes.slice(0),
+            signal: importController.signal,
+            parameters: {
+              linearUnit: 'millimeter',
+              linearDeflectionType: 'bounding_box_ratio',
+              linearDeflection: tessellationFor(bytes.byteLength, compact),
+              angularDeflection: 0.5,
+            },
           })
+          if (stopped) return
           model = buildStepGroup(THREE, result)
         }
         if (stopped) { disposeObject(model); return }
@@ -311,6 +380,19 @@ const ModelViewer = ({
           studioShadow.position.copy(modelCenter)
             .addScaledVector(screenDown, modelMaximum * 0.62)
             .addScaledVector(viewDirection, modelMaximum * 0.42)
+        }
+        const renderFrame = () => {
+          animationFrame = null
+          if (stopped || !renderer || !isIntersecting || document.hidden) return
+          const controlsChanged = controls.update()
+          positionStudioShadow()
+          renderer.render(scene, camera)
+          projectCaseMarkers()
+          if (controlsChanged) requestRender()
+        }
+        requestRender = () => {
+          if (stopped || animationFrame || !isIntersecting || document.hidden) return
+          animationFrame = window.requestAnimationFrame(renderFrame)
         }
         let activeCaseMarkers = caseMarkers
         projectCaseMarkers = () => {
@@ -352,6 +434,7 @@ const ModelViewer = ({
           controls.target.copy(center)
           controls.update()
           projectCaseMarkers()
+          requestRender()
         }
         restoreViewRef.current = state => {
           if (!Array.isArray(state?.camera_position) || !Array.isArray(state?.camera_target)) return
@@ -362,6 +445,7 @@ const ModelViewer = ({
           camera.updateProjectionMatrix()
           controls.update()
           projectCaseMarkers()
+          requestRender()
         }
         captureReferenceRef.current = anchor => {
           const anchorId = String(anchor?.id || anchor?._id || '')
@@ -397,6 +481,7 @@ const ModelViewer = ({
           camera.lookAt(center)
           controls.update()
           projectCaseMarkers()
+          requestRender()
         }
         transparencyRef.current = enabled => {
           model.traverse(child => {
@@ -409,6 +494,7 @@ const ModelViewer = ({
               material.needsUpdate = true
             })
           })
+          requestRender()
         }
         keyboardMove = event => {
           if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-', '_', 'Home'].includes(event.key)) return
@@ -426,6 +512,7 @@ const ModelViewer = ({
           camera.position.copy(controls.target).add(offset)
           camera.lookAt(controls.target)
           controls.update()
+          requestRender()
         }
         if (!compact) renderer.domElement.addEventListener('keydown', keyboardMove)
 
@@ -494,42 +581,47 @@ const ModelViewer = ({
         if (!compact) {
           renderer.domElement.addEventListener('pointerdown', pointerDown)
           renderer.domElement.addEventListener('pointerup', pointerUp)
-          controls.addEventListener('change', projectCaseMarkers)
+          controls.addEventListener('change', requestRender)
         }
         fitRef.current = fit
         zoomRef.current = factor => {
           const offset = camera.position.clone().sub(controls.target).multiplyScalar(factor)
           camera.position.copy(controls.target).add(offset)
           controls.update()
+          requestRender()
         }
         const resize = () => {
           if (!mountRef.current || !renderer) return
           const width = Math.max(mountRef.current.clientWidth, 1)
           const height = Math.max(mountRef.current.clientHeight, 1)
+          renderer.setPixelRatio(pixelRatioFor(width, height, compact))
           renderer.setSize(width, height, false)
           camera.aspect = width / height
           camera.updateProjectionMatrix()
           projectCaseMarkers()
+          requestRender()
         }
         resizeObserver = new ResizeObserver(resize)
         resizeObserver.observe(mountRef.current)
+        if (typeof IntersectionObserver !== 'undefined') {
+          intersectionObserver = new IntersectionObserver(entries => {
+            isIntersecting = entries[0]?.isIntersecting !== false
+            if (isIntersecting) requestRender()
+          }, { rootMargin: '160px' })
+          intersectionObserver.observe(mountRef.current)
+        }
+        documentVisibilityChanged = () => { if (!document.hidden) requestRender() }
+        document.addEventListener('visibilitychange', documentVisibilityChanged)
         resize()
         fit()
         if (selectedAnchorRef.current) restoreViewRef.current(selectedAnchorRef.current.view_state || {})
 
-        const render = () => {
-          if (stopped) return
-          controls.update()
-          positionStudioShadow()
-          renderer.render(scene, camera)
-          if (!compact) animationFrame = requestAnimationFrame(render)
-        }
-        render()
+        requestRender()
         if (!compact && selectedAnchorRef.current && onPreviewReadyRef.current) {
-          animationFrame = requestAnimationFrame(() => captureReferenceRef.current(selectedAnchorRef.current))
+          captureFrame = requestAnimationFrame(() => captureReferenceRef.current(selectedAnchorRef.current))
         }
         if (compact && onPreviewReadyRef.current) {
-          animationFrame = requestAnimationFrame(() => {
+          captureFrame = requestAnimationFrame(() => {
             if (stopped || !renderer?.domElement) return
             positionStudioShadow()
             renderer.render(scene, camera)
@@ -539,11 +631,16 @@ const ModelViewer = ({
             }, 'image/png')
           })
         }
+        trackViewerEventRef.current('model.viewer_loaded', bucketViewerMetrics({ byteLength: bytes.byteLength, compact, extension, stats: model.userData.velakronStats }))
         setStatus('ready')
       } catch (viewerError) {
         if (!stopped) {
           setError(viewerError?.message || 'This model could not be displayed.')
           setStatus('error')
+          if (viewerError?.name !== 'AbortError') {
+            const eventName = String(viewerError?.message || '').includes('too detailed') ? 'model.viewer_guardrail_triggered' : 'model.viewer_failed'
+            trackViewerEventRef.current(eventName, bucketViewerMetrics({ compact, extension: modelExtension(file?.display_filename || file?.original_filename) }))
+          }
         }
       }
     }
@@ -551,6 +648,7 @@ const ModelViewer = ({
     start()
     return () => {
       stopped = true
+      importController.abort()
       fitRef.current = () => {}
       zoomRef.current = () => {}
       markerSyncRef.current = () => {}
@@ -559,23 +657,30 @@ const ModelViewer = ({
       orientationRef.current = () => {}
       transparencyRef.current = () => {}
       if (animationFrame) cancelAnimationFrame(animationFrame)
+      if (captureFrame) cancelAnimationFrame(captureFrame)
       resizeObserver?.disconnect()
+      intersectionObserver?.disconnect()
+      if (documentVisibilityChanged) document.removeEventListener('visibilitychange', documentVisibilityChanged)
       if (keyboardMove) renderer?.domElement?.removeEventListener('keydown', keyboardMove)
       if (pointerDown) renderer?.domElement?.removeEventListener('pointerdown', pointerDown)
       if (pointerUp) renderer?.domElement?.removeEventListener('pointerup', pointerUp)
-      controls?.removeEventListener('change', projectCaseMarkers)
+      if (contextLost) renderer?.domElement?.removeEventListener('webglcontextlost', contextLost, false)
+      controls?.removeEventListener('change', requestRender)
       controls?.dispose()
       disposeObject(model)
       disposeObject(studioShadow)
       environmentRenderTarget?.dispose?.()
+      renderer?.renderLists?.dispose?.()
       renderer?.dispose()
+      renderer?.forceContextLoss?.()
       renderer?.domElement?.remove()
     }
-  }, [compact, file, guidanceId, source])
+  }, [compact, file, guidanceId, leaseActive, source])
 
   if (compact) return <div className='modelViewer modelViewer--thumbnail'>
     <div className='modelViewer__viewport'>
       <div className='modelViewer__canvas' ref={mountRef} />
+      {status === 'suspended' && <div className='modelViewer__state' aria-label='Part thumbnail deferred'><Box aria-hidden='true' /></div>}
       {status === 'loading' && <div className='modelViewer__state' aria-label='Preparing part thumbnail'><LoaderCircle className='spin' aria-hidden='true' /></div>}
       {status === 'error' && <div className='modelViewer__state modelViewer__state--error' aria-label={error || 'Part thumbnail unavailable'}><Box aria-hidden='true' /></div>}
     </div>
@@ -596,6 +701,7 @@ const ModelViewer = ({
     </div>
     <div className={`modelViewer__viewport${annotationMode ? ' modelViewer__viewport--annotating' : ''}`}>
       <div className='modelViewer__canvas' ref={mountRef} />
+      {status === 'suspended' && <div className='modelViewer__state modelViewer__state--suspended'><Box aria-hidden='true' /><strong>3D view paused</strong><span>Only one interactive 3D view runs at a time to keep this page responsive.</span><button type='button' onClick={() => requestModelViewer(viewerId)}>Resume 3D view</button></div>}
       {projectedMarkers.length > 0 && <nav className='modelViewer__markers' aria-label='Cases anchored in this 3D model'>
         {projectedMarkers.filter(marker => marker.visible).map(marker => <button
           type='button'

@@ -5,6 +5,7 @@ const root = path.join(__dirname, '..')
 const source = path.join(root, 'node_modules', 'occt-import-js', 'dist')
 const destination = path.join(root, 'public', 'vendor', 'occt-import-js')
 const assets = [
+  'occt-import-js.js',
   'occt-import-js.wasm',
   'license.occt-import-js.txt',
   'license.occt.txt',

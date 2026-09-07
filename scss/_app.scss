@@ -2113,6 +2113,18 @@
     strong { font-size: 14px; }
     span { max-width: 420px; color: var(--app-text-muted); font-size: 12px; }
     &--error strong { color: var(--vk-danger); }
+    &--suspended button {
+      min-height: 36px;
+      padding: 8px 14px;
+      border: 1px solid var(--vk-info-border);
+      border-radius: 7px;
+      background: var(--vk-action-soft);
+      color: var(--vk-info);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
   }
 
   &__notice {

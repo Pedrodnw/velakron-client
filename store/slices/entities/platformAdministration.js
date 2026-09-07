@@ -197,8 +197,8 @@ export const updatePlatformRelationship = (relationshipId, data, reason) => asyn
   return result
 }
 
-export const trackProductEvent = (eventName, surface) => call({
-  url: '/product-events', method: 'post', data: { event_name: eventName, surface },
+export const trackProductEvent = (eventName, surface, metrics) => call({
+  url: '/product-events', method: 'post', data: { event_name: eventName, surface, ...(metrics ? { metrics } : {}) },
   requestKey: `product-event-${eventName}-${surface}`,
 })
 

@@ -40,4 +40,10 @@ describe('platform administration state', () => {
     })
     expect(Object.keys(action.payload.data)).toEqual(['event_name', 'surface'])
   })
+
+  it('adds only coarse viewer performance buckets when supplied', () => {
+    const metrics = { source_size_bucket: 'large', triangle_count_bucket: '250k_1m', viewer_mode: 'full', edge_mode: 'skipped', device_memory_bucket: 'standard', worker_used: true }
+    const action = trackProductEvent('model.viewer_loaded', 'part_model_viewer', metrics)
+    expect(action.payload.data).toEqual({ event_name: 'model.viewer_loaded', surface: 'part_model_viewer', metrics })
+  })
 })
