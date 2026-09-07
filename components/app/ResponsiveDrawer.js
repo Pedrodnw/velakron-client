@@ -1,7 +1,8 @@
 import { X } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 
 const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
+  const titleId = useId()
   const drawerRef = useRef(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -26,14 +27,17 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
     document.body.style.width = '100%'
     if (scrollbarGap) document.body.style.paddingRight = `${scrollbarGap}px`
     const handleKeyDown = event => {
+      const dialogs = [...document.querySelectorAll('[role=dialog][aria-modal=true]')]
+      if (dialogs.at(-1) !== drawerRef.current) return
       if (event.key === 'Escape') onCloseRef.current()
       if (event.key !== 'Tab') return
       const focusable = [...drawerRef.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
-        .filter(element => !element.disabled)
+        .filter(element => !element.disabled && element.getClientRects().length && element.getAttribute('aria-hidden') !== 'true')
       if (!focusable.length) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      if (document.activeElement === drawerRef.current || !drawerRef.current.contains(document.activeElement)) { event.preventDefault(); (event.shiftKey ? last : first).focus() }
+      else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
     }
     drawerRef.current?.focus()
@@ -52,9 +56,9 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
   return <div className='drawerBackdrop' role='presentation' onMouseDown={event => {
     if (event.target === event.currentTarget) onClose()
   }}>
-    <aside className={`responsiveDrawer${wide ? ' responsiveDrawer--wide' : ''}`} role='dialog' aria-modal='true' aria-labelledby='drawer-title' tabIndex={-1} ref={drawerRef}>
+    <aside className={`responsiveDrawer${wide ? ' responsiveDrawer--wide' : ''}`} role='dialog' aria-modal='true' aria-labelledby={titleId} tabIndex={-1} ref={drawerRef}>
       <header>
-        <h2 id='drawer-title'>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button type='button' aria-label='Close panel' onClick={onClose}><X aria-hidden='true' /></button>
       </header>
       <div className='responsiveDrawer__body' onWheel={event => event.stopPropagation()} onTouchMove={event => event.stopPropagation()}>{children}</div>

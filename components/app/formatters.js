@@ -3,6 +3,7 @@ const exactLabels = {
   oem_admin: 'OEM administrator',
   oem_user: 'OEM member',
   oem_viewer: 'OEM view-only member',
+  supplier_viewer: 'Supplier view-only member',
   api: 'API',
   s3: 'S3',
 }
@@ -31,6 +32,7 @@ export const formatRole = role => ({
   oem_viewer: 'OEM view-only member',
   supplier_admin: 'Supplier administrator',
   supplier_user: 'Supplier member',
+  supplier_viewer: 'Supplier view-only member',
 }[role] || formatLabel(role))
 
 export const formatDate = value => {

@@ -24,10 +24,10 @@ const WorkflowHistory = ({ history = [] }) => {
 const ProductionAttentionPanel = ({ conditions = [], canAcknowledge, canResolve, pending, onAcknowledge, onResolve, onWorkflowAction }) => {
   if (!conditions.length) return <div className='productionAttention productionAttention--clear'>
     <CheckCheck aria-hidden='true' />
-    <div><strong>No active attention flags</strong><p>The current schedule and production information do not require follow-up.</p></div>
+    <div><strong>No automatic or legacy attention reasons</strong><p>The current schedule and production information do not require follow-up.</p></div>
   </div>
   return <section className='productionAttention' aria-label='Active attention reasons'>
-    <header><CircleAlert aria-hidden='true' /><div><strong>{conditions.length} active attention {conditions.length === 1 ? 'flag' : 'flags'}</strong><p>Each flag follows the response and approval workflow assigned to its category.</p></div></header>
+    <header><CircleAlert aria-hidden='true' /><div><strong>{conditions.length} active attention {conditions.length === 1 ? 'flag' : 'flags'}</strong><p>Automatic reasons clear when their underlying condition is resolved. Legacy formal records retain their original workflow.</p></div></header>
     <div className='productionAttention__list'>
       {conditions.map(item => {
         const category = attentionCategoryFor(item.category)
@@ -62,7 +62,7 @@ const ProductionAttentionPanel = ({ conditions = [], canAcknowledge, canResolve,
               ? actions.map(action => <Button key={action.key} className={actionTone(action.key) === 'danger' ? 'vk-button--danger' : ''} variant='secondary' disabled={pending} onClick={() => onWorkflowAction(item, action)}>{action.label}</Button>)
               : <>
                 {canAcknowledge && !item.acknowledged_at && <Button variant='secondary' disabled={pending} onClick={() => onAcknowledge(item)}>Acknowledge</Button>}
-                {canResolveItem && <Button variant='secondary' disabled={pending} onClick={() => onResolve(item)}>Resolve</Button>}
+                {canResolveItem && item.source !== 'computed' && <Button variant='secondary' disabled={pending} onClick={() => onResolve(item)}>Resolve</Button>}
               </>}
           </div>
         </article>

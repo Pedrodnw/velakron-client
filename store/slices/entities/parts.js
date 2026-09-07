@@ -1,5 +1,6 @@
 import { createSelector, createSlice } from '@reduxjs/toolkit'
 import { apiCallBegan } from '../../api'
+import { commandData, CONVERSATION_V2 } from '../../collaborationV2'
 import { openDownloadTarget, uploadFileToIntent } from '../../fileTransfer'
 import { uploadMimeForFile } from '../../modelFiles'
 import { organizationContextCleared, organizationSwitchRequested } from '../appContext'
@@ -224,15 +225,32 @@ export const carryPartVisualAnchor = (partId, sourceRevisionId, anchorId, data) 
 export const createPartCollaboration = data => mutate({ url: '/part-collaboration', data })
 export const updatePartCollaboration = (id, data) => mutate({ url: `/part-collaboration/${id}`, method: 'patch', data })
 export const archivePartCollaboration = (id, data) => mutate({ url: `/part-collaboration/${id}/archive`, data })
-export const postPartCollaborationMessage = (id, body) => mutate({ url: `/part-collaboration/${id}/messages`, data: { body } })
-export const applyPartCollaborationAction = (id, data) => mutate({
+const currentConversation = (state, id) => state.entities.parts.collaborationDetailsById[String(id)]?.item
+export const postPartCollaborationMessage = (id, body) => (dispatch, getState) => {
+  const item = currentConversation(getState(), id)
+  return dispatch(mutate({ url: `/part-collaboration/${id}/messages`, data: item?.collaboration_version === CONVERSATION_V2 ? commandData(id, 'add_message', item.version, { body }) : { body } }))
+}
+const applyLegacyPartCollaborationAction = (id, data) => mutate({
   url: `/part-collaboration/${id}/actions`,
   data: {
     ...data,
     idempotency_key: data.idempotency_key || `part-action:${id}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`,
   },
 })
-export const promotePartCollaboration = (id, data) => mutate({ url: `/part-collaboration/${id}/promote`, data })
+export const applyPartCollaborationAction = (id, data) => (dispatch, getState) => {
+  const item = currentConversation(getState(), id)
+  if (item?.collaboration_version !== CONVERSATION_V2) return dispatch(applyLegacyPartCollaborationAction(id, data))
+  const action = data.action
+  const endpoint = ['needs_response', 'clear_needs_response'].includes(action) ? 'needs-response' : action
+  const payload = action === 'close' ? { summary: data.note } : endpoint === 'needs-response' ? { clear: action === 'clear_needs_response' } : {}
+  return dispatch(mutate({ url: `/part-collaboration/${id}/${endpoint}`, data: commandData(id, action, data.version ?? item.version, payload) }))
+}
+export const promotePartCollaboration = (id, data) => (dispatch, getState) => {
+  const item = currentConversation(getState(), id)
+  const v2 = item?.collaboration_version === CONVERSATION_V2
+  const { idempotency_key: key, version, ...payload } = data
+  return dispatch(mutate({ url: `/part-collaboration/${id}/${v2 ? 'escalate' : 'promote'}`, data: v2 ? commandData(id, 'escalate', version ?? item.version, payload, key) : data }))
+}
 export const startPartReview = id => mutate({ url: `/part-reviews/${id}/start`, data: {} })
 export const requestPartReviewChanges = (id, note) => mutate({ url: `/part-reviews/${id}/request-changes`, data: { note } })
 export const acknowledgePartRequirement = (reviewId, requirementId) => mutate({ url: `/part-reviews/${reviewId}/requirements/${requirementId}/acknowledge`, data: {} })

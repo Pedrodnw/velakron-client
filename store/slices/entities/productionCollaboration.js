@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { apiCallBegan } from '../../api'
+import { commandData } from '../../collaborationV2'
 import { openDownloadTarget, uploadFileToIntent } from '../../fileTransfer'
 import { uploadMimeForFile } from '../../modelFiles'
 import { organizationContextCleared, organizationSwitchRequested } from '../appContext'
@@ -9,6 +10,12 @@ const emptyRecord = () => ({
   notes: [],
   attachments: [],
   attention: [],
+  formalRecords: [],
+  formalContext: {},
+  formalDetails: {},
+  notifications: [],
+  formalLoading: false,
+  formalError: null,
   health: 'unassessed',
   highestSeverity: null,
   timelinePage: null,
@@ -30,6 +37,19 @@ const slice = createSlice({
   name: 'productionCollaboration',
   initialState,
   reducers: {
+    formalRequested: (state, action) => { ensureRecord(state, action.payload).formalLoading = true },
+    formalReceived: (state, action) => {
+      const target = ensureRecord(state, action.payload.id)
+      if (action.payload.list) {
+        target.formalRecords = action.payload.list.conditions || []
+        target.formalContext = action.payload.list.context || {}
+      }
+      if (action.payload.detail?.condition) target.formalDetails[String(action.payload.detail.condition.id)] = action.payload.detail
+      if (action.payload.notifications) target.notifications = action.payload.notifications
+      target.formalLoading = false
+      target.formalError = null
+    },
+    formalFailed: (state, action) => { const target = ensureRecord(state, action.payload.id); target.formalLoading = false; target.formalError = action.payload.error },
     recordRequested: (state, action) => {
       const target = ensureRecord(state, action.payload)
       target.loading = true
@@ -91,6 +111,9 @@ const slice = createSlice({
 
 const {
   mutationRequested,
+  formalRequested,
+  formalReceived,
+  formalFailed,
   recordFailed,
   recordReceived,
   recordRequested,
@@ -277,3 +300,33 @@ export const productionCollaborationSelectors = {
 }
 
 export default slice.reducer
+
+export const loadFormalRecords = id => async dispatch => {
+  dispatch(formalRequested(id))
+  const result = await dispatch(call({ url: `/production-records/${id}/formal-records`, requestKey: `formal-list-${id}` }))
+  if (result?.ok) dispatch(formalReceived({ id, list: result.payload.data }))
+  else if (!result?.cancelled) dispatch(formalFailed({ id, error: result?.error }))
+  return result
+}
+export const loadFormalRecord = (id, formalId) => async dispatch => {
+  const result = await dispatch(call({ url: `/production-records/${id}/formal-records/${formalId}`, requestKey: `formal-detail-${id}-${formalId}` }))
+  if (result?.ok) dispatch(formalReceived({ id, detail: result.payload.data }))
+  else if (!result?.cancelled) dispatch(formalFailed({ id, error: result?.error }))
+  return result
+}
+export const loadCollaborationNotifications = id => async dispatch => {
+  const result = await dispatch(call({ url: `/production-records/${id}/collaboration-notifications`, requestKey: `collaboration-notifications-${id}` }))
+  if (result?.ok) dispatch(formalReceived({ id, notifications: result.payload.data.notifications }))
+  return result
+}
+export const createFormalRecord = (id, data) => async dispatch => {
+  const { idempotency_key: key, version, ...payload } = data
+  const result = await dispatch(mutate(id, { url: `/production-records/${id}/formal-records`, method: 'post', data: commandData(id, 'formal_create', version, payload, key) }))
+  if (result?.ok) await dispatch(loadFormalRecords(id))
+  return result
+}
+export const actOnFormalRecord = (id, formalId, version, payload) => async dispatch => {
+  const result = await dispatch(mutate(id, { url: `/production-records/${id}/formal-records/${formalId}/actions`, method: 'post', data: commandData(formalId, payload.action, version, payload) }))
+  if (result?.ok || result?.error?.code === 'VERSION_CONFLICT' || result?.error?.code === 'FORMAL_RECORD_TERMINAL') await Promise.all([dispatch(loadFormalRecords(id)), dispatch(loadFormalRecord(id, formalId))])
+  return result
+}

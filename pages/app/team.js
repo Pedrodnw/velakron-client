@@ -38,7 +38,7 @@ const memberName = membership => {
 const rolesForOrganization = type => ({
   velakron: ['velakron_admin', 'founder'],
   oem: ['oem_admin', 'oem_user', 'oem_viewer'],
-  supplier: ['supplier_admin', 'supplier_user'],
+  supplier: ['supplier_admin', 'supplier_user', 'supplier_viewer'],
 }[type] || [])
 
 const emptyInvite = { first_name: '', last_name: '', email: '', role: '', message: '' }

@@ -5,6 +5,18 @@ import TimelineRow from './TimelineRow'
 import { formatDateTime, formatLabel } from './formatters'
 
 const presentation = {
+  'collaboration.create': { title: 'Conversation started', icon: MessageSquareText },
+  'collaboration.add_message': { title: 'Conversation message added', icon: MessageSquareText },
+  'collaboration.close': { title: 'Conversation closed with summary', icon: CheckCircle2 },
+  'collaboration.reopen': { title: 'Conversation reopened', icon: RotateCcw },
+  'collaboration.needs_response': { title: 'Company response requested', icon: MessageSquareText },
+  'collaboration.clear_needs_response': { title: 'Response marker cleared', icon: CheckCircle2 },
+  'formal.escalate': { title: 'Conversation escalated to formal record', icon: AlertTriangle },
+  'formal.create': { title: 'Formal record created', icon: AlertTriangle },
+  'formal.approve_resolution': { title: 'OEM approved resolution', icon: CheckCircle2 },
+  'formal.release_production': { title: 'OEM released Production Block', icon: CheckCircle2 },
+  'formal.acknowledge_resumption': { title: 'Supplier acknowledged resumption', icon: CheckCircle2 },
+  'formal.verify_and_close': { title: 'OEM verified and closed Non-Conformance', icon: CheckCircle2 },
   'production_record.created': { title: 'Production record created', icon: CircleDot },
   'production_record.updated': { title: 'Production details updated', icon: CircleDot },
   'production_record.commitment_changed': { title: 'Commitment changed — acceptance required', icon: RotateCcw },
@@ -44,12 +56,12 @@ const presentation = {
 
 const describe = event => {
   const actor = event.actor?.display_name || event.actor?.organization_name || 'Authorized user'
-  const workflowChange = event.event_type === 'attention.workflow_action'
+  const workflowChange = (event.event_type === 'attention.workflow_action' || event.event_type?.startsWith('formal.'))
     && event.after?.previous_state
     && event.after?.next_state
     ? `Workflow moved from ${formatLabel(event.after.previous_state)} to ${formatLabel(event.after.next_state)}.`
     : ''
-  const stage = event.new_stage && event.previous_stage !== event.new_stage
+  const stage = event.previous_stage && event.new_stage && event.previous_stage !== event.new_stage
     ? `Moved from ${formatLabel(event.previous_stage)} to ${formatLabel(event.new_stage)}.`
     : ''
   const dateChange = event.expected_ship_before && event.expected_ship_after
@@ -64,6 +76,7 @@ const describe = event => {
 
 const ProductionTimeline = ({ events = [], onOpenPartCase }) => <div className='productionTimeline'>
   {[...events].sort((left, right) => new Date(right.occurred_at || right.created_at || 0) - new Date(left.occurred_at || left.created_at || 0)).map(event => {
+    const collaborationId = event.collaboration_item || event.after?.collaboration_item
     const isCollaboration = event.event_type?.startsWith('collaboration.')
     const isInspection = event.event_type?.startsWith('inspection.')
     const item = presentation[event.event_type] || (isCollaboration
@@ -85,7 +98,7 @@ const ProductionTimeline = ({ events = [], onOpenPartCase }) => <div className='
       description={describe(event)}
       time={formatDateTime(event.occurred_at)}
       icon={item.icon}
-      action={event.collaboration_item && onOpenPartCase ? <Button variant='secondary' onClick={() => onOpenPartCase(String(event.collaboration_item?.id || event.collaboration_item?._id || event.collaboration_item))}><MessageSquareText aria-hidden='true' /> Open discussion</Button> : null}
+      action={event.event_type?.startsWith('formal.') && event.after?.attention_condition ? <Button variant='secondary' href={`/app/production/${event.production_record?.id || event.production_record?._id || event.production_record}?formal=${event.after.attention_condition}`}>Open formal record</Button> : collaborationId && onOpenPartCase ? <Button variant='secondary' onClick={() => onOpenPartCase(String(collaborationId?.id || collaborationId?._id || collaborationId))}><MessageSquareText aria-hidden='true' /> Open discussion</Button> : null}
     />
   })}
 </div>

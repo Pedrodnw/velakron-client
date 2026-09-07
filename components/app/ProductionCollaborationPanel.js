@@ -141,7 +141,8 @@ const ProductionCollaborationPanel = ({
   const productionTimeline = collaboration.timeline.length ? collaboration.timeline : detail?.timeline || []
   const timeline = useMemo(() => {
     const byId = new Map()
-    ;[...productionTimeline, ...partEvents].forEach(event => byId.set(String(event.id || event._id), event))
+    const mirroredPartEvents = new Set(productionTimeline.map(event => String(event.after?.part_workspace_event || '')))
+    ;[...productionTimeline, ...partEvents.filter(event => !mirroredPartEvents.has(String(event.id || event._id)))].forEach(event => byId.set(String(event.id || event._id), event))
     return [...byId.values()].sort((left, right) => new Date(left.occurred_at || left.created_at || 0) - new Date(right.occurred_at || right.created_at || 0))
   }, [partEvents, productionTimeline])
   const tabs = [

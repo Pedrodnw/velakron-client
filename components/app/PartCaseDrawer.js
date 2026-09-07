@@ -7,6 +7,7 @@ import { Button } from '../design-system'
 import { formatDateTime, formatLabel, statusTone } from './formatters'
 import PartAssetViewer from './PartAssetViewer'
 import ResponsiveDrawer from './ResponsiveDrawer'
+import PartConversationDrawerV2 from './PartConversationDrawerV2'
 import StatusBadge from './StatusBadge'
 
 const emptyForm = {
@@ -50,7 +51,7 @@ const StoredVisualReference = ({ source, alt }) => {
   return <img className='partCaseVisual__image' src={image.source} alt={alt} />
 }
 
-const PartCaseDrawer = ({
+const LegacyPartCaseDrawer = ({
   open,
   mode = 'create',
   itemDetail,
@@ -270,4 +271,15 @@ const PartCaseDrawer = ({
   </ResponsiveDrawer>
 }
 
-export default PartCaseDrawer
+export default function PartCaseDrawer(props) {
+  const item = props.itemDetail?.item
+  if ((props.mode === 'create' && props.v2Enabled) || item?.collaboration_version === 'part-collaboration-v2') {
+    const visual = item?.visual_anchor && <div className='partCaseVisual__preview'>{props.linkedVisual?.protected
+      ? <div className='partCaseVisual__notice'><ShieldAlert aria-hidden='true' /><strong>ITAR verification required</strong><span>Open the full viewer to confirm authorized access.</span></div>
+      : props.linkedVisual?.error ? <p>{props.linkedVisual.error}</p>
+        : props.linkedVisual?.preview ? <StoredVisualReference source={props.linkedVisual.source} alt={`Saved visual reference for ${item.title}`} />
+          : <PartAssetViewer asset={props.linkedVisual?.asset} source={props.linkedVisual?.source} loading={props.linkedVisual?.loading} anchors={[item.visual_anchor]} selectedAnchorId={item.visual_anchor.id || item.visual_anchor._id} onPreviewReady={item.state === 'open' ? props.onVisualPreviewReady : undefined} />}</div>
+    return <PartConversationDrawerV2 {...props} visual={visual} />
+  }
+  return <LegacyPartCaseDrawer {...props} />
+}
