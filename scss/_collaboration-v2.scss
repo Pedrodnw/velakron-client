@@ -33,6 +33,16 @@
   &__datum p { margin: 5px 0; }
   &__scope, &__acceptance { padding: 20px; border: 1px solid var(--vk-workspace-border); border-radius: 10px; background: var(--vk-workspace-surface-subtle); }
   &__acceptance { grid-column: 1 / -1; border-color: var(--vk-success-border); background: var(--vk-success-soft); }
+  &__affectedProductions { padding: 20px; border: 1px solid var(--vk-info-border); border-radius: 10px; background: var(--vk-info-soft); }
+  &__affectedProductions > div:first-child p { margin: -4px 0 14px; color: var(--vk-workspace-text-secondary); }
+  &__productionLinks { display: grid; gap: 10px; }
+  &__productionLink { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; min-width: 0; border: 1px solid var(--vk-workspace-border-strong); border-radius: 9px; padding: 14px 16px; background: var(--vk-workspace-surface); color: inherit; text-align: left; font: inherit; }
+  button.formalV2__productionLink { cursor: pointer; }
+  button.formalV2__productionLink:hover { border-color: var(--vk-action); background: var(--vk-workspace-surface-hover); }
+  &__productionLink > span:first-child { display: grid; gap: 4px; min-width: 0; }
+  &__productionLink strong, &__productionLink small { overflow-wrap: anywhere; }
+  &__productionLink--current { border-color: var(--vk-info-border); }
+  &__productionLinkState { flex: 0 0 auto; color: var(--vk-action); font-size: 12px; font-weight: 700; }
   &__history ol { padding-left: 24px; }
   &__history li { padding: 14px 0; border-top: 1px solid var(--vk-workspace-border); }
   &__history li p { margin: 6px 0; }
@@ -46,7 +56,8 @@
   @media (max-width: 720px) {
     &__list > button { align-items: flex-start; flex-direction: column; gap: 12px; padding: 14px; }
     &__actions .vk-button { flex: 1 1 auto; }
-    &__fieldset, &__notice, &__scope, &__acceptance { padding: 14px; }
+    &__fieldset, &__notice, &__scope, &__acceptance, &__affectedProductions { padding: 14px; }
+    &__productionLink { align-items: flex-start; flex-direction: column; gap: 8px; }
     .productionFormGrid { grid-template-columns: minmax(0, 1fr); }
     &__notifications li { flex-direction: column; }
   }

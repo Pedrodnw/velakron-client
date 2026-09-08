@@ -27,7 +27,7 @@ export const DataSummary = ({ data, participants = [], files = [], onDownload })
 
 export const TechnicalAcceptance = ({ acceptance }) => acceptance ? <section className='formalV2__acceptance'><h3>Accepted for this production only</h3><DataSummary data={acceptance.change} /><p>OEM approved by {acceptance.approval?.actor?.display_name || 'an authorized OEM member'} · {formatDateTime(acceptance.approval?.occurred_at)}.</p><small>The released revision and its source files remain unchanged.</small></section> : null
 
-export const FormalDetail = ({ item, detail, context, files, pending, record, onAction, onSource, onNewCase, onRelated, onDraftChange, onDownload, canCreate }) => {
+export const FormalDetail = ({ item, detail, context, files, pending, record, onAction, onSource, onNewCase, onRelated, onProduction, onDraftChange, onDownload, canCreate }) => {
   const [selected, setSelected] = useState(null)
   const [actionDirty, setActionDirty] = useState(false)
   const { requestDiscard, discardDialog } = useDraftDiscard()
@@ -42,6 +42,7 @@ export const FormalDetail = ({ item, detail, context, files, pending, record, on
   const lastTransition = [...(item.workflow?.history || [])].reverse().find(entry => entry.from_state !== entry.to_state)
   const returnReason = lastTransition?.action?.startsWith('return_') && lastTransition.to_state === item.workflow?.state ? lastTransition.note : null
   const summaryProps = { participants: context.supplier_members || [], files, onDownload }
+  const affectedProductionRecords = detail?.affected_production_records || []
   if (!isFormalV2(item)) return <div className='formalV2'><p className='formalV2__notice'>Legacy history · read-only</p><h3>{item.explanation}</h3><p>{item.resolution_reason || item.workflow?.state_label}</p><DataSummary data={item.workflow?.data} {...summaryProps} /><ol>{(item.workflow?.history || []).map((entry, index) => <li key={idOf(entry) || index}><strong>{formatLabel(entry.action)}</strong><p>{entry.actor?.display_name} · {formatDateTime(entry.occurred_at)}</p><p>{entry.note}</p></li>)}</ol>{item.legacy_replaced_by && <Button variant='secondary' onClick={() => onRelated(idOf(item.legacy_replaced_by))}>Open replacement formal record</Button>}</div>
   return <div className='formalV2'>
     <div className='formalV2__heading'><StatusBadge tone={item.workflow?.terminal ? 'success' : item.workflow?.production_blocked ? 'danger' : 'warning'}>{item.workflow?.state_label}</StatusBadge><span>{item.record_number}</span></div>
@@ -49,6 +50,12 @@ export const FormalDetail = ({ item, detail, context, files, pending, record, on
     {returnReason && <section className='formalV2__notice' aria-label='Requested changes'><strong>OEM requested changes</strong><p>{returnReason}</p></section>}
     <p className='formalV2__explanation'>{item.explanation}</p>
     <dl className='partCaseDetail__facts'><div><dt>Production</dt><dd>{record.public_reference}</dd></div><div><dt>Category</dt><dd>{formalLabel(item.category)}</dd></div><div><dt>Last activity</dt><dd>{formatDateTime(item.last_seen_at)}</dd></div><div><dt>Current responsibility</dt><dd>{item.workflow?.current_actor_side === 'none' ? 'Closed' : formatLabel(item.workflow?.current_actor_side)}</dd></div></dl>
+    {affectedProductionRecords.length > 1 && <section className='formalV2__affectedProductions' aria-labelledby={`affected-productions-${item.id}`}><div><h3 id={`affected-productions-${item.id}`}>Affected production records</h3><p>This formal decision and its production controls apply to every record listed here.</p></div><div className='formalV2__productionLinks'>{affectedProductionRecords.map(production => {
+      const current = idOf(production) === idOf(record)
+      const description = production.primary ? 'Primary production record' : 'Additional affected production record'
+      const content = <><span><strong>{production.public_reference}</strong><small>{description}{production.part_number ? ` · Part ${production.part_number}` : ''}</small></span><span className='formalV2__productionLinkState'>{current ? 'Currently viewing' : 'Open record'}</span></>
+      return current ? <div key={idOf(production)} className='formalV2__productionLink formalV2__productionLink--current' aria-current='page'>{content}</div> : <button type='button' key={idOf(production)} className='formalV2__productionLink' aria-label={`Open affected production record ${production.public_reference}`} onClick={() => onProduction(idOf(production))}>{content}</button>
+    })}</div></section>}
     {scope && <section className='formalV2__scope'><h3>{scope.affected_quantity} affected · {Math.max(0, Number(scope.produced_quantity ?? record.quantity) - scope.affected_quantity)} outside the reported scope</h3><DataSummary data={scope} {...summaryProps} />{canCreate && <Button variant='secondary' onClick={() => onNewCase('formal', item.id)}>Create a related formal record</Button>}</section>}
     {detail?.source_conversation && <details className='formalV2__source' open><summary>Source conversation · {detail.source_conversation.title}</summary><p>{detail.source_conversation.description}</p>{(detail.source_messages || []).map(message => <article key={idOf(message)}><strong>{message.author?.display_name || 'Workspace member'}</strong><small>{formatDateTime(message.created_at)}</small><p>{message.body}</p></article>)}<Button variant='secondary' onClick={() => onSource(idOf(detail.source_conversation))}>Open source, visual references, and files</Button><div className='formalV2__boundary'>Escalated here · {formatDateTime(item.created_at)}</div></details>}
     <TechnicalAcceptance acceptance={item.technical_acceptance} />
@@ -90,6 +97,13 @@ export default function FormalEscalationPanel({ record, organization, enabled, f
   })
   const open = (id, options = {}) => navigate({ formal: id }, { ...options, afterNavigate: () => { if (!options.saved) setFeedback(null) } })
   const close = () => navigate({})
+  const openProduction = id => requestDiscard(dirty, () => {
+    setDirty(false)
+    const query = { id, part_tab: 'cases', formal: formalId }
+    if (typeof router.query.return_to === 'string') query.return_to = router.query.return_to
+    router.push({ pathname: '/app/production/[id]', query })
+    return true
+  })
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === 'hidden') return
@@ -131,7 +145,7 @@ export default function FormalEscalationPanel({ record, organization, enabled, f
     {!!collaboration.notifications?.length && <details className='formalV2__notifications'><summary>Recent collaboration updates</summary><ul>{collaboration.notifications.slice(0, 12).map(notification => <li key={idOf(notification)}><button type='button' onClick={() => notification.formal_record ? open(idOf(notification.formal_record)) : navigate({ part_tab: 'cases', collaboration: idOf(notification.conversation) })}>{notification.subject || formatLabel(notification.event_type)}</button><small>{formatDateTime(notification.occurred_at)}</small></li>)}</ul></details>}
     <ResponsiveDrawer open={Boolean(formalId)} title={creating ? 'Create formal record' : item ? formalLabel(item.category) : 'Formal record'} wide onClose={close}>
       <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-      {creating && enabled && canCreate ? <FormalCreationForm key={`new:${router.query.formal_related || ''}`} record={record} version={record.version} organizationType={organization.type} files={files} relatedRecords={context.related_production_records} formalRecords={records} defaultRelatedFormal={router.query.formal_related || ''} pending={collaboration.mutating} onDraftChange={setDirty} onCancel={close} onSubmit={submit} /> : item ? <FormalDetail canCreate={enabled && canCreate} key={item.id} item={item} detail={detail} context={context} files={files} record={record} pending={collaboration.mutating} onAction={submit} onDraftChange={setDirty} onSource={id => navigate({ part_tab: 'cases', collaboration: id })} onRelated={open} onNewCase={(kind, id) => navigate(kind === 'formal' ? { formal: 'new', formal_related: id } : { part_tab: 'cases', new_conversation: '1', references_formal_record: id })} onDownload={file => file.export_control === 'itar' ? setProtectedFile(file) : onDownload(file)} /> : <p role='status'>{collaboration.formalError?.message || 'Loading formal record…'}</p>}
+      {creating && enabled && canCreate ? <FormalCreationForm key={`new:${router.query.formal_related || ''}`} record={record} version={record.version} organizationType={organization.type} files={files} relatedRecords={context.related_production_records} formalRecords={records} defaultRelatedFormal={router.query.formal_related || ''} pending={collaboration.mutating} onDraftChange={setDirty} onCancel={close} onSubmit={submit} /> : item ? <FormalDetail canCreate={enabled && canCreate} key={item.id} item={item} detail={detail} context={context} files={files} record={record} pending={collaboration.mutating} onAction={submit} onDraftChange={setDirty} onSource={id => navigate({ part_tab: 'cases', collaboration: id })} onRelated={open} onProduction={openProduction} onNewCase={(kind, id) => navigate(kind === 'formal' ? { formal: 'new', formal_related: id } : { part_tab: 'cases', new_conversation: '1', references_formal_record: id })} onDownload={file => file.export_control === 'itar' ? setProtectedFile(file) : onDownload(file)} /> : <p role='status'>{collaboration.formalError?.message || 'Loading formal record…'}</p>}
     </ResponsiveDrawer>
     <ItarAccessDialog open={Boolean(protectedFile)} file={protectedFile} purpose='download' pending={downloadPending} feedback={feedback} onClose={() => setProtectedFile(null)} onConfirm={async attestation => { setDownloadPending(true); const result = await onDownload(protectedFile, attestation); setDownloadPending(false); if (result?.ok) setProtectedFile(null); else setFeedback({ type: 'error', message: workflowError(result) }); return result }} />
     {discardDialog}

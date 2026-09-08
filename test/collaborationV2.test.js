@@ -36,6 +36,19 @@ describe('Collaboration V2 client contracts', () => {
     expect(html).not.toContain('Start a new case referencing this record')
     expect(html).not.toContain('Add message')
   })
+  it('labels the primary and additional affected Production Records and makes the other record navigable', () => {
+    const item = { id: 'formal', category: 'production_block', explanation: 'Stop both linked records.', workflow: { version: FORMAL_V2, terminal: false, current_actor_side: 'supplier', history: [], data: {} } }
+    const detail = { affected_production_records: [
+      { id: 'primary', public_reference: 'VK-PRIMARY', part_number: 'VLK-100', primary: true },
+      { id: 'related', public_reference: 'VK-RELATED', part_number: 'VLK-100', primary: false },
+    ] }
+    const html = render(FormalDetail, { item, detail, context: {}, files: [], record: { id: 'primary', public_reference: 'VK-PRIMARY' }, onProduction: () => {} })
+    expect(html).toContain('Affected production records')
+    expect(html).toContain('Primary production record · Part VLK-100')
+    expect(html).toContain('Additional affected production record · Part VLK-100')
+    expect(html).toContain('aria-current="page"')
+    expect(html).toContain('aria-label="Open affected production record VK-RELATED"')
+  })
   it('keeps an unavailable action draft readable while disabling its submission', () => {
     const html = render(FormalActionForm, { item: { version: 4, workflow: { data: { resolution: { summary: 'Retained supplier proposal', reason: 'Retained supporting rationale' } } } }, action: { key: 'submit_resolution', label: 'Submit resolution', data_kind: 'resolution' }, unavailable: true })
     expect(html).toContain('Retained supplier proposal')
