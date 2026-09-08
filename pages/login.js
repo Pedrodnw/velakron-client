@@ -11,6 +11,7 @@ import LinkWrap from '../components/LinkWrap'
 import Seo from '../components/Seo'
 import {
   getAuthInitialized,
+  getAuthSessionEndReason,
   getAuthUser,
   loginAccount,
 } from '../store/slices/auth'
@@ -19,10 +20,12 @@ const Login = () => {
   const dispatch = useDispatch()
   const router = useRouter()
   const initialized = useSelector(getAuthInitialized)
+  const sessionEndReason = useSelector(getAuthSessionEndReason)
   const user = useSelector(getAuthUser)
   const [form, setForm] = useState({ email: '', password: '', remember_me: false })
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const sessionExpired = router.query.reason === 'session_expired' || sessionEndReason === 'expired'
 
   useEffect(() => {
     if (initialized && user) router.replace(safeReturnPath(router.query.next))
@@ -63,6 +66,7 @@ const Login = () => {
       panelTitle='Log in to Velakron'
     >
       <form className='authForm' onSubmit={submit}>
+        {sessionExpired && !error && <FormMessage>Your session expired. Sign in again to continue where you left off.</FormMessage>}
         <FormMessage>{error}</FormMessage>
         <FormField
           id='login-email'

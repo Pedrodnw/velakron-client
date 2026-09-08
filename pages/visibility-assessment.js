@@ -25,6 +25,7 @@ import {
   saveVisibilityAnswers,
   startVisibilityAssessment,
 } from '../store/visibilityAssessment'
+import { firstVisibilityContactError, validateVisibilityContact } from '../store/visibilityContact'
 
 export const visibilityQuestions = [
   { key: 'supplier_count', label: 'How many outside suppliers are you actively managing?', note: 'Count the suppliers your team relies on for active production.', options: [['1_10', '1–10'], ['11_50', '11–50'], ['51_200', '51–200'], ['200_plus', '200+']] },
@@ -93,25 +94,28 @@ const AssessmentQuestion = ({ question, answer, number, onBack, onContinue, onSe
   </footer>
 </section>
 
-const ContactStep = ({ contact, error, pending, onBack, onChange, onSubmit }) => <section className='assessmentCard assessmentContact'>
+const FieldError = ({ field, errors }) => errors[field] ? <small className='assessmentFieldError' id={`assessment-${field}-error`}>{errors[field]}</small> : null
+
+const ContactStep = ({ contact, error, fieldErrors, pending, onBack, onChange, onSubmit }) => <section className='assessmentCard assessmentContact'>
   <Progress current={visibilityQuestions.length} total={visibilityQuestions.length} />
   <div className='assessmentContact__heading'>
     <span><LockKeyhole aria-hidden='true' /></span>
     <div><p className='visibilityHome__eyebrow'>Your results are ready</p><h1>See your Production Visibility Score</h1><p>Enter your work details to see your score immediately. We’ll also use them to tailor your demo if you choose to book one.</p></div>
   </div>
   {error && <div className='assessmentError' role='alert'>{error}</div>}
-  <form className='assessmentContact__form' id='assessment-contact-form' onSubmit={onSubmit}>
-    <label><span>First name</span><input name='first_name' required autoComplete='given-name' value={contact.first_name} onChange={onChange} /></label>
-    <label><span>Last name</span><input name='last_name' required autoComplete='family-name' value={contact.last_name} onChange={onChange} /></label>
-    <label><span>Company</span><input name='company_name' required autoComplete='organization' value={contact.company_name} onChange={onChange} /></label>
-    <label><span>Work email</span><input name='email' type='email' required autoComplete='email' value={contact.email} onChange={onChange} /></label>
-    <label><span>Job title <em>Optional</em></span><input name='job_title' autoComplete='organization-title' value={contact.job_title} onChange={onChange} /></label>
-    <label><span>Phone <em>Optional</em></span><input name='phone' type='tel' autoComplete='tel' value={contact.phone} onChange={onChange} /></label>
+  <form className='assessmentContact__form' id='assessment-contact-form' onSubmit={onSubmit} noValidate>
+    <label className={fieldErrors.first_name ? 'has-error' : ''}><span>First name</span><input name='first_name' required autoComplete='given-name' value={contact.first_name} onChange={onChange} aria-invalid={Boolean(fieldErrors.first_name)} aria-describedby={fieldErrors.first_name ? 'assessment-first_name-error' : undefined} /><FieldError field='first_name' errors={fieldErrors} /></label>
+    <label className={fieldErrors.last_name ? 'has-error' : ''}><span>Last name</span><input name='last_name' required autoComplete='family-name' value={contact.last_name} onChange={onChange} aria-invalid={Boolean(fieldErrors.last_name)} aria-describedby={fieldErrors.last_name ? 'assessment-last_name-error' : undefined} /><FieldError field='last_name' errors={fieldErrors} /></label>
+    <label className={fieldErrors.company_name ? 'has-error' : ''}><span>Company</span><input name='company_name' required autoComplete='organization' value={contact.company_name} onChange={onChange} aria-invalid={Boolean(fieldErrors.company_name)} aria-describedby={fieldErrors.company_name ? 'assessment-company_name-error' : undefined} /><FieldError field='company_name' errors={fieldErrors} /></label>
+    <label className={fieldErrors.email ? 'has-error' : ''}><span>Work email</span><input name='email' type='email' required autoComplete='email' value={contact.email} onChange={onChange} aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? 'assessment-email-error' : undefined} /><FieldError field='email' errors={fieldErrors} /></label>
+    <label className={fieldErrors.job_title ? 'has-error' : ''}><span>Job title <em>Optional</em></span><input name='job_title' autoComplete='organization-title' maxLength='160' value={contact.job_title} onChange={onChange} aria-invalid={Boolean(fieldErrors.job_title)} aria-describedby={fieldErrors.job_title ? 'assessment-job_title-error' : undefined} /><FieldError field='job_title' errors={fieldErrors} /></label>
+    <label className={fieldErrors.phone ? 'has-error' : ''}><span>Phone <em>Optional</em></span><input name='phone' type='tel' autoComplete='tel' maxLength='40' value={contact.phone} onChange={onChange} aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? 'assessment-phone-error' : undefined} /><FieldError field='phone' errors={fieldErrors} /></label>
     <label className='assessmentHoneypot' aria-hidden='true'>Website<input name='website' value={contact.website} onChange={onChange} tabIndex='-1' autoComplete='off' /></label>
-    <label className='assessmentConsent'>
-      <input name='consent' type='checkbox' checked={contact.consent} onChange={onChange} />
+    <label className={`assessmentConsent${fieldErrors.consent ? ' has-error' : ''}`}>
+      <input name='consent' type='checkbox' required checked={contact.consent} onChange={onChange} aria-invalid={Boolean(fieldErrors.consent)} aria-describedby={fieldErrors.consent ? 'assessment-consent-error' : undefined} />
       <span><Check aria-hidden='true' /></span>
       <p>Velakron may contact me about this assessment and a personalized product demonstration.</p>
+      <FieldError field='consent' errors={fieldErrors} />
     </label>
   </form>
   <footer className='assessmentCard__footer'>
@@ -177,6 +181,7 @@ const VisibilityAssessment = () => {
   const [result, setResult] = useState(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [contactErrors, setContactErrors] = useState({})
   const [bookingOpen, setBookingOpen] = useState(false)
   const [availability, setAvailability] = useState([])
   const [selectedSlot, setSelectedSlot] = useState('')
@@ -252,13 +257,43 @@ const VisibilityAssessment = () => {
   const updateContact = event => {
     const { checked, name, type, value } = event.target
     setContact(current => ({ ...current, [name]: type === 'checkbox' ? checked : value }))
+    if (contactErrors[name]) {
+      const next = { ...contactErrors }
+      delete next[name]
+      setContactErrors(next)
+      setError(Object.keys(next).length ? 'Please correct the information marked below.' : '')
+    }
+  }
+
+  const focusContactError = errors => {
+    const field = firstVisibilityContactError(errors)
+    if (!field) return
+    setTimeout(() => {
+      const input = document.querySelector(`#assessment-contact-form [name='${field}']`)
+      input?.closest('label')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      input?.focus({ preventScroll: true })
+    }, 0)
   }
 
   const submitContact = async event => {
-    event.preventDefault(); setPending(true); setError('')
+    event.preventDefault()
+    const validationErrors = validateVisibilityContact(contact)
+    if (Object.keys(validationErrors).length) {
+      setContactErrors(validationErrors)
+      setError('Please correct the information marked below.')
+      focusContactError(validationErrors)
+      return
+    }
+    setPending(true); setError(''); setContactErrors({})
     const response = await dispatch(captureVisibilityContact(credentials.assessment_id, credentials.access_token, contact))
     setPending(false)
-    if (!response?.ok) return setError(errorMessage(response))
+    if (!response?.ok) {
+      const fieldErrors = response?.error?.details || {}
+      setContactErrors(fieldErrors)
+      setError(Object.keys(fieldErrors).length ? 'Please correct the information marked below.' : errorMessage(response))
+      focusContactError(fieldErrors)
+      return
+    }
     setResult(response.payload.data.result)
     writeSession({ ...credentials, answers, captured: true })
     setPhase('result')
@@ -292,7 +327,10 @@ const VisibilityAssessment = () => {
 
   const back = () => {
     setError('')
-    if (phase === 'contact') return setPhase('question')
+    if (phase === 'contact') {
+      setContactErrors({})
+      return setPhase('question')
+    }
     if (questionIndex === 0) return setPhase('intro')
     setQuestionIndex(value => value - 1)
   }
@@ -321,7 +359,7 @@ const VisibilityAssessment = () => {
           </div>
         </section>}
         {phase === 'question' && <AssessmentQuestion question={question} answer={answers[question.key]} number={questionIndex + 1} onBack={back} onSelect={value => setAnswers(current => ({ ...current, [question.key]: value }))} onContinue={continueQuestion} pending={pending} />}
-        {phase === 'contact' && <ContactStep {...{ contact, error, pending }} onBack={back} onChange={updateContact} onSubmit={submitContact} />}
+        {phase === 'contact' && <ContactStep contact={contact} error={error} fieldErrors={contactErrors} pending={pending} onBack={back} onChange={updateContact} onSubmit={submitContact} />}
         {phase === 'result' && result && <ResultsStep {...{ result, availability, bookingError, bookingOpen, bookingPending, onBook: book, onOpenBooking: openBooking, selectedSlot, setSelectedSlot }} />}
       </div>
     </main>

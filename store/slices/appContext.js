@@ -125,6 +125,7 @@ const slice = createSlice({
         if (hasOrganizationContext(action.payload)) applyContext(state, action.payload)
       })
       .addCase('auth/sessionFailed', clearContext)
+      .addCase('auth/sessionExpired', clearContext)
       .addCase('auth/signedOut', clearContext)
   },
 })

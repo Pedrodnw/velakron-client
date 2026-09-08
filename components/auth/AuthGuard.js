@@ -2,19 +2,22 @@ import { LoaderCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import { useSelector } from 'react-redux'
-import { getAuthInitialized, getAuthUser } from '../../store/slices/auth'
+import { getAuthInitialized, getAuthSessionEndReason, getAuthUser } from '../../store/slices/auth'
+import { loginPathForReturn } from './utils'
 
 const AuthGuard = ({ children }) => {
   const router = useRouter()
   const initialized = useSelector(getAuthInitialized)
+  const sessionEndReason = useSelector(getAuthSessionEndReason)
   const user = useSelector(getAuthUser)
 
   useEffect(() => {
     if (initialized && !user) {
-      const next = encodeURIComponent(router.asPath || '/account')
-      router.replace(`/login?next=${next}`)
+      router.replace(loginPathForReturn(router.asPath || '/account', {
+        sessionExpired: sessionEndReason === 'expired',
+      }))
     }
-  }, [initialized, router, user])
+  }, [initialized, router, sessionEndReason, user])
 
   if (!initialized || !user) {
     return <section className='authLoading authLoading--workspace' aria-live='polite'>

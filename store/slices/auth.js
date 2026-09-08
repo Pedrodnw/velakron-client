@@ -6,6 +6,7 @@ const initialState = {
   initialized: false,
   status: 'idle',
   error: null,
+  sessionEndReason: null,
 }
 
 const responseUser = payload => payload?.data?.user || null
@@ -23,6 +24,7 @@ const slice = createSlice({
       state.initialized = true
       state.status = state.user ? 'authenticated' : 'anonymous'
       state.error = null
+      state.sessionEndReason = null
     },
     sessionFailed: (state, action) => {
       state.user = null
@@ -39,6 +41,7 @@ const slice = createSlice({
       state.initialized = true
       state.status = state.user ? 'authenticated' : 'anonymous'
       state.error = null
+      state.sessionEndReason = null
     },
     authRequestFailed: (state, action) => {
       state.status = state.user ? 'authenticated' : 'anonymous'
@@ -49,6 +52,14 @@ const slice = createSlice({
       state.initialized = true
       state.status = 'anonymous'
       state.error = null
+      state.sessionEndReason = null
+    },
+    sessionExpired: state => {
+      state.user = null
+      state.initialized = true
+      state.status = 'anonymous'
+      state.error = null
+      state.sessionEndReason = 'expired'
     },
   },
 })
@@ -60,8 +71,11 @@ const {
   sessionFailed,
   sessionReceived,
   sessionRequested,
+  sessionExpired,
   signedOut,
 } = slice.actions
+
+export { sessionExpired }
 
 const authenticatedRequest = (url, method, data) => apiCallBegan({
   url,
@@ -98,5 +112,6 @@ export const logoutAccount = () => apiCallBegan({
 export const getAuthUser = state => state.auth.user
 export const getAuthInitialized = state => state.auth.initialized
 export const getAuthStatus = state => state.auth.status
+export const getAuthSessionEndReason = state => state.auth.sessionEndReason
 
 export default slice.reducer

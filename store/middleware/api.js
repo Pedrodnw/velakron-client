@@ -1,7 +1,13 @@
 import axios from 'axios'
 import { apiCallBegan, apiCallCancelled, apiCallFailed, apiCallSuccess } from '../api'
+import { sessionExpired } from '../slices/auth'
 
 const activeRequests = new Map()
+
+export const isExpiredAuthenticationResponse = error => (
+  error?.response?.status === 401
+  && error?.response?.data?.error?.code === 'AUTHENTICATION_REQUIRED'
+)
 
 export const salesDemoPresenterHeaders = ({ url, pathname = '', presenterToken = '' }) => {
   const previewExchangeRequest = pathname === '/sales-demo/preview'
@@ -85,6 +91,9 @@ const api = ({ dispatch, getState }) => next => async action => {
       return { ok: false, cancelled: true }
     }
     const payload = error.response?.data || { message: error.message }
+    if (getState().auth?.user && isExpiredAuthenticationResponse(error)) {
+      dispatch(sessionExpired())
+    }
     dispatch(apiCallFailed(payload))
     if (onError) dispatch({ type: onError, payload })
     return { ok: false, error: payload?.error || payload }
