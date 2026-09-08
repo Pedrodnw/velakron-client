@@ -67,13 +67,14 @@ const Team = () => {
   const load = () => {
     if (!organization?.id || !canRead) return
     dispatch(loadMemberships(organization.id))
-    dispatch(loadInvitations(organization.id))
+    if (canManage) dispatch(loadInvitations(organization.id))
   }
 
-  useEffect(() => { load() }, [canRead, dispatch, organization?.id])
+  useEffect(() => { load() }, [canRead, canManage, dispatch, organization?.id])
 
   if (!canRead) return <PermissionDenied />
   if (membershipsLoading && !memberships.length) return <section className='appPanel'><AppSkeleton lines={6} /></section>
+  const activeTab = canManage ? tab : 'members'
 
   const closeDrawer = () => { setDrawer(null); setFeedback(null); setPending(false) }
   const openInvite = () => {
@@ -145,12 +146,12 @@ const Team = () => {
 
   return <>
     <Seo title='Team' description='Organization invitations, roles, and access.' path='/app/team' noIndex />
-    <AppPageHeader eyebrow='Access control' title='Team' description={`Invite people and manage their access to ${organization.name}. Account security and company access remain separate.`} actions={canInvite && <Button onClick={openInvite}><MailPlus aria-hidden='true' /> Invite Member</Button>} />
-    <div className='teamToolbar'><Tabs items={[{ key: 'members', label: 'Members', count: memberships.length }, { key: 'invitations', label: 'Invitations', count: invitations.length }]} activeKey={tab} onChange={setTab} /><StatusBadge tone='info'><Shield aria-hidden='true' /> Organization-scoped</StatusBadge></div>
+    <AppPageHeader eyebrow='Access control' title='Team' description={`${canInvite ? 'Invite people and manage' : 'View people and'} their access to ${organization.name}. Account security and company access remain separate.`} actions={canInvite && <Button onClick={openInvite}><MailPlus aria-hidden='true' /> Invite Member</Button>} />
+    <div className='teamToolbar'><Tabs items={[{ key: 'members', label: 'Members', count: memberships.length }, ...(canManage ? [{ key: 'invitations', label: 'Invitations', count: invitations.length }] : [])]} activeKey={activeTab} onChange={setTab} /><StatusBadge tone='info'><Shield aria-hidden='true' /> Organization-scoped</StatusBadge></div>
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
-    {(membershipsError || invitationsError) && <ErrorState description={(membershipsError || invitationsError).message} onRetry={load} />}
+    {(membershipsError || (canManage && invitationsError)) && <ErrorState description={(membershipsError || invitationsError).message} onRetry={load} />}
     <section className='appPanel appPanel--table'>
-      {tab === 'members' ? <DataTable caption={`Memberships for ${organization.name}`} columns={memberColumns} rows={memberships} emptyTitle='No memberships found' emptyDescription='Invite the first teammate to start collaborating.' /> : invitationsLoading && !invitations.length ? <AppSkeleton lines={5} /> : <DataTable caption={`Invitations for ${organization.name}`} columns={invitationColumns} rows={invitations} emptyTitle='No invitations yet' emptyDescription='Pending and completed invitations will appear here.' />}
+      {activeTab === 'members' ? <DataTable caption={`Memberships for ${organization.name}`} columns={memberColumns} rows={memberships} emptyTitle='No memberships found' emptyDescription='Invite the first teammate to start collaborating.' /> : invitationsLoading && !invitations.length ? <AppSkeleton lines={5} /> : <DataTable caption={`Invitations for ${organization.name}`} columns={invitationColumns} rows={invitations} emptyTitle='No invitations yet' emptyDescription='Pending and completed invitations will appear here.' />}
     </section>
 
     <ResponsiveDrawer open={drawer === 'invite'} title='Invite a team member' onClose={closeDrawer}>

@@ -57,7 +57,7 @@ const Parts = () => {
     {loading && !parts.length ? <section className='appPanel'><AppSkeleton lines={8} /></section> : parts.length ? <>
       <section className='appPanel appPanel--table partWorkspaceDesktop'><DataTable caption='Part workspaces' columns={columns} rows={parts} /></section>
       <section className='partWorkspaceMobile' aria-label='Part workspaces'>{parts.map(item => <RecordCard key={item.id} href={`/app/parts/${item.id}`} eyebrow={item.part_number} title={item.name} facts={[{ label: 'Current revision', value: item.current_released_revision?.revision || 'Draft only' }, { label: 'Updated', value: formatDate(item.updated_at) }]} actionLabel='Open part' />)}</section>
-    </> : <section className='appPanel'><EmptyState icon={Box} title='No active parts yet' description='Create the first part workspace to define a part and use it in production.' action={canCreate && <Button href='/app/parts/new'><Plus aria-hidden='true' /> New part workspace</Button>} /></section>}
+    </> : <section className='appPanel'><EmptyState icon={Box} title={search.trim() ? 'No matching parts' : 'No active parts yet'} description={search.trim() ? 'Try a different part number or name, or clear your search to see all active parts.' : 'Create the first part workspace to define a part and use it in production.'} action={search.trim() ? <Button variant='secondary' onClick={() => { setSearch(''); setPage(1) }}>Clear search</Button> : canCreate && <Button href='/app/parts/new'><Plus aria-hidden='true' /> New part workspace</Button>} /></section>}
     <Pagination meta={pagination} onPageChange={setPage} label='Active part pages' />
   </>
 }
