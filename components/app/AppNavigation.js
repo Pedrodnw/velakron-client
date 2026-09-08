@@ -25,7 +25,7 @@ import LinkWrap from '../LinkWrap'
 import { getActiveOrganization, getEffectivePermissions, getFeatureEnabled } from '../../store/slices/appContext'
 import { getNavigationItems } from './navigation'
 import { loadPlatformActionCenter, platformSelectors } from '../../store/slices/entities/platformAdministration'
-import { loadPartActionSummary, partSelectors } from '../../store/slices/entities/parts'
+import { loadProductionSummary, productionCollaborationSelectors } from '../../store/slices/entities/productionCollaboration'
 
 const icons = {
   account: UserRound,
@@ -55,12 +55,13 @@ const AppNavigation = ({ onNavigate }) => {
   const permissions = useSelector(getEffectivePermissions)
   const partWorkspacesEnabled = useSelector(getFeatureEnabled('part_workspaces'))
   const actionCenter = useSelector(platformSelectors.getActionCenter)
-  const partActions = useSelector(partSelectors.getActionSummary)
+  const productionSummary = useSelector(productionCollaborationSelectors.getSummary)
   const visibleItems = getNavigationItems(organization?.type, permissions, {
     demoWorkspace: organization?.demo_workspace,
     features: { part_workspaces: partWorkspacesEnabled },
   })
   const canReviewPlatform = permissions.includes('platform.support')
+  const canReadProduction = visibleItems.some(item => item.href === '/app/production')
   useEffect(() => {
     if (!canReviewPlatform) return undefined
     const refresh = () => dispatch(loadPlatformActionCenter())
@@ -76,26 +77,31 @@ const AppNavigation = ({ onNavigate }) => {
     }
   }, [canReviewPlatform, dispatch])
   useEffect(() => {
-    if (!partWorkspacesEnabled || organization?.type !== 'supplier' || !permissions.includes('part.read')) return undefined
-    const refresh = () => dispatch(loadPartActionSummary())
+    if (organization?.type !== 'supplier' || !canReadProduction) return undefined
+    const refresh = () => { if (document.visibilityState !== 'hidden') dispatch(loadProductionSummary()) }
     refresh()
-    const interval = window.setInterval(refresh, 60_000)
-    return () => window.clearInterval(interval)
-  }, [dispatch, organization?.id, organization?.type, partWorkspacesEnabled, permissions])
+    const interval = window.setInterval(refresh, 45_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [dispatch, organization?.id, organization?.type, canReadProduction])
 
   return <nav className='appNavigation' aria-label='Portal navigation'>
     <p>Workspace</p>
     {visibleItems.map(({ href, label, icon, exact }) => {
       const Icon = icons[icon]
       const active = exact ? router.pathname === href : router.pathname.startsWith(href)
-      const partActionCount = (partActions?.needs_action || 0) + (partActions?.new_revisions || 0)
       const count = href === '/admin/action-center'
         ? actionCenter?.counts?.needs_velakron || 0
-        : href === '/app/production' && organization?.type === 'supplier' ? partActionCount : 0
+        : href === '/app/production' && organization?.type === 'supplier' ? productionSummary?.counts?.action_required || 0 : 0
       return <LinkWrap key={href} href={href} className={active ? 'is-active' : ''} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
         <Icon aria-hidden='true' />
         <span>{label}</span>
-        {count > 0 && <strong className='appNavigation__count' aria-label={`${count} item${count === 1 ? '' : 's'} need action`}>{count > 99 ? '99+' : count}</strong>}
+        {count > 0 && <strong className='appNavigation__count' aria-label={`${count} item${count === 1 ? ' needs' : 's need'} action`}>{count > 99 ? '99+' : count}</strong>}
       </LinkWrap>
     })}
   </nav>

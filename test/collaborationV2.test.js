@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { commandData, FORMAL_V2, isFormalV2, workflowError } from '../store/collaborationV2'
 import { DataSummary, FormalDetail, TechnicalAcceptance } from '../components/app/FormalEscalationPanel'
-import { FormalActionForm, FormalCreationForm } from '../components/app/FormalEscalationForms'
+import { EvidenceSelect, FormalActionForm, FormalCreationForm } from '../components/app/FormalEscalationForms'
+import ConfirmationDialog from '../components/app/ConfirmationDialog'
 
 const render = (Component, props) => renderToStaticMarkup(React.createElement(Component, props))
 describe('Collaboration V2 client contracts', () => {
@@ -49,5 +50,31 @@ describe('Collaboration V2 client contracts', () => {
     const legacy = render(FormalDetail, { item: { id: 'legacy', explanation: 'Previous decision', active: false, workflow: { history: [] } }, context: {}, record: {}, files: [] })
     expect(legacy).toContain('Legacy history · read-only')
     expect(legacy).toContain('Previous decision')
+  })
+  it('keeps return instructions visible after comments and removes the notice after resubmission', () => {
+    const returned = { action: 'return_resolution', from_state: 'awaiting_oem_resolution_approval', to_state: 'supplier_resolution_required', note: 'Specify the lot and independent inspection method.' }
+    const item = { id: 'formal', category: 'issue', workflow: { version: FORMAL_V2, state: returned.to_state, history: [returned, { action: 'add_message', from_state: returned.to_state, to_state: returned.to_state, note: 'Acknowledged.' }] } }
+    const props = { item, context: {}, files: [], record: {} }
+    expect(render(FormalDetail, props)).toContain('aria-label="Requested changes"')
+    item.workflow.state = 'awaiting_oem_resolution_approval'
+    item.workflow.history.push({ action: 'submit_resolution', from_state: returned.to_state, to_state: item.workflow.state })
+    expect(render(FormalDetail, props)).not.toContain('aria-label="Requested changes"')
+  })
+  it('gives nested confirmations independent accessible names and an explicit safe exit', () => {
+    const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
+      React.createElement(ConfirmationDialog, { open: true, title: 'Parent confirmation' }),
+      React.createElement(ConfirmationDialog, { open: true, title: 'Discard draft?', cancelLabel: 'Keep editing', confirmLabel: 'Discard draft', danger: true }),
+    ))
+    const ids = [...html.matchAll(/aria-labelledby="([^"]+)"/g)].map(match => match[1])
+    expect(new Set(ids).size).toBe(2)
+    expect(html).toContain('Keep editing')
+    expect(html).toContain('vk-button--danger')
+  })
+  it('directs evidence uploads to the relevant source and keeps optional links compact', () => {
+    expect(render(EvidenceSelect, {})).toContain('Documents or Photos')
+    expect(render(EvidenceSelect, { emptyHint: 'Attach evidence to the source conversation before escalating.' })).toContain('source conversation')
+    const props = { record: {}, organizationType: 'oem', formalRecords: [{ id: 'related', category: 'issue', explanation: 'Existing issue' }] }
+    expect(render(FormalCreationForm, props)).toMatch(/<details class="formalV2__links"><summary>Link other records/)
+    expect(render(FormalCreationForm, { ...props, defaultRelatedFormal: 'related' })).toMatch(/<details class="formalV2__links" open=""/)
   })
 })

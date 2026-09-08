@@ -6,6 +6,7 @@ import FormMessage from '../auth/FormMessage'
 import ResponsiveDrawer from './ResponsiveDrawer'
 import StatusBadge from './StatusBadge'
 import ItarAccessDialog from './ItarAccessDialog'
+import useDraftDiscard from './useDraftDiscard'
 import { FormalActionForm, FormalCreationForm, formalLabel, idOf } from './FormalEscalationForms'
 import { formatDateTime, formatLabel } from './formatters'
 import { getHasPermission } from '../../store/slices/appContext'
@@ -29,21 +30,23 @@ export const TechnicalAcceptance = ({ acceptance }) => acceptance ? <section cla
 export const FormalDetail = ({ item, detail, context, files, pending, record, onAction, onSource, onNewCase, onRelated, onDraftChange, onDownload, canCreate }) => {
   const [selected, setSelected] = useState(null)
   const [actionDirty, setActionDirty] = useState(false)
+  const { requestDiscard, discardDialog } = useDraftDiscard()
   const actions = item.workflow?.available_actions || []
   const actionAvailable = !item.workflow?.terminal && (selected?.key === 'add_message' ? item.workflow?.can_message : actions.some(action => action.key === selected?.key))
   const draftChanged = value => { setActionDirty(value); onDraftChange?.(value) }
   const chooseAction = action => {
     if (selected?.key === action?.key) return
-    if (actionDirty && !window.confirm('Discard this action draft?')) return
-    setSelected(action)
-    draftChanged(false)
+    requestDiscard(actionDirty, () => { setSelected(action); draftChanged(false) })
   }
   const scope = item.workflow?.data?.affected_scope
+  const lastTransition = [...(item.workflow?.history || [])].reverse().find(entry => entry.from_state !== entry.to_state)
+  const returnReason = lastTransition?.action?.startsWith('return_') && lastTransition.to_state === item.workflow?.state ? lastTransition.note : null
   const summaryProps = { participants: context.supplier_members || [], files, onDownload }
   if (!isFormalV2(item)) return <div className='formalV2'><p className='formalV2__notice'>Legacy history · read-only</p><h3>{item.explanation}</h3><p>{item.resolution_reason || item.workflow?.state_label}</p><DataSummary data={item.workflow?.data} {...summaryProps} /><ol>{(item.workflow?.history || []).map((entry, index) => <li key={idOf(entry) || index}><strong>{formatLabel(entry.action)}</strong><p>{entry.actor?.display_name} · {formatDateTime(entry.occurred_at)}</p><p>{entry.note}</p></li>)}</ol>{item.legacy_replaced_by && <Button variant='secondary' onClick={() => onRelated(idOf(item.legacy_replaced_by))}>Open replacement formal record</Button>}</div>
   return <div className='formalV2'>
     <div className='formalV2__heading'><StatusBadge tone={item.workflow?.terminal ? 'success' : item.workflow?.production_blocked ? 'danger' : 'warning'}>{item.workflow?.state_label}</StatusBadge><span>{item.record_number}</span></div>
     <div className='formalV2__notice' role='status'><strong>{item.workflow?.responsibility_label}</strong><p>{item.workflow?.production_blocked ? 'Production is stopped until the OEM releases this Block. Approving the solution alone does not release production.' : item.workflow?.terminal ? 'This formal record is permanently closed. Start a new case for any additional work.' : item.category === 'non_conformance' ? 'This Non-Conformance controls the affected parts. A separate active Production Block is required to stop production.' : item.category === 'production_block' ? 'This Block has been released by the OEM. Supplier acknowledgement completes its record.' : 'Supplier resolution requires OEM approval.'}</p></div>
+    {returnReason && <section className='formalV2__notice' aria-label='Requested changes'><strong>OEM requested changes</strong><p>{returnReason}</p></section>}
     <p className='formalV2__explanation'>{item.explanation}</p>
     <dl className='partCaseDetail__facts'><div><dt>Production</dt><dd>{record.public_reference}</dd></div><div><dt>Category</dt><dd>{formalLabel(item.category)}</dd></div><div><dt>Last activity</dt><dd>{formatDateTime(item.last_seen_at)}</dd></div><div><dt>Current responsibility</dt><dd>{item.workflow?.current_actor_side === 'none' ? 'Closed' : formatLabel(item.workflow?.current_actor_side)}</dd></div></dl>
     {scope && <section className='formalV2__scope'><h3>{scope.affected_quantity} affected · {Math.max(0, Number(scope.produced_quantity ?? record.quantity) - scope.affected_quantity)} outside the reported scope</h3><DataSummary data={scope} {...summaryProps} />{canCreate && <Button variant='secondary' onClick={() => onNewCase('formal', item.id)}>Create a related formal record</Button>}</section>}
@@ -57,6 +60,7 @@ export const FormalDetail = ({ item, detail, context, files, pending, record, on
     {!!item.related_formal_records?.length && <section><h3>Related formal records</h3>{item.related_formal_records.map(value => <Button key={idOf(value)} variant='secondary' onClick={() => onRelated(idOf(value))}>Open related record</Button>)}</section>}
     <details className='formalV2__history'><summary>Complete formal history · {item.workflow?.history?.length || 0} entries</summary><ol>{(item.workflow?.history || []).map((entry, index) => <li key={idOf(entry) || index}><strong>{formatLabel(entry.action)}</strong><p>{entry.actor?.display_name} · {entry.actor?.organization_name || formatLabel(entry.actor?.organization_type)} · {formatDateTime(entry.occurred_at)}</p><p>{entry.note}</p><DataSummary data={entry.data} {...summaryProps} /><small>{formatLabel(entry.from_state)} → {formatLabel(entry.to_state)}</small></li>)}</ol></details>
     {!!files?.length && <details className='partCaseAttachments'><summary>Shared production evidence</summary><ul>{files.filter(file => file.visibility === 'shared').map(file => <li key={idOf(file)}><span>{file.display_filename || file.original_filename}</span><Button variant='secondary' disabled={file.state !== 'available'} onClick={() => onDownload(file)}>Download</Button></li>)}</ul></details>}
+    {discardDialog}
   </div>
 }
 
@@ -69,6 +73,7 @@ export default function FormalEscalationPanel({ record, organization, enabled, f
   const [downloadPending, setDownloadPending] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [dirty, setDirty] = useState(false)
+  const { requestDiscard, discardDialog } = useDraftDiscard()
   const [filter, setFilter] = useState('active')
   const formalId = typeof router.query.formal === 'string' ? router.query.formal : ''
   const creating = formalId === 'new'
@@ -76,14 +81,14 @@ export default function FormalEscalationPanel({ record, organization, enabled, f
   const item = detail?.condition || collaboration.formalRecords?.find(value => idOf(value) === formalId)
   const context = collaboration.formalContext || {}
   const records = (collaboration.formalRecords || []).filter(value => isFormalV2(value) || !value.active)
-  const navigate = (next, { saved = false } = {}) => {
-    if (dirty && !saved && !window.confirm('Discard your unsaved draft?')) return false
+  const navigate = (next, { saved = false, afterNavigate } = {}) => requestDiscard(dirty && !saved, () => {
     setDirty(false)
     const { formal: previous, collaboration: source, formal_related: previousRelated, ...query } = router.query
     router.replace({ pathname: router.pathname, query: { ...query, ...next } }, undefined, { shallow: true })
+    afterNavigate?.()
     return true
-  }
-  const open = (id, options) => { if (navigate({ formal: id }, options)) setFeedback(null) }
+  })
+  const open = (id, options = {}) => navigate({ formal: id }, { ...options, afterNavigate: () => { if (!options.saved) setFeedback(null) } })
   const close = () => navigate({})
   useEffect(() => {
     const refresh = () => {
@@ -129,5 +134,6 @@ export default function FormalEscalationPanel({ record, organization, enabled, f
       {creating && enabled && canCreate ? <FormalCreationForm key={`new:${router.query.formal_related || ''}`} record={record} version={record.version} organizationType={organization.type} files={files} relatedRecords={context.related_production_records} formalRecords={records} defaultRelatedFormal={router.query.formal_related || ''} pending={collaboration.mutating} onDraftChange={setDirty} onCancel={close} onSubmit={submit} /> : item ? <FormalDetail canCreate={enabled && canCreate} key={item.id} item={item} detail={detail} context={context} files={files} record={record} pending={collaboration.mutating} onAction={submit} onDraftChange={setDirty} onSource={id => navigate({ part_tab: 'cases', collaboration: id })} onRelated={open} onNewCase={(kind, id) => navigate(kind === 'formal' ? { formal: 'new', formal_related: id } : { part_tab: 'cases', new_conversation: '1', references_formal_record: id })} onDownload={file => file.export_control === 'itar' ? setProtectedFile(file) : onDownload(file)} /> : <p role='status'>{collaboration.formalError?.message || 'Loading formal record…'}</p>}
     </ResponsiveDrawer>
     <ItarAccessDialog open={Boolean(protectedFile)} file={protectedFile} purpose='download' pending={downloadPending} feedback={feedback} onClose={() => setProtectedFile(null)} onConfirm={async attestation => { setDownloadPending(true); const result = await onDownload(protectedFile, attestation); setDownloadPending(false); if (result?.ok) setProtectedFile(null); else setFeedback({ type: 'error', message: workflowError(result) }); return result }} />
+    {discardDialog}
   </section>
 }

@@ -4,6 +4,7 @@ import { Button } from '../design-system'
 import FormMessage from '../auth/FormMessage'
 import ResponsiveDrawer from './ResponsiveDrawer'
 import StatusBadge from './StatusBadge'
+import useDraftDiscard from './useDraftDiscard'
 import { formatDateTime, formatLabel } from './formatters'
 import { FormalCreationForm, TextField, idOf } from './FormalEscalationForms'
 import { CONVERSATION_V2, newCommandKey } from '../../store/collaborationV2'
@@ -16,6 +17,7 @@ const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], r
   const [summary, setSummary] = useState('')
   const [action, setAction] = useState('message')
   const [dirty, setDirty] = useState(false)
+  const { requestDiscard, discardDialog } = useDraftDiscard()
   const [authorized, setAuthorized] = useState(false)
   const [key] = useState(newCommandKey)
   const [actionVersion, setActionVersion] = useState(item?.version)
@@ -23,7 +25,7 @@ const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], r
   const record = productionRecords[0]
   const actions = item?.available_actions || []
   const has = value => actions.some(entry => entry.key === value)
-  const close = () => { if (!dirty || window.confirm('Discard your unsaved draft?')) onClose() }
+  const close = () => requestDiscard(dirty, onClose)
   useEffect(() => {
     if (!dirty) return undefined
     const warn = event => { event.preventDefault(); event.returnValue = '' }
@@ -31,10 +33,11 @@ const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], r
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
   const choose = next => {
-    if (action === 'escalate' && next !== action && dirty && !window.confirm('Discard this escalation draft?')) return
-    setAction(next)
-    setActionVersion(item?.version)
-    setDirty(Boolean(reply || summary))
+    requestDiscard(action === 'escalate' && next !== action && dirty, () => {
+      setAction(next)
+      setActionVersion(item?.version)
+      setDirty(Boolean(reply || summary))
+    })
   }
   const act = async (name, note = '') => {
     const result = await onAction(name, note, name === 'close' ? actionVersion : item.version)
@@ -73,12 +76,17 @@ const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], r
           {action === 'close' && <form className='drawerForm' onSubmit={event => { event.preventDefault(); act('close', summary) }}><TextField label='Closing summary' value={summary} onChange={value => { setSummary(value); setDirty(Boolean(value || reply)) }} />{actionVersion !== item.version && <div className='formalV2__notice'><p>The conversation changed. Your summary is preserved. Review the discussion above before closing.</p><Button type='button' variant='secondary' onClick={() => setActionVersion(item.version)}>I reviewed the updated conversation</Button></div>}<footer><Button type='submit' disabled={pending || actionVersion !== item.version}>Close conversation</Button></footer></form>}
           {['needs_response', 'clear_needs_response'].includes(action) && <div className='drawerForm'><p>{action === 'needs_response' ? `Request a response from ${relatedCompanyName || 'the other company'}. Sending a message later does not clear this marker.` : 'Clear your company’s response marker after providing the requested information.'}</p><Button disabled={pending} onClick={() => act(action)}>{action === 'needs_response' ? 'Request response' : 'Clear needs response'}</Button></div>}
         </>}
-        {action === 'escalate' && <FormalCreationForm key={`escalate-${item.id}`} escalation unavailable={!canWrite} version={item.version} record={record} organizationType={organizationType} files={itemDetail.attachments} pending={pending} onDraftChange={setDirty} onCancel={() => choose('message')} onSubmit={onPromote} />}
+        {action === 'escalate' && <FormalCreationForm key={`escalate-${item.id}`} escalation unavailable={!canWrite} version={item.version} record={record} organizationType={organizationType} files={itemDetail.attachments} pending={pending} onDraftChange={setDirty} onCancel={() => choose('message')} onSubmit={async payload => {
+          const result = await onPromote(payload)
+          if (result?.ok) { setAction('message'); setDirty(Boolean(reply || summary)) }
+          return result
+        }} />}
         {has('reopen') && <Button disabled={pending} onClick={() => act('reopen')}>Reopen conversation</Button>}
         <section className='partCaseAttachments'><header><h3><Paperclip aria-hidden='true' /> Evidence and files</h3></header>{itemDetail.attachments?.length ? <ul>{itemDetail.attachments.map(file => <li key={idOf(file)}><span>{file.display_filename || file.original_filename} {file.state !== 'available' && `· ${formatLabel(file.state)}`}</span><Button type='button' variant='secondary' disabled={file.state !== 'available'} onClick={() => onDownloadAttachment?.(file)}>Download</Button></li>)}</ul> : <p>No evidence attached.</p>}{upload && <p role='status'>{upload.filename} · {upload.progress}%</p>}{canWrite && <>{itarControlled && <label className='productionCheck'><input type='checkbox' checked={authorized} onChange={event => setAuthorized(event.target.checked)} /><ShieldAlert aria-hidden='true' /><span>I am authorized to attach controlled data.</span></label>}<Button variant='secondary' disabled={pending || (itarControlled && !authorized)} onClick={() => inputRef.current?.click()}>Attach evidence</Button><input type='file' ref={inputRef} hidden onChange={event => { const file = event.target.files?.[0]; if (file) onUpload?.(file, { itar_upload_authorized: authorized, synthetic_data_acknowledged: authorized }); event.target.value = '' }} /></>}</section>
         <details className='formalV2__history'><summary>Conversation history</summary><ol>{(item.workflow_history || []).map((entry, index) => <li key={idOf(entry) || index}><strong>{formatLabel(entry.action)}</strong><p>{entry.note}</p><small>{entry.actor?.display_name} · {formatDateTime(entry.occurred_at)} · {formatLabel(entry.to_state)}</small></li>)}</ol></details>
       </>}
     </div>
+    {discardDialog}
   </ResponsiveDrawer>
 }
 export default function PartConversationDrawerV2(props) {
