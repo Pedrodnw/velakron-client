@@ -447,6 +447,12 @@
     background: var(--vk-success-soft);
     color: var(--vk-success);
   }
+
+  &--warning {
+    border-color: var(--vk-warning-border);
+    background: var(--vk-warning-soft);
+    color: var(--vk-warning);
+  }
 }
 
 .authLoading {

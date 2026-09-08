@@ -48,7 +48,7 @@ import ResponsiveDrawer from './ResponsiveDrawer'
 import StatusBadge from './StatusBadge'
 import { formatDate, formatDateTime, formatLabel, statusTone } from './formatters'
 import { inspectionSelectors, loadInspectionPlan, loadInspectionRuns } from '../../store/slices/entities/inspection'
-import { visualPreviewToBlob } from './visualContextPreview'
+import { cacheVisualPreviewBestEffort, visualPreviewToBlob } from './visualContextPreview'
 
 const TABS = [
   ['overview', 'Overview', Box],
@@ -495,6 +495,8 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
   }
   const createCase = async form => {
     let anchorId = ''
+    let previewCacheFailure = null
+    setCaseFeedback(null)
     if (pendingAnchor) {
       const anchorResult = await dispatch(createVisualAnchor(partId, revisionId, {
         kind: pendingAnchor.anchor_kind,
@@ -512,14 +514,13 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
       anchorId = idOf(anchorResult.payload.data.anchor)
       if (pendingAnchor.visual_preview && revision.export_control !== 'itar') {
         const blob = visualPreviewToBlob(pendingAnchor.visual_preview)
-        const previewResult = blob && await dispatch(cacheVisualAnchorPreview(partId, revisionId, anchorId, {
-          blob,
-          width: pendingAnchor.visual_preview.width,
-          height: pendingAnchor.visual_preview.height,
-        }))
-        if (!previewResult?.ok) {
-          setCaseFeedback({ type: 'error', message: resultError(previewResult, 'The saved visual reference could not be stored. Please capture the feature again.') })
-          return previewResult
+        if (blob) {
+          const previewAttempt = await cacheVisualPreviewBestEffort(() => dispatch(cacheVisualAnchorPreview(partId, revisionId, anchorId, {
+            blob,
+            width: pendingAnchor.visual_preview.width,
+            height: pendingAnchor.visual_preview.height,
+          })))
+          if (!previewAttempt.saved) previewCacheFailure = previewAttempt.result
         }
       }
     }
@@ -543,6 +544,12 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
     setCaseDrawer({ open: true, mode: 'detail', id: collaborationId })
     await router.replace({ pathname: router.pathname, query: { ...router.query, part_tab: 'cases', collaboration: collaborationId } }, undefined, { shallow: true })
     await refresh()
+    if (previewCacheFailure) {
+      setCaseFeedback({
+        type: 'warning',
+        message: 'Case created. The linked feature is attached, but its quick image preview could not be saved. Velakron will retry when the case is opened.',
+      })
+    }
     return result
   }
   const openCase = item => {

@@ -173,3 +173,22 @@ export const visualPreviewToBlob = preview => {
     return null
   }
 }
+
+export const cacheVisualPreviewBestEffort = async cache => {
+  if (typeof cache !== 'function') return { saved: false, result: null }
+  try {
+    const result = await cache()
+    return { saved: Boolean(result?.ok), result: result || null }
+  } catch (error) {
+    return {
+      saved: false,
+      result: {
+        ok: false,
+        error: {
+          code: error?.code || 'PREVIEW_CACHE_FAILED',
+          message: error?.message || 'The visual preview could not be cached.',
+        },
+      },
+    }
+  }
+}

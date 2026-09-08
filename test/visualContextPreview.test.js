@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { drawVisualPreviewSelection, focusedVisualPreviewCrop, mapVisualPreviewSelection } from '../components/app/visualContextPreview'
+import { cacheVisualPreviewBestEffort, drawVisualPreviewSelection, focusedVisualPreviewCrop, mapVisualPreviewSelection } from '../components/app/visualContextPreview'
 
 describe('visual context preview', () => {
   it('maps a selected point into a letterboxed thumbnail', () => {
@@ -64,5 +64,24 @@ describe('visual context preview', () => {
 
     expect(calls).toContainEqual(['fillRect', 72, 81, 216, 162])
     expect(calls.filter(call => Array.isArray(call) && call[0] === 'strokeRect')).toHaveLength(2)
+  })
+
+  it('keeps an optional linked-visual cache failure from rejecting case creation', async () => {
+    const failedResult = { ok: false, error: { code: 'VALIDATION_ERROR', message: 'Renderer version changed' } }
+
+    await expect(cacheVisualPreviewBestEffort(async () => failedResult)).resolves.toEqual({
+      saved: false,
+      result: failedResult,
+    })
+    await expect(cacheVisualPreviewBestEffort(async () => {
+      throw new Error('Temporary storage failure')
+    })).resolves.toMatchObject({
+      saved: false,
+      result: { ok: false, error: { code: 'PREVIEW_CACHE_FAILED', message: 'Temporary storage failure' } },
+    })
+    await expect(cacheVisualPreviewBestEffort(async () => ({ ok: true }))).resolves.toEqual({
+      saved: true,
+      result: { ok: true },
+    })
   })
 })
