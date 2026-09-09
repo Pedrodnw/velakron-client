@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, Factory, LoaderCircle } from 'lucide-react'
+import { ArrowRight, Building2, Eye, Factory, LoaderCircle } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
@@ -25,6 +25,7 @@ const ImtsDemo = () => {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
   const [campaign, setCampaign] = useState(null)
+  const previewMode = router.query.preview === '1'
 
   useEffect(() => {
     if (!router.isReady || !router.query.campaign) return
@@ -80,12 +81,14 @@ const ImtsDemo = () => {
         </section>
 
         <section className='tradeShowCard' aria-labelledby='imts-demo-form-title'>
+          {previewMode && <aside className='tradeShowPreviewNotice'><Eye aria-hidden='true' /><span><strong>Safe preview</strong><small>This page will not create a visitor, CRM contact, or demo session.</small></span></aside>}
           <div className='tradeShowCard__heading'>
             <p className='technicalLabel'>Choose your perspective</p>
             <h2 id='imts-demo-form-title'>Start your Velakron demo</h2>
             <p>No password or setup required.</p>
           </div>
           <form className='tradeShowForm' onSubmit={submit}>
+            <fieldset disabled={previewMode} className='tradeShowPreviewFields'>
             <FormMessage>{error}</FormMessage>
             <FormField id='imts-demo-name' label='Full name' name='full_name' value={form.full_name} onChange={update} autoComplete='name' maxLength={160} required />
             <FormField id='imts-demo-company' label='Company' name='company_name' value={form.company_name} onChange={update} autoComplete='organization' maxLength={180} required />
@@ -113,6 +116,8 @@ const ImtsDemo = () => {
               {pending ? <><LoaderCircle className='spin' aria-hidden='true' /> Preparing your workspace…</> : <>Enter the experience <ArrowRight aria-hidden='true' /></>}
             </Button>
             <p className='tradeShowForm__notice'>By continuing, you agree that Velakron may keep these details to follow up about the product. Your temporary demo remains available for 12 hours.</p>
+            </fieldset>
+            {previewMode && <Button type='button' variant='secondary' onClick={() => window.close()}>Close safe preview</Button>}
           </form>
         </section>
       </main>

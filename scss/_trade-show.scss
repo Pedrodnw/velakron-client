@@ -102,6 +102,28 @@
   }
 }
 
+.tradeShowPreviewFields {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tradeShowPreviewNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -8px 0 20px;
+  padding: 12px;
+  border: 1px solid var(--vk-info-border);
+  border-radius: 8px;
+  background: var(--vk-info-soft);
+  color: var(--vk-workspace-text);
+  > svg { width: 20px; color: var(--vk-info); }
+  > span { display: grid; gap: 2px; }
+  small { color: var(--vk-workspace-text-muted); }
+}
+
 .tradeShowRoleChoice {
   display: grid;
   grid-template-columns: 1fr 1fr;

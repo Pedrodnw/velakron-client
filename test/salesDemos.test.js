@@ -4,6 +4,7 @@ import { getNavigationItems } from '../components/app/navigation'
 import {
   loadSalesDemoSessions,
   salesDemoRequest,
+  salesDemoTelemetry,
 } from '../store/slices/entities/salesDemos'
 import salesDemoReducer from '../store/slices/entities/salesDemos'
 import { salesDemoPresenterHeaders } from '../store/middleware/api'
@@ -31,6 +32,13 @@ describe('founder Sales Demo workspace', () => {
       data: { expected_revision: 3 },
       organizationScoped: true,
     })
+    const telemetry = salesDemoTelemetry('launcher.completed', 1200)
+    expect(telemetry.payload).toMatchObject({
+      url: '/sales-demos/telemetry',
+      method: 'post',
+      data: { metric: 'launcher.completed', duration_ms: 1200 },
+      organizationScoped: true,
+    })
   })
 
   it('maps product routes to privacy-safe journey keys without retaining full URLs', () => {
@@ -48,13 +56,14 @@ describe('founder Sales Demo workspace', () => {
   })
 
   it('stores Sales Demo request outcomes and resets loading after success or failure', () => {
-    const requested = salesDemoReducer(undefined, { type: 'salesDemos/requested' })
-    expect(requested.loading).toBe(true)
+    const requested = salesDemoReducer(undefined, { type: 'salesDemos/summaryRequested' })
+    expect(requested.loadingByResource.summary).toBe(true)
+    expect(requested.loadingByResource.sessions).toBe(false)
     const succeeded = salesDemoReducer(requested, { type: 'salesDemos/summaryReceived', payload: { data: { counts: { active_prospects: 2 } } } })
-    expect(succeeded.loading).toBe(false)
+    expect(succeeded.loadingByResource.summary).toBe(false)
     expect(succeeded.summary.counts.active_prospects).toBe(2)
-    const failed = salesDemoReducer(requested, { type: 'salesDemos/failed', payload: { error: { code: 'VERSION_CONFLICT', message: 'Refresh first' } } })
-    expect(failed.loading).toBe(false)
+    const failed = salesDemoReducer(requested, { type: 'salesDemos/summaryFailed', payload: { error: { code: 'VERSION_CONFLICT', message: 'Refresh first' } } })
+    expect(failed.loadingByResource.summary).toBe(false)
     expect(failed.error.code).toBe('VERSION_CONFLICT')
   })
 
