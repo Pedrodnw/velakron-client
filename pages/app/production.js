@@ -23,7 +23,7 @@ import LinkWrap from '../../components/LinkWrap'
 import { loadPartActionItems, partSelectors } from '../../store/slices/entities/parts'
 
 const views = {
-  oem: [{ key: 'active', label: 'Active' }, { key: 'draft', label: 'Drafts' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }],
+  oem: [{ key: 'action_required', label: 'Action required' }, { key: 'active', label: 'Active' }, { key: 'draft', label: 'Drafts' }, { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' }],
   supplier: [{ key: 'action_required', label: 'Action required' }, { key: 'active', label: 'Active parts' }, { key: 'completed', label: 'Recently completed' }],
 }
 const stages = ['assigned', 'accepted', 'material_ordered', 'material_received', 'programming', 'in_production', 'inspection', 'ready_to_ship', 'shipped', 'delivered', 'quality_review', 'approved']
@@ -54,6 +54,7 @@ const Production = () => {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [checkingAlternativeView, setCheckingAlternativeView] = useState(false)
   const refreshSequence = useRef(0)
+  const locallyWrittenFilters = useRef('')
   const type = organization?.type
   const inspectionView = inspectionEnabled && inspectionViews.includes(router.query.inspection) ? router.query.inspection : ''
 
@@ -74,10 +75,12 @@ const Production = () => {
       first_article: ['true', 'false'].includes(router.query.first_article) ? router.query.first_article : '',
       page: Number.isInteger(page) && page > 0 ? page : 1,
     }
-    setFilters(next); setDebouncedSearch(next.search); setFiltersReady(true)
+    setFilters(next)
+    if (JSON.stringify(next) !== locallyWrittenFilters.current) setDebouncedSearch(next.search)
+    setFiltersReady(true)
     if (type === 'oem') dispatch(loadRelationships(organization.id))
     dispatch(trackProductEvent('production.list_viewed', 'production_list'))
-  }, [dispatch, organization?.id, router.isReady, type])
+  }, [dispatch, organization?.id, router.isReady, router.asPath, type])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(filters.search), 300)
@@ -86,11 +89,12 @@ const Production = () => {
 
   const filterCount = ['search', 'stage', 'health', 'attention', 'supplier_organization_id', 'required_from', 'required_to', 'first_article']
     .filter(key => Boolean(filters[key])).length
-  const canChooseAlternativeView = type === 'supplier' && filters.page === 1 && filterCount === 0
+  const canChooseAlternativeView = type === 'supplier' && !router.query.view && filters.page === 1 && filterCount === 0
 
   const updateFilters = changes => {
     setCheckingAlternativeView(false)
     const next = { ...filters, ...changes }
+    locallyWrittenFilters.current = JSON.stringify(next)
     setFilters(next)
     router.replace({ pathname: '/app/production', query: cleanQuery(next) }, undefined, { shallow: true })
   }
@@ -118,6 +122,7 @@ const Production = () => {
       if (sequence !== refreshSequence.current) return result
       if (fallbackView) {
         const next = { ...filters, view: fallbackView, page: 1 }
+        locallyWrittenFilters.current = JSON.stringify(next)
         setFilters(next)
         router.replace({ pathname: '/app/production', query: cleanQuery(next) }, undefined, { shallow: true })
         return result
@@ -138,8 +143,9 @@ const Production = () => {
     const refreshWhenVisible = () => { if (document.visibilityState !== 'hidden') refresh() }
     const interval = window.setInterval(refreshWhenVisible, 45_000)
     window.addEventListener('focus', refreshWhenVisible)
+    window.addEventListener('velakron:production-refresh', refreshWhenVisible)
     document.addEventListener('visibilitychange', refreshWhenVisible)
-    return () => { window.clearInterval(interval); window.removeEventListener('focus', refreshWhenVisible); document.removeEventListener('visibilitychange', refreshWhenVisible) }
+    return () => { window.clearInterval(interval); window.removeEventListener('focus', refreshWhenVisible); window.removeEventListener('velakron:production-refresh', refreshWhenVisible); document.removeEventListener('visibilitychange', refreshWhenVisible) }
   }, [filtersReady, refresh])
 
   if (!allowed) return <PermissionDenied />
@@ -167,7 +173,7 @@ const Production = () => {
       {inspectionQueueView !== inspectionView ? <AppSkeleton lines={3} /> : inspectionQueue.length ? <div className='inspectionQueueList'>{inspectionQueue.map(run => <RecordCard key={run.id} href={`/app/production/${run.production_record?.id || run.production_record}`} eyebrow={`${run.kind.replaceAll('_', ' ')} inspection`} title={run.production_record?.part_number || run.part?.part_number || 'Production inspection'} description={`${run.completed_results}/${run.required_results} results · ${run.pass_count} passing · ${run.fail_count + run.unconfirmed_failure_count} findings`} badges={<StatusBadge tone={run.fail_count || run.unconfirmed_failure_count ? 'danger' : run.state === 'accepted' ? 'success' : 'warning'}>{run.state.replaceAll('_', ' ')}</StatusBadge>} actionLabel='Open inspection' />)}</div> : <EmptyState compact icon={ClipboardCheck} title='This inspection queue is clear' description='No released inspection run currently matches this responsibility.' />}
     </section>}
     <div id='production-filter-panel' className={`productionFilterPanel${filtersOpen ? ' is-open' : ''}`}>
-    <FilterBar label='Production filters' actions={<Button variant='secondary' onClick={() => { updateFilters(initialFilters(type)); setFiltersOpen(false) }}>Clear filters</Button>}>
+    <FilterBar label='Production filters' actions={<Button variant='secondary' onClick={() => { updateFilters({ ...initialFilters(type), view: filters.view }); setFiltersOpen(false) }}>Clear filters</Button>}>
       <label><span>Search</span><div className='inputWithIcon'><Search aria-hidden='true' /><input value={filters.search} onChange={event => updateFilters({ search: event.target.value, page: 1 })} placeholder='Part, PO, or VK reference' /></div></label>
       {type === 'oem' && <label><span>Supplier</span><select value={filters.supplier_organization_id} onChange={event => updateFilters({ supplier_organization_id: event.target.value, page: 1 })}><option value=''>All suppliers</option>{relationships.filter(item => item.status === 'active').map(item => <option key={item.id} value={item.supplier_organization?.id}>{item.supplier_organization?.name}</option>)}</select></label>}
       <label><span>Stage</span><select value={filters.stage} onChange={event => updateFilters({ stage: event.target.value, page: 1 })}><option value=''>All stages</option>{stages.map(stage => <option key={stage} value={stage}>{stage.replaceAll('_', ' ')}</option>)}</select></label>

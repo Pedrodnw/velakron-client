@@ -1,5 +1,6 @@
 import { Provider } from 'react-redux'
 import AuthBootstrap from '../components/auth/AuthBootstrap'
+import { AppDialogProvider } from '../components/app/AppDialogProvider'
 import MainLayout from '../components/layouts/mainLayout'
 import { wrapper } from '../store/configStore'
 import '../scss/styles.scss'
@@ -10,7 +11,7 @@ const MyApp = ({ Component, ...rest }) => {
 
   return <Provider store={store}>
     <AuthBootstrap />
-    {getLayout(<Component {...props.pageProps} />)}
+    <AppDialogProvider>{getLayout(<Component {...props.pageProps} />)}</AppDialogProvider>
   </Provider>
 }
 

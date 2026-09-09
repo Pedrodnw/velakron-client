@@ -1408,6 +1408,9 @@
 .confirmationDialog {
   position: relative;
   width: min(100%, 430px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 28px;
   border: 1px solid var(--app-border-strong);
   border-radius: 12px;
@@ -1453,6 +1456,23 @@
   &__actions {
     @include flex-row(flex-end, center, 9px);
   }
+}
+
+.dialogBackdrop { z-index: 1600; }
+
+.appDialogFields {
+  display: grid;
+  gap: 16px;
+  label { display: grid; gap: 8px; }
+  input, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--app-border-strong);
+    border-radius: 8px;
+    background: var(--app-surface);
+    color: var(--app-text);
+  }
+  textarea { resize: vertical; }
 }
 
 .vk-button--danger {

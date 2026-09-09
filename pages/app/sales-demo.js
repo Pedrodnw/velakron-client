@@ -1,4 +1,5 @@
 import QRCode from 'qrcode'
+import { useAppDialog } from '../../components/app/AppDialogProvider'
 import {
   Activity,
   AlertTriangle,
@@ -214,6 +215,9 @@ const CommandPanel = ({ session, onChanged }) => {
 }
 
 const SessionDetail = ({ sessionId, onClose }) => {
+  const ask = useAppDialog()
+  const [mutation, setMutation] = useState('')
+  const mutationInFlight = useRef(false)
   const dispatch = useDispatch()
   const [session, setSession] = useState(null)
   const [events, setEvents] = useState([])
@@ -246,18 +250,26 @@ const SessionDetail = ({ sessionId, onClose }) => {
   }, [load])
 
   const mutate = async (kind, data = {}) => {
-    if (kind === 'reset' && !window.confirm('Reset this Sales Demo to its original baseline? The guest will remain logged in, but synthetic changes will be removed.')) return
-    if (kind === 'end' && !window.confirm('End this Sales Demo now? The guest will lose access.')) return
-    setFeedback(null)
-    const result = await dispatch(salesDemoRequest({
-      url: `/sessions/${sessionId}/${kind}`,
-      method: 'post',
-      data: kind === 'reset' ? { expected_revision: session.revision } : data,
-      requestKey: `sales-demo-${kind}-${sessionId}`,
-    }))
-    if (!result?.ok) { setFeedback({ type: 'error', message: safeMessage(result) }); return }
-    setFeedback({ type: 'success', message: kind === 'reset' ? 'Demo reset to its pinned baseline.' : kind === 'extend' ? 'Demo extended.' : 'Demo ended.' })
-    load({ quiet: true })
+    if (mutationInFlight.current) return
+    mutationInFlight.current = true
+    try {
+      if (kind === 'reset' && !await ask({ title: 'Reset this Sales Demo?', description: 'All synthetic changes in this session will be removed and its published baseline restored. The guest will remain signed in.', confirmLabel: 'Reset baseline', danger: true })) return
+      if (kind === 'end' && !await ask({ title: 'End this Sales Demo?', description: 'The guest will lose access. Session history is retained. Reset the baseline first to remove test changes.', confirmLabel: 'End demo', danger: true })) return
+      setMutation(kind)
+      setFeedback(null)
+      const result = await dispatch(salesDemoRequest({
+        url: `/sessions/${sessionId}/${kind}`,
+        method: 'post',
+        data: kind === 'reset' ? { expected_revision: session.revision } : data,
+        requestKey: `sales-demo-${kind}-${sessionId}`,
+      }))
+      if (!result?.ok) { setFeedback({ type: 'error', message: safeMessage(result) }); return }
+      setFeedback({ type: 'success', message: kind === 'reset' ? 'Demo reset to its pinned baseline.' : kind === 'extend' ? 'Demo extended.' : 'Demo ended.' })
+      await load({ quiet: true })
+    } finally {
+      mutationInFlight.current = false
+      setMutation('')
+    }
   }
 
   if (loading && !session) return <section className='appPanel'><AppSkeleton lines={12} /></section>
@@ -269,9 +281,9 @@ const SessionDetail = ({ sessionId, onClose }) => {
       <div><button type='button' onClick={onClose}>← All sessions</button><p className='technicalLabel'>{formatLabel(session.session_type)}</p><h2>{session.label}</h2><p>{formatLabel(session.experience)} experience · template v{session.template_version?.version_number || '—'}</p></div>
       <div className='salesDemoDetail__actions'>
         <StatusBadge tone={toneForPresence(session.presence)}>{formatLabel(session.presence)}</StatusBadge>
-        {session.demo_active && <Button variant='secondary' onClick={() => mutate('extend', { hours: 2 })}><Clock3 aria-hidden='true' /> Add 2 hours</Button>}
-        {session.demo_active && <Button variant='secondary' onClick={() => mutate('reset')}><RotateCcw aria-hidden='true' /> Reset baseline</Button>}
-        {session.demo_active && <Button variant='secondary' onClick={() => mutate('end', { reason: 'Ended from the founder Sales Demo dashboard' })}><StopCircle aria-hidden='true' /> End</Button>}
+        {session.demo_active && <Button variant='secondary' disabled={Boolean(mutation)} onClick={() => mutate('extend', { hours: 2 })}><Clock3 aria-hidden='true' /> Add 2 hours</Button>}
+        {session.demo_active && <Button variant='secondary' disabled={Boolean(mutation)} onClick={() => mutate('reset')}><RotateCcw aria-hidden='true' /> Reset baseline</Button>}
+        {session.demo_active && <Button variant='secondary' disabled={Boolean(mutation)} onClick={() => mutate('end', { reason: 'Ended from the founder Sales Demo dashboard' })}><StopCircle aria-hidden='true' /> End</Button>}
       </div>
     </header>
     <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
@@ -296,6 +308,7 @@ const SessionDetail = ({ sessionId, onClose }) => {
 }
 
 const TemplateEditor = ({ defaultPartPresetKey, partPresets, templates, onRefresh }) => {
+  const ask = useAppDialog()
   const dispatch = useDispatch()
   const [selectedId, setSelectedId] = useState(idOf(templates[0]))
   const [template, setTemplate] = useState(null)
@@ -344,8 +357,8 @@ const TemplateEditor = ({ defaultPartPresetKey, partPresets, templates, onRefres
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
-  const selectTemplate = nextId => {
-    if (dirty && !window.confirm('Discard the unsaved baseline changes?')) return
+  const selectTemplate = async nextId => {
+    if (dirty && !await ask({ title: 'Discard baseline changes?', description: 'Your unsaved baseline changes will be lost.', confirmLabel: 'Discard changes', cancelLabel: 'Keep editing', danger: true })) return
     setSelectedId(nextId)
   }
   const createTemplate = async event => {

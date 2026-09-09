@@ -1,3 +1,4 @@
+import { useAppDialog } from '../../../components/app/AppDialogProvider'
 import { AlertTriangle, CalendarDays, CheckCircle2, Database, KeyRound, Mail, Pencil, Play, Plus, RefreshCw, Settings2, Unplug } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
@@ -49,6 +50,7 @@ const automationFormFromRule = rule => ({
 })
 
 const CrmSettings = () => {
+  const ask = useAppDialog()
   const router = useRouter()
   const dispatch = useDispatch()
   const [tab, setTab] = useState('connections')
@@ -117,7 +119,7 @@ const CrmSettings = () => {
     else { setFeedback({ type: 'success', message: `${connection.account_email} refreshed.` }); load() }
   }
   const disconnect = async connection => {
-    if (!window.confirm(`Disconnect ${connection.account_email} from the CRM? Scheduled messages that use it will stop.`)) return
+    if (!await ask({ title: 'Disconnect?', description: `Disconnect ${connection.account_email} from the CRM? Scheduled messages that use it will stop.`, confirmLabel: 'Disconnect', danger: true })) return
     const result = await dispatch(crmRequest({ url: `/google/connections/${connection.id}`, method: 'delete', data: {}, requestKey: `crm-google-disconnect-${connection.id}` }))
     if (!result?.ok) setFeedback({ type: 'error', message: crmErrorMessage(result) })
     else { setFeedback({ type: 'success', message: `${connection.account_email} disconnected.` }); load() }
@@ -213,7 +215,7 @@ const CrmSettings = () => {
     const [survivorId, duplicateId] = group.ids || []
     if (!survivorId || !duplicateId) return
     const names = (group.names || []).slice(0, 2).join(' and ')
-    if (!window.confirm(`Merge ${names || 'these records'}? The first record will remain and the second will be archived. Relationship history will be preserved.`)) return
+    if (!await ask({ title: 'Merge records?', description: `Merge ${names || 'these records'}? The first record will remain and the second will be archived. Relationship history will be preserved.`, confirmLabel: 'Merge records', danger: true })) return
     setSaving(true); setFeedback(null)
     const result = await dispatch(crmRequest({
       url: `/merge/${entity}`, method: 'post', requestKey: `crm-merge-${entity}-${duplicateId}`,
@@ -225,7 +227,7 @@ const CrmSettings = () => {
     load()
   }
   const restore = async (record, entity) => {
-    if (!window.confirm(`Restore ${record.name || `${record.first_name} ${record.last_name}`} to the active CRM?`)) return
+    if (!await ask({ title: 'Restore?', description: `Restore ${record.name || `${record.first_name} ${record.last_name}`} to the active CRM?`, confirmLabel: 'Restore', danger: false })) return
     setSaving(true)
     const result = await dispatch(crmRequest({ url: `/${entity}/${record.id}/restore`, method: 'post', data: { reason: 'Restored by a founder from CRM administration.' }, requestKey: `crm-restore-${entity}-${record.id}` }))
     setSaving(false)

@@ -15,6 +15,13 @@ export const salesDemoRouteMap = pathname => {
 export const salesDemoActionKey = (method, path) => {
   const verb = String(method || 'update').toLowerCase()
   const resource = String(path || '')
+  const productionAction = resource.match(/^\/production-records\/[^/]+\/(accept|decline|machine|forecast|transition|assign|confirm-delivery|report-quality-issue|approve-quality|notes)$/)?.[1]
+  if (verb === 'post' && productionAction) return `production.${{
+    accept: 'assignment_accepted', decline: 'assignment_declined', assign: 'assignment_sent',
+    machine: 'machine_changed', forecast: 'forecast_updated', transition: 'stage_changed',
+    'confirm-delivery': 'delivery_confirmed', 'report-quality-issue': 'quality_issue_reported',
+    'approve-quality': 'quality_approved', notes: 'note_added',
+  }[productionAction]}`
   if (resource.includes('production')) return `production.${verb}`
   if (resource.includes('relationship') || resource.includes('supplier')) return `relationship.${verb}`
   if (resource.includes('facilit')) return `facility.${verb}`

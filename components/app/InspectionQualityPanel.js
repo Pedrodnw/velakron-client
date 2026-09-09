@@ -1,3 +1,4 @@
+import { useAppDialog } from './AppDialogProvider'
 import axios from 'axios'
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, ClipboardCheck, Download, Eye, FileSpreadsheet, FileUp, GitCompareArrows, LoaderCircle, Paperclip, RefreshCw, Ruler, Send, UserRoundCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -52,6 +53,7 @@ const ResultEntry = ({ characteristic, sampleNumber, result, pending, onSave, on
 }
 
 export const InspectionRunWorkspace = ({ runId, production, organizationType, onClose, onChanged, embedded = false }) => {
+  const ask = useAppDialog()
   const dispatch = useDispatch()
   const hasRecordPermission = useSelector(getHasPermission('inspection.result.record'))
   const hasSubmitPermission = useSelector(getHasPermission('inspection.package.submit'))
@@ -98,10 +100,13 @@ export const InspectionRunWorkspace = ({ runId, production, organizationType, on
     : (detail.characteristics || []).filter(item => scope.has(idOf(item))).flatMap(characteristic => Array.from({ length: scope.get(idOf(characteristic)) || 1 }, (_, index) => ({ characteristic, sampleNumber: index + 1, result: activeResults.find(item => idOf(item.inspection_characteristic) === idOf(characteristic) && item.sample_key === String(index + 1)) })))
   const nextIncompleteIndex = rows.findIndex(row => !row.result)
   const action = async (operation, success) => { setFeedback(null); const result = await operation(); if (!result?.ok) setFeedback({ type: 'error', message: resultError(result, 'The inspection update could not be saved.') }); else { setFeedback({ type: 'success', message: success }); await refresh() } return result }
-  const confirmFailure = result => {
-    const affected = window.prompt('How many parts may be affected?', '1'); if (!affected) return
-    const containment = window.prompt('Describe the immediate containment or next action.'); if (!containment) return
-    action(() => dispatch(confirmInspectionFailure(idOf(result), { affected_quantity: Number(affected), containment })), 'Non-conformance opened and linked to this exact inspection result.')
+  const confirmFailure = async result => {
+    const answer = await ask({ title: 'Confirm inspection failure?', description: 'Create a Non-Conformance linked to this exact inspection result.', confirmLabel: 'Confirm failure', danger: true, fields: [
+      { name: 'affected', label: 'Affected quantity', type: 'number', min: 1, max: production?.quantity, step: 1, defaultValue: '1' },
+      { name: 'containment', label: 'Immediate containment or next action', multiline: true, minLength: 4, maxLength: 1000 },
+    ] })
+    if (!answer) return
+    action(() => dispatch(confirmInspectionFailure(idOf(result), { affected_quantity: Number(answer.affected), containment: answer.containment.trim() })), 'Non-conformance opened and linked to this exact inspection result.')
   }
   const readCsv = file => { const reader = new FileReader(); reader.onload = () => setImportState(current => ({ ...current, csv: String(reader.result || ''), file, attachmentId: '', preview: null, idempotency_key: `csv:${runId}:${file.name}:${file.size}:${file.lastModified}` })); reader.readAsText(file) }
   const previewCsv = async () => {

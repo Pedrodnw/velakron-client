@@ -40,6 +40,11 @@ describe('founder Sales Demo workspace', () => {
     expect(salesDemoRouteMap('/app/machines/[id]')).toEqual({ route_key: 'machines', journey_step: 'machines' })
     expect(salesDemoActionKey('patch', '/production-records/64ff00/private-part')).toBe('production.patch')
     expect(salesDemoActionKey('post', '/relationships/64ff00/accept')).toBe('relationship.post')
+    expect(salesDemoActionKey('post', '/production-records/private-id/accept')).toBe('production.assignment_accepted')
+    expect(salesDemoActionKey('post', '/production-records/private-id/forecast')).toBe('production.forecast_updated')
+    expect(salesDemoActionKey('post', '/production-records/private-id/machine')).toBe('production.machine_changed')
+    expect(salesDemoActionKey('post', '/production-records/private-id/transition')).toBe('production.stage_changed')
+    expect(salesDemoActionKey('patch', '/production-records/private-id/forecast')).toBe('production.patch')
   })
 
   it('stores Sales Demo request outcomes and resets loading after success or failure', () => {

@@ -1,3 +1,4 @@
+import { useAppDialog } from '../../../../components/app/AppDialogProvider'
 import { ArrowLeft, CalendarPlus, ClipboardCheck, Link2, MailPlus, MessageSquarePlus, Pencil, Plus, RefreshCw, Trash2, UserPlus } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useState } from 'react'
@@ -33,6 +34,7 @@ const assessmentAnswerLabels = {
 }
 
 const OrganizationDetail = () => {
+  const ask = useAppDialog()
   const router = useRouter()
   const dispatch = useDispatch()
   const [state, setState] = useState({ loading: true, data: null, error: '' })
@@ -115,7 +117,7 @@ const OrganizationDetail = () => {
     setModal(''); setRelationshipForm(initialRelationship); setFeedback({ type: 'success', message: 'OEM and supplier records connected.' }); load()
   }
   const archiveOrganization = async () => {
-    if (!window.confirm(`Archive ${organization.name}? Open opportunities and onboarding must be closed first. History will be retained.`)) return
+    if (!await ask({ title: 'Archive?', description: `Archive ${organization.name}? Open opportunities and onboarding must be closed first. History will be retained.`, confirmLabel: 'Archive', danger: true })) return
     setSaving(true); setFeedback(null)
     const result = await dispatch(crmRequest({ url: `/organizations/${organization.id}`, method: 'delete', data: { version: organization.version, reason: 'Archived by a founder from the CRM organization record.' }, requestKey: `crm-organization-archive-${organization.id}` }))
     setSaving(false)

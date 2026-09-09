@@ -4,6 +4,7 @@ import { Button } from '../design-system'
 
 const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onClose, danger = false, confirmDisabled = false, children }) => {
   const titleId = useId()
+  const descriptionId = useId()
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
@@ -11,6 +12,10 @@ const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm'
   useEffect(() => {
     if (!open) return undefined
     const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    const previousRootOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
     const handleKeyDown = event => {
       if ([...document.querySelectorAll('[role=dialog][aria-modal=true]')].at(-1) !== dialogRef.current) return
       if (event.key === 'Escape') { event.preventDefault(); onCloseRef.current(); return }
@@ -28,6 +33,8 @@ const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm'
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      document.documentElement.style.overflow = previousRootOverflow
       previousFocus?.focus?.()
     }
   }, [open])
@@ -37,11 +44,11 @@ const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm'
   return <div className='dialogBackdrop' role='presentation' onMouseDown={event => {
     if (event.target === event.currentTarget) onClose()
   }}>
-    <section className='confirmationDialog' role='dialog' aria-modal='true' aria-labelledby={titleId} tabIndex={-1} ref={dialogRef}>
+    <section className='confirmationDialog' role='dialog' aria-modal='true' aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1} ref={dialogRef}>
       <button className='confirmationDialog__close' type='button' aria-label='Close dialog' onClick={onClose}><X aria-hidden='true' /></button>
       <span className='confirmationDialog__icon'><AlertTriangle aria-hidden='true' /></span>
       <h2 id={titleId}>{title}</h2>
-      <p>{description}</p>
+      <p id={descriptionId}>{description}</p>
       {children && <div className='confirmationDialog__body'>{children}</div>}
       <div className='confirmationDialog__actions'>
         <Button variant='secondary' onClick={onClose}>{cancelLabel}</Button>

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import LinkWrap from '../LinkWrap'
 import { VelakronLogo } from '../design-system'
 import AppNavigation from '../app/AppNavigation'
+import { useAppDialog } from '../app/AppDialogProvider'
 import AppBreadcrumbs from '../app/AppBreadcrumbs'
 import OrganizationSwitcher from '../app/OrganizationSwitcher'
 import ExperienceSwitcher from '../app/ExperienceSwitcher'
@@ -27,6 +28,7 @@ const roleLabels = {
 }
 
 const AppLayout = ({ children, wide = false }) => {
+  const ask = useAppDialog()
   const router = useRouter()
   const dispatch = useDispatch()
   const [navigationOpen, setNavigationOpen] = useState(false)
@@ -74,7 +76,8 @@ const AppLayout = ({ children, wide = false }) => {
     } else await router.replace('/imts-demo')
   }
   const resetDemo = async () => {
-    if (!presenter || resettingDemo || !window.confirm('Reset this preview to its published baseline? All synthetic changes in this preview will be removed.')) return
+    if (!presenter || resettingDemo || finishingDemo) return
+    if (!await ask({ title: 'Reset this preview?', description: 'All synthetic changes in this preview will be removed and its published baseline restored. You will remain in the preview.', confirmLabel: 'Reset preview', danger: true })) return
     setResettingDemo(true)
     setFinishError('')
     const state = await dispatch(apiCallBegan({ url: '/sales-demos/current/state' }))
@@ -105,7 +108,7 @@ const AppLayout = ({ children, wide = false }) => {
       <AppNavigation onNavigate={closeNavigation} />
       <div className='appSidebar__footer'>
         <span>Velakron workspace</span>
-        <small>{organization?.demo_workspace ? (presenter ? 'Founder preview workspace' : 'Private Sales Demo workspace') : 'Organization access is enforced'}</small>
+        <small>{organization?.demo_workspace ? 'Private Sales Demo workspace' : 'Organization access is enforced'}</small>
         {organization?.demo_workspace && <>
           {presenter && <div className='appSidebar__demoControls'>
             <button type='button' onClick={resetDemo} disabled={resettingDemo || finishingDemo}>
@@ -141,7 +144,7 @@ const AppLayout = ({ children, wide = false }) => {
         </div>
       </header>
       <main id='app-main-content' className={`appMain${wide ? ' appMain--wide' : ''}`}><AppAccessBoundary>
-        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>{presenter ? 'Founder preview' : 'Private Sales Demo'}{remainingLabel ? ` · ${remainingLabel}` : ''}</strong><span>{presenter ? 'Synthetic customer workspace. A Velakron presenter may introduce updates while you explore; open Founder controls to switch roles.' : 'Synthetic, isolated workspace. A Velakron presenter may introduce updates while you explore, and access expires automatically.'}</span></div></div>}
+        {organization?.demo_workspace && <div className='demoWorkspaceBanner'><Clock3 aria-hidden='true' /><div><strong>Private Sales Demo{presenter ? ' · Founder preview' : ''}{remainingLabel ? ` · ${remainingLabel}` : ''}</strong><span>{presenter ? 'Synthetic customer workspace. A Velakron presenter may introduce updates while you explore; open Founder controls to switch roles.' : 'Synthetic, isolated workspace. A Velakron presenter may introduce updates while you explore, and access expires automatically.'}</span></div></div>}
         <SalesDemoSessionTracker />
         <AppBreadcrumbs />{children}
       </AppAccessBoundary></main>

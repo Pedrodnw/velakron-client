@@ -1,3 +1,4 @@
+import { useAppDialog } from '../../../components/app/AppDialogProvider'
 import { CalendarPlus, MailPlus, Pencil, Search, Trash2, UserRound } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
@@ -14,6 +15,7 @@ import Seo from '../../../components/Seo'
 import { crmErrorMessage, crmRequest } from '../../../store/crmApi'
 
 const CrmContacts = () => {
+  const ask = useAppDialog()
   const router = useRouter()
   const dispatch = useDispatch()
   const [state, setState] = useState({ loading: true, rows: [], meta: null, error: '' })
@@ -72,7 +74,7 @@ const CrmContacts = () => {
   }
   const archive = async () => {
     const contact = detail.contact
-    if (!window.confirm(`Archive ${contact.full_name}? The relationship history will be retained.`)) return
+    if (!await ask({ title: 'Archive?', description: `Archive ${contact.full_name}? The relationship history will be retained.`, confirmLabel: 'Archive', danger: true })) return
     setSaving(true)
     const result = await dispatch(crmRequest({ url: `/contacts/${contact.id}`, method: 'delete', requestKey: `crm-contact-archive-${contact.id}`, data: { version: contact.version, reason: 'Archived by a founder from the CRM contact directory.' } }))
     setSaving(false)

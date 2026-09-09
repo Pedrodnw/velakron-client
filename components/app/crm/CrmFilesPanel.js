@@ -1,3 +1,4 @@
+import { useAppDialog } from '../AppDialogProvider'
 import { Download, FileText, Image, LoaderCircle, Paperclip, Trash2, Upload } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
@@ -17,6 +18,7 @@ const byteLabel = bytes => {
 }
 
 const CrmFilesPanel = ({ subject, subjectId }) => {
+  const ask = useAppDialog()
   const dispatch = useDispatch()
   const [files, setFiles] = useState([])
   const [file, setFile] = useState(null)
@@ -53,7 +55,7 @@ const CrmFilesPanel = ({ subject, subjectId }) => {
     else setFeedback({ type: 'error', message: crmErrorMessage(result, 'The file could not be downloaded.') })
   }
   const remove = async item => {
-    if (!window.confirm(`Remove ${item.display_filename || item.original_filename}? This action is audited.`)) return
+    if (!await ask({ title: 'Remove file?', description: `Remove ${item.display_filename || item.original_filename}? This action is audited.`, confirmLabel: 'Remove file', danger: true })) return
     const result = await dispatch(crmRequest({ url: `/files/${subject}/${subjectId}/${item.id}`, method: 'delete', data: { reason: 'Removed by a founder from the CRM record.' }, requestKey: `crm-file-remove-${item.id}` }))
     if (!result?.ok) setFeedback({ type: 'error', message: crmErrorMessage(result, 'The file could not be removed.') })
     else { setFeedback({ type: 'success', message: 'File removed from the CRM record.' }); load() }

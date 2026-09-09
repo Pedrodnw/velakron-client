@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { apiCallBegan } from '../../store/api'
 import { getActiveOrganization } from '../../store/slices/appContext'
 import { loadProductionCollaboration, loadProductionSummary } from '../../store/slices/entities/productionCollaboration'
-import { loadProductionRecord, loadProductionRecords } from '../../store/slices/entities/productionRecords'
+import { loadProductionRecord } from '../../store/slices/entities/productionRecords'
 import { loadRelationships } from '../../store/slices/entities/relationships'
 import { salesDemoActionKey, salesDemoRouteMap } from '../../store/salesDemoTracking'
 
@@ -65,7 +65,7 @@ const SalesDemoSessionTracker = () => {
       else if (pathname === '/app/production/[id]' && routeId) {
         dispatch(loadProductionRecord(routeId))
         dispatch(loadProductionCollaboration(routeId))
-      } else if (pathname.startsWith('/app/production')) dispatch(loadProductionRecords())
+      } else if (pathname.startsWith('/app/production')) window.dispatchEvent(new Event('velakron:production-refresh'))
       else if (pathname.startsWith('/app/suppliers')) dispatch(loadRelationships())
       else if (event?.entity_type) router.replace(router.asPath, undefined, { scroll: false })
     }
