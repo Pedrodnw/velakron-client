@@ -1,20 +1,26 @@
-import { useState } from 'react'
-import { ArrowUpRight } from 'lucide-react'
-import Link from 'next/link'
+import { useId, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { TextLink } from './Elements'
 import ProductFigure from './ProductFigure'
 
 const benefits = [
-  ['worklist', 'See what needs attention', 'A clear production view helps you find the work that needs a response, a fresh update, or a closer look.', '/for-oems'],
-  ['record', 'Understand progress and dates', 'Keep the current stage, required arrival, and supplier commitment attached to the production record.', '/how-it-works'],
-  ['conversation', 'Keep the question in context', 'Discuss the relevant part and revision with the information both teams need to reach an answer.', '/how-it-works'],
-  ['issue', 'Resolve problems with ownership', 'Make the next action explicit and retain the decisions behind a production issue or block.', '/quality'],
-  ['supplier', 'Keep your customers informed', 'Give connected OEM customers a shared place to find progress, questions, and updates.', '/for-suppliers'],
+  ['issue', 'Spot the next action', 'See the production concern and which company needs to respond.', '/for-oems'],
+  ['update', 'Share a changed forecast', 'Keep the expected ship date and the reason for a change together.', '/for-suppliers'],
+  ['conversation', 'Resolve a part question', 'Keep the technical question, revision, and next response together.', '/how-it-works'],
 ]
 export default function ProductGallery() {
-  const [selected,setSelected] = useState(0)
-  const current = benefits[selected]
-  return <div className='mk-gallery'>
-    <div className='mk-gallery__choices' aria-label='Explore product benefits'>{benefits.map(([name,title,description], index) => <button type='button' key={name} aria-pressed={selected === index} onClick={() => setSelected(index)}><span className='mk-label'>0{index+1}</span><strong>{title}</strong><span className='mk-gallery__description'>{description}</span><ArrowUpRight size={18} aria-hidden /></button>)}</div>
-    <div className='mk-gallery__display'><ProductFigure key={current[0]} name={current[0]} /><Link className='mk-text-link' href={current[3]}>Explore this workflow <ArrowUpRight size={17} aria-hidden /></Link></div>
+  const [selected, setSelected] = useState(0)
+  const id = useId()
+  return <div className='mk-gallery' aria-label='Explore product benefits'>
+    {benefits.map(([name, title, description, href], index) => <div className={`mk-gallery__item${selected === index ? ' is-selected' : ''}`} key={name}>
+      <h3 className='mk-gallery__choice' style={{ gridRow: index + 1 }}><button type='button' id={`${id}-choice-${index}`} aria-expanded={selected === index} aria-controls={`${id}-panel-${index}`} onClick={event => { const button=event.currentTarget; setSelected(index); if (window.innerWidth<=767) requestAnimationFrame(() => button.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'})) }}>
+        <span className='mk-label'>0{index + 1}</span><strong>{title}</strong><ChevronDown size={18} aria-hidden />
+      </button></h3>
+      <div className='mk-gallery__display' id={`${id}-panel-${index}`} role='region' aria-labelledby={`${id}-choice-${index}`} hidden={selected !== index}>
+        <p className='mk-gallery__description'>{description}</p>
+        {selected === index && <ProductFigure name={name} placement='hero' />}
+        <TextLink href={href}>Explore this workflow</TextLink>
+      </div>
+    </div>)}
   </div>
 }

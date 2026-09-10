@@ -1,15 +1,18 @@
 import dimensions from './mediaDimensions.json'
-// Published derivatives only. Capture provenance lives in docs/acceptance/public-site/media-manifest.json.
-const figure = (file, alt, caption, width = 1600, height = 1100) => ({ src: `/images/marketing/${file}.webp`, alt, caption, width: dimensions[file]?.width || width, height: dimensions[file]?.height || height })
+// Lossless actual-product crops. Model-bearing captures use VLK-4001 Rev A.
+// Provenance: docs/acceptance/public-site/ux-refresh/manifest.json.
+const image = name => ({src:`/images/marketing/${name}.webp`,...dimensions[name],lossless:true})
+const figure = (name,alt,caption,takeaway,{mobile,displayWidth}={}) => ({...image(`${name}-v2`),alt,caption,takeaway,displayWidth,original:{...image(`${name}-v2`),src:`/images/marketing/${name}-v2.png`},...(mobile ? {mobile:image(`${mobile}-v2`)} : {})})
 export const productMedia = {
-  overview: figure('oem-overview', 'OEM dashboard showing production records, supplier progress, and work requiring attention.', 'A shared view of production and the records that need attention.'),
-  worklist: figure('oem-worklist-vlk', 'OEM production worklist with supplier, stage, and schedule information.', 'Find the production commitments that need a closer look.'),
-  record: figure('production-record', 'Production record with part context, current stage, required arrival, and supplier commitment.', 'The part, progress, and dates stay connected to the same production record.'),
-  conversation: figure('part-conversation', 'A manufacturing discussion beside the relevant part and revision.', 'Keep the manufacturing question beside the context needed to answer it.'),
-  issue: figure('production-issue', 'A supplier production record showing a production block and the company responsible for the next response.', 'A production block makes the restriction and next response visible.'),
-  inspection: figure('inspection-evidence', 'Inspection results and quality review for a production record.', 'A recorded inspection result and its accepted review package stay with the work.'),
-  supplier: figure('supplier-worklist-vlk', 'Supplier worklist showing production commitments for connected OEM customers.', 'One place to keep connected customers informed about their work.'),
-  update: figure('supplier-update-vlk', 'Supplier shipping update for VLK-1001 with its structural-ring model thumbnail visible.', 'Report progress on the record both companies use.'),
-  mobile: figure('supplier-mobile', 'The actual supplier production view in a mobile browser.', 'Production context in the mobile browser.', 780, 1688),
-  history: figure('production-history-vlk', 'Completed VLK-5001 production workflow and its retained update history.', 'A record of the updates and decisions that brought the work here.'),
+  overview:figure('overview','OEM attention queue with current VLK-4001 bell-crank thumbnails, dates, stages, and attention reasons.','Start with the production records that need a response.','The required arrival, supplier forecast, and next action appear together.',{mobile:'overview-mobile'}),
+  worklist:figure('overview','OEM attention queue showing VLK-4001 production commitments.','Find the commitments that need a closer look.','See which production record needs your team’s response.',{mobile:'overview-mobile'}),
+  record:figure('record','Production commitment for VLK-4001 Rev A, including quantity, supplier, required arrival, and expected ship date.','One commitment, with the customer’s requirement and supplier’s forecast.','Required arrival and expected ship are separate dates.',{mobile:'record-mobile'}),
+  conversation:figure('conversation','Bearing-bore clarification for the VLK-4001 bell crank, linked to revision A and a responsible company.','Keep a technical question with its revision and next response.','The bearing-bore question identifies the company responsible for the next response.',{mobile:'conversation-mobile'}),
+  issue:figure('issue','Production block explaining the concern and identifying the company responsible for the next response.','A production concern with an explicit next response.','The current step and responsible company are visible.',{mobile:'issue-mobile'}),
+  inspection:figure('inspection','Accepted first-article inspection result for VLK-4001, showing a bearing-bore measurement of 1.2501 inches.','Read the recorded measurement against the requirement.','Measured 1.2501 in · allowed range 1.2490–1.2510 in · Pass.',{mobile:'inspection-mobile'}),
+  nonconformance:figure('nonconformance','Approved rework disposition for a nonconformance affecting a VLK-4001 production lot.','Keep the rework instructions, approval, and verification connected.','Three affected parts were reworked; the retained record includes OEM verification.',{mobile:'nonconformance-mobile'}),
+  update:figure('update','Supplier draft of a revised shipping forecast for VLK-4001, with a reason for the later date.','Explain a changed shipping forecast before saving it.','A later date requires a reason that the customer can understand.',{mobile:'update-mobile',displayWidth:480}),
+  mobile:figure('supplier-mobile','Actual mobile supplier record for VLK-4001 showing its model thumbnail, stage, and update controls.','The supplier’s production record in a phone browser.','Open the record, review its state, and report an update.',{displayWidth:360}),
+  supplier:figure('supplier-mobile','Supplier production context for the current VLK-4001 bell crank.','Keep the customer informed about the work.','Production context and update controls travel together.',{displayWidth:360}),
+  history:figure('history','Lot-specific technical acceptance documenting the original condition, accepted change, reason, and effectivity.','An approval with an explicit production scope.','The approval applies to this lot; it does not rewrite the released revision.',{mobile:'history-mobile'}),
 }

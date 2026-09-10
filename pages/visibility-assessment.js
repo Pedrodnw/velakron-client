@@ -63,13 +63,13 @@ const formatSlotDay = value => new Intl.DateTimeFormat('en-US', { weekday: 'shor
 const formatSlotTime = value => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }).format(new Date(value))
 const formatBooking = value => new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York', timeZoneName: 'short' }).format(new Date(value))
 
-const Progress = ({ current, total }) => <div className='assessmentProgress' aria-label={`Question ${current} of ${total}`}>
+const Progress = ({ current, total }) => <div className='assessmentProgress' aria-label={`Step ${current} of ${total}`}>
   <div><span>Production Visibility Assessment</span><strong>{current} of {total}</strong></div>
   <span className='assessmentProgress__track'><i style={{ width: `${(current / total) * 100}%` }} /></span>
 </div>
 
 const AssessmentQuestion = ({ question, answer, number, onBack, onContinue, onSelect, pending }) => <section className='assessmentCard assessmentQuestion' aria-labelledby='assessment-question'>
-  <Progress current={number} total={visibilityQuestions.length} />
+  <Progress current={number} total={visibilityQuestions.length + 1} />
   <div className='assessmentQuestion__heading'>
     <span className='assessmentQuestion__number'>0{number}</span>
     <div>
@@ -92,17 +92,17 @@ const AssessmentQuestion = ({ question, answer, number, onBack, onContinue, onSe
   </div>
   <footer className='assessmentCard__footer'>
     <button type='button' className='assessmentBack' onClick={onBack}><ArrowLeft aria-hidden='true' /> Back</button>
-    <button type='button' className='assessmentPrimary' disabled={!answer || pending} onClick={onContinue}>{pending ? <><LoaderCircle className='assessmentSpinner' /> Saving…</> : <>{number === visibilityQuestions.length ? 'Continue to results' : 'Next question'} <ArrowRight aria-hidden='true' /></>}</button>
+    <button type='button' className='assessmentPrimary' disabled={!answer || pending} onClick={onContinue}>{pending ? <><LoaderCircle className='assessmentSpinner' /> Saving…</> : <>{number === visibilityQuestions.length ? 'Continue to contact details' : 'Next question'} <ArrowRight aria-hidden='true' /></>}</button>
   </footer>
 </section>
 
 const FieldError = ({ field, errors }) => errors[field] ? <small className='assessmentFieldError' id={`assessment-${field}-error`}>{errors[field]}</small> : null
 
 const ContactStep = ({ contact, error, fieldErrors, pending, onBack, onChange, onSubmit }) => <section className='assessmentCard assessmentContact'>
-  <Progress current={visibilityQuestions.length} total={visibilityQuestions.length} />
+  <Progress current={visibilityQuestions.length + 1} total={visibilityQuestions.length + 1} />
   <div className='assessmentContact__heading'>
     <span><LockKeyhole aria-hidden='true' /></span>
-    <div><p className='visibilityHome__eyebrow'>Your results are ready</p><h1>See your Production Visibility Score</h1><p>Enter your work details to see your score immediately. We’ll also use them to tailor your demo if you choose to book one.</p></div>
+    <div><p className='visibilityHome__eyebrow'>Final step · Your contact details</p><h1>See your Production Visibility Score</h1><p>Complete this final step to see your score. Work contact details and contact permission are required. We’ll also use them to tailor your demo if you choose to book one.</p></div>
   </div>
   {error && <div className='assessmentError' role='alert'>{error}</div>}
   <form className='assessmentContact__form' id='assessment-contact-form' onSubmit={onSubmit} noValidate>
@@ -116,7 +116,7 @@ const ContactStep = ({ contact, error, fieldErrors, pending, onBack, onChange, o
     <label className={`assessmentConsent${fieldErrors.consent ? ' has-error' : ''}`}>
       <input name='consent' type='checkbox' required checked={contact.consent} onChange={onChange} aria-invalid={Boolean(fieldErrors.consent)} aria-describedby={fieldErrors.consent ? 'assessment-consent-error' : undefined} />
       <span><Check aria-hidden='true' /></span>
-      <p>Velakron may contact me about this assessment and a personalized product demonstration.</p>
+      <p>Velakron may contact me about this assessment and a personalized product demonstration. <Link href='/privacy' target='_blank' rel='noopener'>Privacy Notice (new tab)</Link>.</p>
       <FieldError field='consent' errors={fieldErrors} />
     </label>
   </form>
@@ -342,19 +342,19 @@ const VisibilityAssessment = () => {
 
   const question = visibilityQuestions[questionIndex]
   return <div className='marketing visibilityHome assessmentPage'>
-    <Seo title='Production Visibility Assessment' description='See how much visibility your team has into supplier production in about two minutes.' path='/visibility-assessment' />
+    <Seo title='Production Visibility Assessment' description='Answer eight questions, then provide work contact details to view a production visibility score based on your answers.' path='/visibility-assessment' />
     <a className='skipLink' href='#main-content'>Skip to main content</a>
     <MarketingHeader />
     <main id='main-content' className='assessmentPage__main'>
       <div className='visibilityHome__container assessmentPage__shell'>
         {phase === 'intro' && <section className='assessmentIntro'>
           <div className='assessmentIntro__copy'>
-            <p className='visibilityHome__eyebrow'>Two-minute assessment</p>
+            <p className='visibilityHome__eyebrow'>Production visibility assessment</p>
             <h1>How much visibility do you actually have into your suppliers?</h1>
-            <p>Answer eight practical questions and get a clear Production Visibility Score for your current process.</p>
+            <p>Answer eight questions about your process, then provide your name, company, work email, and contact permission to view your score. Booking a demo is optional.</p>
             {error && <div className='assessmentError' role='alert'>{error}</div>}
             <button type='button' className='assessmentPrimary' onClick={begin} disabled={!credentials || pending}>{pending || !credentials ? <><LoaderCircle className='assessmentSpinner' /> Preparing…</> : <>Check Your Visibility <ArrowRight /></>}</button>
-            <small><Clock3 /> About 2 minutes · Results shown immediately</small>
+            <small><Clock3 /> 8 questions + contact details · About 2–3 minutes</small>
           </div>
           <div className='assessmentIntro__preview' aria-hidden='true'>
             <span className='assessmentIntro__icon'><Eye /></span>
