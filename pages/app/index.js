@@ -4,17 +4,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   AppPageHeader,
   AppSkeleton,
-  AttentionReason,
   EmptyState,
   ErrorState,
   MetricCard,
-  RecordCard,
-  ScheduleHealthBadge,
-  StageBadge,
   StatusBadge,
 } from '../../components/app'
 import { Button } from '../../components/design-system'
-import { formatDate, formatDateTime, formatLabel, formatStorageStatus, statusTone } from '../../components/app/formatters'
+import { formatDateTime, formatLabel, formatStorageStatus, statusTone } from '../../components/app/formatters'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
 import { getActiveMembership, getActiveOrganization } from '../../store/slices/appContext'
@@ -23,26 +19,11 @@ import { loadPlatformActionCenter, loadPlatformSummary, platformSelectors, track
 import { internalTaskSelectors, loadInternalTasks } from '../../store/slices/entities/internalTasks'
 import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import PlatformActionQueue from '../../components/app/PlatformActionQueue'
+import ProductionRecordCard from '../../components/app/ProductionRecordCard'
+import { ProductionCardImages } from '../../components/app/ProductionCardThumbnail'
 
 const metric = value => String(value ?? '—')
 const positiveTone = (value, activeTone) => Number(value || 0) > 0 ? activeTone : 'success'
-const recordCompany = (record, organizationType) => organizationType === 'supplier'
-  ? record.oem_organization?.name || 'OEM customer'
-  : record.supplier_organization?.name || 'Unassigned supplier'
-
-const ProductionRecordCard = ({ record, organizationType }) => <RecordCard
-  href={`/app/production/${record.id}`}
-  eyebrow={record.public_reference}
-  title={record.part_number || record.part_name || 'Production record'}
-  description={recordCompany(record, organizationType)}
-  badges={<>{record.export_control === 'itar' && <StatusBadge tone='danger'>ITAR</StatusBadge>}<StageBadge value={record.current_stage} /><ScheduleHealthBadge value={record.schedule_health} /></>}
-  facts={[
-    { label: 'Required arrival', value: formatDate(record.required_delivery_date) },
-    { label: 'Expected ship', value: formatDate(record.expected_ship_date) },
-    { label: 'Last supplier update', value: formatDateTime(record.last_supplier_update_at) },
-  ]}
-/>
-
 const StageDistribution = ({ distribution = {} }) => {
   const rows = Object.entries(distribution)
   const total = rows.reduce((sum, [, count]) => sum + count, 0)
@@ -161,7 +142,7 @@ const OperationalDashboard = ({ organization }) => {
   const supplier = organization.type === 'supplier'
   const attention = summary.attention_queue || []
   const secondary = supplier ? summary.recently_completed || [] : summary.upcoming_required_dates || []
-  return <>
+  return <ProductionCardImages>
     {error && <ErrorState title='Production overview could not refresh' description='Showing the last successful snapshot. Refresh before making a schedule decision.' onRetry={refresh} />}
     <section className='metricGrid metricGrid--priority' aria-label='Production priorities'>
       <MetricCard label='Action required' value={metric(summary.counts?.action_required)} detail='Production records with an action owned by your company' icon={AlertTriangle} tone={positiveTone(summary.counts?.action_required, 'warning')} href='/app/production?view=action_required' />
@@ -173,7 +154,7 @@ const OperationalDashboard = ({ organization }) => {
     <div className='dashboardPriorityGrid'>
       <section className='appPanel dashboardPriorityGrid__primary'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Current priorities</p><h2>{supplier ? 'Your next actions' : 'Attention queue'}</h2></div><Button href='/app/production' variant='secondary'>Open production</Button></header>
-        {attention.length ? <div className='recordCardGrid'>{attention.map(record => <div key={record.id}><ProductionRecordCard record={record} organizationType={organization.type} /><AttentionReason codes={record.active_attention_codes} /></div>)}</div> : <EmptyState compact title='No records need attention' description='Current production information is within the approved rules.' />}
+        {attention.length ? <div className='productionCardGrid'>{attention.map(record => <ProductionRecordCard key={record.id} record={record} organizationType={organization.type} />)}</div> : <EmptyState compact title='No records need attention' description='Current production information is within the approved rules.' />}
       </section>
       <section className='appPanel'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Portfolio</p><h2>Active stages</h2></div></header>
@@ -183,15 +164,15 @@ const OperationalDashboard = ({ organization }) => {
     <div className='appDashboardGrid'>
       <section className='appPanel'>
         <header className='appPanel__header'><div><p className='technicalLabel'>{supplier ? 'Closed work' : 'Next 30 days'}</p><h2>{supplier ? 'Recently completed' : 'Upcoming required dates'}</h2></div></header>
-        {secondary.length ? <div className='compactRecordList'>{secondary.map(record => <ProductionRecordCard key={record.id} record={record} organizationType={organization.type} />)}</div> : <EmptyState compact title={supplier ? 'No recently completed records' : 'No upcoming required dates'} description='Records will appear here when they match this operating window.' />}
+        {secondary.length ? <div className='productionCardList'>{secondary.map(record => <ProductionRecordCard compact key={record.id} record={record} organizationType={organization.type} />)}</div> : <EmptyState compact title={supplier ? 'No recently completed records' : 'No upcoming required dates'} description='Records will appear here when they match this operating window.' />}
       </section>
       <section className='appPanel'>
         <header className='appPanel__header'><div><p className='technicalLabel'>Activity</p><h2>Recently updated</h2></div></header>
-        {(summary?.recently_updated || []).length ? <div className='compactRecordList'>{summary.recently_updated.map(record => <ProductionRecordCard key={record.id} record={record} organizationType={organization.type} />)}</div> : <EmptyState compact title='No recent updates' description='Confirmed production changes will appear here.' />}
+        {(summary?.recently_updated || []).length ? <div className='productionCardList'>{summary.recently_updated.map(record => <ProductionRecordCard compact key={record.id} record={record} organizationType={organization.type} />)}</div> : <EmptyState compact title='No recent updates' description='Confirmed production changes will appear here.' />}
         <p className='dashboardFreshness'><Clock3 aria-hidden='true' /> Last refreshed {formatDateTime(summary?.freshness?.read_at)}. Updates refresh every 45 seconds while visible.</p>
       </section>
     </div>
-  </>
+  </ProductionCardImages>
 }
 
 const PortalOverview = () => {
