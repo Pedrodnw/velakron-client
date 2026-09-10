@@ -1149,3 +1149,351 @@
   .salesDemoCampaignCard__qr { max-width: 110px; }
   .salesDemoLinkWizard details > div { grid-template-columns: 1fr; }
 }
+
+// In-product Sales Demo tutorial
+.salesDemoTutorial {
+  display: grid;
+  gap: 24px;
+}
+
+.salesDemoTutorialHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, .55fr);
+  gap: 30px;
+  padding: 34px;
+  overflow: hidden;
+  border: 1px solid rgba($primary, .24);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 90% 5%, rgba(79, 70, 229, .12), transparent 33%),
+    linear-gradient(135deg, rgba($primary, .11), rgba(14, 165, 233, .035) 55%, var(--app-surface));
+  box-shadow: 0 18px 48px rgba(8, 20, 38, .075);
+
+  h2 { max-width: 720px; margin: 8px 0 10px; font-size: clamp(28px, 3.4vw, 48px); letter-spacing: -.035em; }
+  p:not(.technicalLabel) { max-width: 720px; margin: 0; color: var(--app-text-secondary); font-size: 15px; line-height: 1.65; }
+  > div > div { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
+  > aside {
+    display: grid;
+    align-content: center;
+    gap: 10px;
+    padding: 24px;
+    border: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--app-surface) 90%, transparent);
+    box-shadow: 0 10px 30px rgba(8, 20, 38, .05);
+    > svg { width: 30px; height: 30px; color: $primary; }
+    > strong { font-size: 17px; }
+    > div { height: 8px; overflow: hidden; border-radius: 999px; background: var(--app-border); }
+    > div span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, $primary, #4f46e5); transition: width 180ms ease; }
+    > small { color: var(--app-text-muted); line-height: 1.45; }
+  }
+}
+
+.salesDemoTutorialPaths {
+  padding: 22px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  > header h2 { margin: 5px 0 16px; }
+  > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  button {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    grid-template-rows: auto auto;
+    gap: 3px 10px;
+    min-height: 90px;
+    align-content: center;
+    padding: 15px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    background: var(--app-surface-subtle);
+    color: var(--app-text);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+    &:hover, &:focus-visible { border-color: rgba($primary, .45); box-shadow: 0 8px 24px rgba(8, 20, 38, .07); transform: translateY(-2px); }
+    svg { grid-row: 1 / 3; width: 22px; color: $primary; }
+    strong { font-size: 13px; }
+    span { color: var(--app-text-muted); font-size: 10px; line-height: 1.4; }
+  }
+}
+
+.salesDemoTutorialQuickPath {
+  display: grid;
+  grid-template-columns: minmax(230px, .65fr) minmax(540px, 1.5fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--vk-info-border);
+  border-radius: 12px;
+  background: linear-gradient(120deg, rgba($primary, .07), var(--app-surface));
+  h2 { margin: 5px 0; }
+  p:not(.technicalLabel) { margin: 0; color: var(--app-text-secondary); font-size: 12px; line-height: 1.45; }
+  ol { display: flex; align-items: center; margin: 0; padding: 0; overflow-x: auto; list-style: none; }
+  li { position: relative; display: grid; min-width: 104px; place-items: center; gap: 6px; padding: 0 12px; text-align: center; }
+  li:not(:last-child)::after { content: ''; position: absolute; top: 13px; right: -8px; width: 16px; border-top: 1px solid rgba($primary, .32); }
+  li span { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 50%; background: $primary; color: #fff; font-size: 10px; }
+  li strong { color: var(--app-text-secondary); font-size: 9px; line-height: 1.3; }
+}
+
+.salesDemoTutorialLayout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.salesDemoTutorialContents {
+  position: sticky;
+  top: 88px;
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  box-shadow: 0 8px 24px rgba(8, 20, 38, .045);
+
+  > p { margin: 0 0 5px; }
+  button {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--app-text);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    &:hover, &:focus-visible { border-color: var(--app-border); background: var(--app-surface-subtle); }
+    > span { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: rgba($primary, .08); color: $primary; font-size: 10px; font-weight: 800; }
+    > span svg { width: 13px; }
+    b { font-size: 10px; line-height: 1.35; }
+    small { color: var(--app-text-muted); font-size: 8px; white-space: nowrap; }
+    &.is-complete > span { background: rgba(22, 163, 74, .1); color: #16a34a; }
+  }
+}
+
+.salesDemoTutorialSteps { display: grid; min-width: 0; gap: 22px; }
+
+.salesDemoTutorialStep {
+  scroll-margin-top: 90px;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  box-shadow: 0 10px 30px rgba(8, 20, 38, .045);
+
+  > header {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    align-items: center;
+    gap: 13px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--app-border);
+    background: linear-gradient(105deg, rgba($primary, .055), transparent 45%);
+    > span { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 50%; background: $primary; color: #fff; font-size: 14px; font-weight: 800; }
+    > span svg { width: 18px; }
+    h2 { margin: 4px 0 0; font-size: 21px; }
+    label { display: flex; align-items: center; gap: 7px; color: var(--app-text-muted); cursor: pointer; font-size: 10px; font-weight: 700; }
+    label input { width: 17px; height: 17px; accent-color: #16a34a; }
+  }
+  &.is-complete { border-color: rgba(22, 163, 74, .25); > header > span { background: #16a34a; } }
+}
+
+.salesDemoTutorialStep__body {
+  display: grid;
+  grid-template-columns: minmax(280px, .72fr) minmax(420px, 1.28fr);
+  gap: 24px;
+  padding: 22px;
+}
+
+.salesDemoTutorialStep__instructions {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  > ol { display: grid; gap: 10px; margin: 0; padding-left: 22px; color: var(--app-text-secondary); font-size: 12px; line-height: 1.55; }
+  > ol li { padding-left: 4px; }
+  > ol strong { color: var(--app-text); }
+  > aside { display: flex; gap: 10px; width: 100%; padding: 12px; border: 1px solid var(--vk-info-border); border-radius: 8px; background: rgba($primary, .045); }
+  > aside svg { width: 19px; height: 19px; flex: 0 0 auto; color: $primary; }
+  > aside div { display: grid; gap: 3px; }
+  > aside strong { font-size: 11px; }
+  > aside p { margin: 0; color: var(--app-text-secondary); font-size: 10px; line-height: 1.5; }
+  > aside.is-safe { border-color: rgba(22, 163, 74, .25); background: rgba(22, 163, 74, .055); svg { color: #16a34a; } }
+  > aside.is-warning { border-color: var(--vk-warning-border); background: var(--vk-warning-soft); svg { color: var(--vk-warning); } }
+}
+
+.salesDemoTutorialScreen {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #ced8e6;
+  border-radius: 10px;
+  background: #f6f9fd;
+  color: #182234;
+  box-shadow: 0 16px 36px rgba(8, 20, 38, .12);
+
+  button { pointer-events: none; }
+  figcaption { padding: 10px 13px; border-top: 1px solid #d9e1ec; background: #fff; color: #64748b; font-size: 9px; line-height: 1.45; }
+  figcaption strong { color: #334155; }
+}
+
+.salesDemoTutorialScreen__chrome {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-bottom: 1px solid #d7e0eb;
+  background: #fff;
+  > span { width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; }
+  > span:first-child { background: #fca5a5; }
+  > span:nth-child(2) { background: #fcd34d; }
+  > span:nth-child(3) { background: #86efac; }
+  > strong { margin-left: 6px; color: #475569; font-size: 8px; }
+}
+
+.salesDemoTutorialScreen__tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  border-bottom: 1px solid #dce4ef;
+  background: #f8fafc;
+  span, b { padding: 5px 8px; border-radius: 5px; font-size: 7px; white-space: nowrap; }
+  b { border: 1px solid #d6dfec; background: #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, .06); }
+}
+
+.salesDemoTutorialScreen__home {
+  display: grid;
+  grid-template-columns: .78fr 1.22fr;
+  gap: 12px;
+  min-height: 230px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(14, 92, 242, .09), transparent 55%);
+  > div:first-child { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+  small { color: #0969da; font-size: 6px; font-weight: 800; letter-spacing: .16em; }
+  > div:first-child strong { max-width: 210px; margin-top: 6px; font-size: 19px; line-height: 1.12; }
+  p { margin: 6px 0 12px; color: #64748b; font-size: 8px; }
+  button { padding: 7px 10px; border: 0; border-radius: 5px; background: #0969da; color: #fff; font-size: 7px; font-weight: 750; }
+  > div:last-child { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; align-content: center; }
+  > div:last-child span { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 6px; min-height: 64px; padding: 9px; border: 1px solid #d7e0eb; border-radius: 7px; background: #fff; }
+  > div:last-child svg { width: 16px; color: #0969da; }
+  > div:last-child b { font-size: 7px; }
+}
+
+.salesDemoTutorialScreen__modal { min-height: 275px; margin: 16px; padding: 16px; border: 1px solid #d5dfec; border-radius: 8px; background: #fff; box-shadow: 0 12px 30px rgba(15, 23, 42, .1); }
+.salesDemoTutorialScreen__modal header { display: flex; align-items: center; justify-content: space-between; gap: 10px; small { display: block; color: #0969da; font-size: 6px; font-weight: 800; letter-spacing: .14em; } strong { font-size: 13px; } > b { color: #64748b; font-size: 7px; } }
+.salesDemoTutorialScreen__progress { height: 5px; margin: 11px 0 14px; overflow: hidden; border-radius: 99px; background: #e8eef6; span { display: block; width: 25%; height: 100%; background: #0969da; } }
+.salesDemoTutorialScreen__purpose { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; article { display: grid; min-height: 105px; align-content: start; gap: 6px; padding: 10px; border: 1px solid #d7e0eb; border-radius: 7px; background: #f8fafc; } article:first-child { border-color: #60a5fa; background: #eff6ff; } svg { width: 17px; color: #0969da; } b { font-size: 8px; } small { color: #64748b; font-size: 6px; line-height: 1.4; } }
+.salesDemoTutorialScreen__modal footer { display: flex; justify-content: flex-end; gap: 6px; margin-top: 13px; span, b { padding: 6px 10px; border: 1px solid #d5dfec; border-radius: 5px; font-size: 7px; } b { border-color: #0969da; background: #0969da; color: #fff; } }
+
+.salesDemoTutorialScreen__outline { display: flex; gap: 5px; padding: 10px; overflow: hidden; border-bottom: 1px solid #dce4ef; background: #fff; span, b { min-width: 88px; padding: 7px; border: 1px solid #d7e0eb; border-radius: 6px; font-size: 7px; } b { border-color: #60a5fa; background: #eff6ff; color: #0969da; } }
+.salesDemoTutorialScreen__presenter { display: grid; grid-template-columns: 1fr .85fr .9fr; gap: 7px; min-height: 230px; padding: 12px; section { display: grid; align-content: start; gap: 7px; padding: 11px; border: 1px solid #d7e0eb; border-radius: 7px; background: #fff; } small { color: #0969da; font-size: 6px; font-weight: 800; letter-spacing: .12em; } strong { font-size: 11px; } p { margin: 0; color: #64748b; font-size: 7px; line-height: 1.45; } button { padding: 7px; border: 0; border-radius: 5px; background: #0969da; color: #fff; font-size: 7px; font-weight: 750; } section div { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 7px; border-radius: 5px; background: #f1f5f9; b, span { font-size: 7px; } span { color: #b45309; } } section:last-child > b { padding: 7px; border: 1px solid #dce4ef; border-radius: 5px; font-size: 7px; } }
+
+.salesDemoTutorialScreen__builder { display: grid; grid-template-columns: 110px 1fr; min-height: 290px; > aside { display: grid; align-content: start; gap: 5px; padding: 12px; border-right: 1px solid #d7e0eb; background: #f8fafc; } > aside span, > aside b { padding: 7px; border-radius: 5px; font-size: 7px; } > aside b { background: #eaf2ff; color: #0969da; } > section { padding: 14px; background: #fff; } > section > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border: 0; } > section > header small { display: block; color: #0969da; font-size: 6px; font-weight: 800; } > section > header strong { font-size: 11px; } > section > header em { padding: 4px 6px; border-radius: 99px; background: #ecfdf5; color: #15803d; font-size: 6px; font-style: normal; } > section > footer { display: flex; justify-content: flex-end; gap: 5px; margin-top: 10px; span, b { padding: 6px 8px; border: 1px solid #d7e0eb; border-radius: 5px; font-size: 7px; } b { border-color: #0969da; background: #0969da; color: #fff; } } }
+.salesDemoTutorialScreen__form { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 14px; label { display: grid; gap: 4px; color: #475569; font-size: 6px; font-weight: 750; } .is-wide { grid-column: 1 / -1; } input, textarea { min-width: 0; padding: 7px; border: 1px solid #d7e0eb; border-radius: 5px; background: #f8fafc; color: #334155; font: inherit; font-size: 7px; resize: none; } }
+
+.salesDemoTutorialScreen__share { display: grid; grid-template-columns: 95px 1fr; gap: 12px; min-height: 245px; padding: 17px; background: #fff; > section { display: grid; align-content: start; gap: 10px; } > section > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; border: 0; } > section > header small { display: block; color: #15803d; font-size: 6px; font-weight: 800; } > section > header strong { font-size: 11px; } > section > header b { padding: 4px 7px; border-radius: 99px; background: #ecfdf5; color: #15803d; font-size: 6px; } }
+.salesDemoTutorialScreen__qr { display: grid; width: 95px; height: 95px; place-items: center; border: 1px solid #d7e0eb; border-radius: 7px; background: repeating-conic-gradient(#172033 0 25%, #fff 0 50%) 50% / 13px 13px; svg { width: 36px; height: 36px; padding: 7px; border-radius: 5px; background: #fff; color: #0969da; } }
+.salesDemoTutorialScreen__stats { display: grid; grid-template-columns: repeat(4, 1fr); overflow: hidden; border: 1px solid #d7e0eb; border-radius: 6px; span { display: grid; gap: 2px; padding: 7px; border-right: 1px solid #d7e0eb; &:last-child { border: 0; } } strong { font-size: 11px; } small { color: #64748b; font-size: 5px; text-transform: uppercase; } }
+.salesDemoTutorialScreen__actions { display: flex; flex-wrap: wrap; gap: 5px; span, b { padding: 6px 8px; border: 1px solid #d7e0eb; border-radius: 5px; font-size: 6px; } b { border-color: #60a5fa; color: #0969da; } }
+
+.salesDemoTutorialScreen__filters { display: flex; gap: 6px; padding: 10px; overflow: hidden; border-bottom: 1px solid #d7e0eb; background: #fff; span, b { display: flex; min-width: 82px; align-items: center; gap: 4px; padding: 7px; border: 1px solid #d7e0eb; border-radius: 5px; background: #f8fafc; font-size: 6px; } span:first-child { min-width: 145px; } svg { width: 10px; } }
+.salesDemoTutorialScreen__history { min-height: 220px; padding: 12px; header, > div { display: grid; grid-template-columns: 1fr 1.25fr .75fr .85fr; gap: 8px; align-items: center; padding: 9px; } header { color: #64748b; font-size: 5px; font-weight: 800; } > div { border: 1px solid #d7e0eb; border-bottom: 0; background: #fff; &:nth-child(2) { border-radius: 6px 6px 0 0; } &:last-child { border-bottom: 1px solid #d7e0eb; border-radius: 0 0 6px 6px; } b, span, em, small { font-size: 6px; } span, small { color: #64748b; } em { width: fit-content; padding: 4px 6px; border-radius: 99px; background: #ecfdf5; color: #15803d; font-style: normal; } } }
+
+.salesDemoTutorialMarker {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #e11d48;
+  box-shadow: 0 3px 10px rgba(136, 19, 55, .32);
+  color: #fff;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
+  &.is-one { top: 43px; left: 24px; }
+  &.is-two { top: 135px; left: 23%; }
+  &.is-three { top: 128px; right: 7%; }
+  &.is-four { top: 55px; left: 9%; }
+  &.is-five { top: 145px; left: 34%; }
+  &.is-six { right: 8%; bottom: 42px; }
+  &.is-seven { top: 45px; left: 4%; }
+  &.is-eight { top: 126px; left: 41%; }
+  &.is-nine { top: 125px; right: 5%; }
+  &.is-ten { top: 54px; left: 16px; }
+  &.is-eleven { top: 54px; left: 34%; }
+  &.is-twelve { right: 6%; bottom: 42px; }
+  &.is-thirteen { top: 62px; left: 30px; }
+  &.is-fourteen { top: 95px; right: 6%; }
+  &.is-fifteen { right: 18%; bottom: 42px; }
+  &.is-sixteen { top: 50px; left: 5%; }
+  &.is-seventeen { top: 118px; left: 48%; }
+  &.is-eighteen { right: 7%; bottom: 44px; }
+}
+
+.salesDemoTutorialGlossary {
+  padding: 24px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  h2 { margin: 5px 0 16px; }
+  dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; }
+  dl div { padding: 13px; border: 1px solid var(--app-border); border-radius: 8px; background: var(--app-surface-subtle); }
+  dt { color: var(--app-text); font-size: 11px; font-weight: 800; }
+  dd { margin: 5px 0 0; color: var(--app-text-secondary); font-size: 10px; line-height: 1.5; }
+}
+
+@media (max-width: 1180px) {
+  .salesDemoTutorialPaths > div { grid-template-columns: repeat(2, 1fr); }
+  .salesDemoTutorialQuickPath { grid-template-columns: 1fr; }
+  .salesDemoTutorialQuickPath ol { justify-content: flex-start; }
+  .salesDemoTutorialQuickPath .vk-button { width: fit-content; }
+  .salesDemoTutorialStep__body { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 820px) {
+  .salesDemoTutorialHero { grid-template-columns: 1fr; padding: 24px; }
+  .salesDemoTutorialLayout { grid-template-columns: 1fr; }
+  .salesDemoTutorialContents { position: static; display: flex; max-width: 100%; overflow-x: auto; }
+  .salesDemoTutorialContents > p { display: none; }
+  .salesDemoTutorialContents button { flex: 0 0 175px; }
+  .salesDemoTutorialGlossary dl { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 620px) {
+  .salesDemoTutorialHero { padding: 20px; }
+  .salesDemoTutorialHero > div > div { display: grid; }
+  .salesDemoTutorialHero .vk-button { width: 100%; }
+  .salesDemoTutorialPaths > div { grid-template-columns: 1fr; }
+  .salesDemoTutorialQuickPath { padding: 18px; }
+  .salesDemoTutorialStep > header { grid-template-columns: 40px 1fr; padding: 15px; }
+  .salesDemoTutorialStep > header label { grid-column: 1 / -1; }
+  .salesDemoTutorialStep__body { gap: 18px; padding: 15px; }
+  .salesDemoTutorialScreen__home { grid-template-columns: 1fr; }
+  .salesDemoTutorialScreen__home > div:last-child { grid-template-columns: 1fr 1fr; }
+  .salesDemoTutorialScreen__purpose { grid-template-columns: 1fr; }
+  .salesDemoTutorialScreen__purpose article { min-height: 62px; }
+  .salesDemoTutorialScreen__presenter { grid-template-columns: 1fr; }
+  .salesDemoTutorialScreen__builder { grid-template-columns: 84px 1fr; }
+  .salesDemoTutorialScreen__share { grid-template-columns: 68px 1fr; padding: 11px; }
+  .salesDemoTutorialScreen__qr { width: 68px; height: 68px; }
+  .salesDemoTutorialScreen__stats { grid-template-columns: repeat(2, 1fr); }
+  .salesDemoTutorialScreen__history header, .salesDemoTutorialScreen__history > div { grid-template-columns: 1.2fr 1fr .7fr; > :last-child { display: none; } }
+  .salesDemoTutorialMarker { display: none; }
+  .salesDemoTutorialGlossary dl { grid-template-columns: 1fr; }
+}

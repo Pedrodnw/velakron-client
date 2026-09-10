@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { salesDemoActionKey, salesDemoRouteMap } from '../store/salesDemoTracking'
 import { getNavigationItems } from '../components/app/navigation'
+import SalesDemoTutorial, { salesDemoTutorialSteps } from '../components/app/sales-demo/SalesDemoTutorial'
 import {
   loadSalesDemoSessions,
   salesDemoRequest,
@@ -11,6 +16,34 @@ import { salesDemoPresenterHeaders } from '../store/middleware/api'
 import { fileTransferFetchOptions } from '../store/fileTransfer'
 
 describe('founder Sales Demo workspace', () => {
+  it('provides a complete, actionable Sales Demo tutorial', () => {
+    const html = renderToStaticMarkup(createElement(SalesDemoTutorial, { onNavigate: () => {}, onStart: () => {} }))
+    expect(salesDemoTutorialSteps.map(step => step.id)).toEqual(['choose', 'launch', 'present', 'template', 'share', 'monitor', 'finish'])
+    expect(html).toContain('Learn the Sales Demo workspace')
+    expect(html).toContain('Your first safe rehearsal')
+    expect(html).toContain('Create and save a reusable starting point')
+    expect(html).toContain('Create a self-guided link or QR code')
+    expect(html).toContain('Annotated preview of the Sales Demo Home page')
+    expect(html).toContain('Essentials → Demo outline → Featured story → Supporting data → Preview &amp; publish')
+    expect(html).toContain('choose <strong>Presenter-led</strong> in the Type filter')
+    expect(html).toContain('<strong>Open this screen</strong>')
+    expect(html).toContain("Only presenter-led sessions offer <strong>Open this screen</strong>")
+    expect(html).toContain('Prospect sessions can still receive safe synthetic events from the founder workspace')
+    expect(html).toContain('Annotated preview of the Live demos monitoring view')
+    expect(html).toContain('Select <strong>End</strong>, then confirm with <strong>End demo</strong>')
+    expect(html).toContain('filter by demo type, session status, role, template, shared link, presenter, or date')
+    expect(html).toContain('saved follow-up is also added to CRM automatically')
+    expect(html).not.toContain('Open guest view')
+    expect(html).not.toContain('Outline → Story data')
+    expect((html.match(/Mark complete/g) || [])).toHaveLength(salesDemoTutorialSteps.length)
+  })
+
+  it('describes presenter-led notes separately from practice notes', () => {
+    const html = readFileSync(resolve(process.cwd(), 'pages/app/sales-demo.js'), 'utf8')
+    expect(html).toContain('Presenter note saved to this demo.')
+    expect(html).toContain('Presenter notes stay with this controlled demo for review in History')
+  })
+
   it('shows the dashboard only when the founder Sales Demo permission is present', () => {
     const hidden = getNavigationItems('velakron', ['internal_task.read'])
     expect(hidden.some(item => item.href === '/app/sales-demo')).toBe(false)

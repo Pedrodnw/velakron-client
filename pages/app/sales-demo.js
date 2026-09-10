@@ -50,6 +50,7 @@ import SalesDemoLauncher from '../../components/app/sales-demo/SalesDemoLauncher
 import SalesDemoTemplateLibrary from '../../components/app/sales-demo/SalesDemoTemplateLibrary'
 import SalesDemoSessionExplorer from '../../components/app/sales-demo/SalesDemoSessionExplorer'
 import SalesDemoCampaignsPanel from '../../components/app/sales-demo/SalesDemoCampaignsPanel'
+import SalesDemoTutorial from '../../components/app/sales-demo/SalesDemoTutorial'
 import { getHasPermission } from '../../store/slices/appContext'
 import {
   loadSalesDemoCampaigns,
@@ -67,6 +68,7 @@ const tabs = [
   { key: 'sessions', label: 'Live demos' },
   { key: 'campaigns', label: 'Shared links' },
   { key: 'history', label: 'History' },
+  { key: 'tutorial', label: 'Tutorial' },
 ]
 
 const toneForPresence = presence => ({ online: 'success', recently_active: 'info', idle: 'warning', offline: 'neutral' }[presence] || 'neutral')
@@ -366,7 +368,14 @@ const SessionDetail = ({ sessionId, onClose }) => {
     setMutation('')
     if (!result?.ok) { setFeedback({ type: 'error', message: safeMessage(result) }); return }
     followUpDirty.current = false
-    setFeedback({ type: 'success', message: session.lead ? 'Follow-up saved to this demo and its CRM activity.' : 'Practice note saved to this demo.' })
+    setFeedback({
+      type: 'success',
+      message: session.lead
+        ? 'Follow-up saved to this demo and its CRM activity.'
+        : session.session_purpose === 'presenter_led'
+          ? 'Presenter note saved to this demo.'
+          : 'Practice note saved to this demo.',
+    })
     await load({ quiet: true })
   }
 
@@ -415,7 +424,11 @@ const SessionDetail = ({ sessionId, onClose }) => {
       </section>
     </div>
     <section className='salesDemoFollowUp'>
-      <header><div><p className='technicalLabel'>{session.demo_active ? 'Capture context as you go' : 'Close the loop'}</p><h3>Demo outcome and follow-up</h3><p>{session.lead ? 'These notes are also added to the prospect’s CRM activity so the next conversation starts with context.' : 'Practice notes stay with this rehearsal and never enter prospect reporting.'}</p></div>{session.lead?.crm_organization && <Button href={`/app/crm/organizations/${session.lead.crm_organization}`} variant='secondary'>Open CRM record</Button>}</header>
+      <header><div><p className='technicalLabel'>{session.demo_active ? 'Capture context as you go' : 'Close the loop'}</p><h3>Demo outcome and follow-up</h3><p>{session.lead
+        ? 'These notes are also added to the prospect’s CRM activity so the next conversation starts with context.'
+        : session.session_purpose === 'presenter_led'
+          ? 'Presenter notes stay with this controlled demo for review in History; they are not added to prospect reporting or CRM.'
+          : 'Practice notes stay with this rehearsal and never enter prospect reporting.'}</p></div>{session.lead?.crm_organization && <Button href={`/app/crm/organizations/${session.lead.crm_organization}`} variant='secondary'>Open CRM record</Button>}</header>
       <form onSubmit={saveFollowUp}><label><span>Outcome</span><select value={followUp.outcome} onChange={event => updateFollowUp('outcome', event.target.value)}><option value=''>Choose an outcome</option><option value='qualified'>Qualified opportunity</option><option value='follow_up'>Follow-up requested</option><option value='not_now'>Interested, not now</option><option value='not_fit'>Not a fit</option></select></label><label><span>Follow-up date <small>Optional</small></span><input type='datetime-local' value={followUp.follow_up_at} onChange={event => updateFollowUp('follow_up_at', event.target.value)} /></label><label className='salesDemoFollowUp__notes'><span>Notes</span><textarea rows={3} maxLength={2000} value={followUp.notes} onChange={event => updateFollowUp('notes', event.target.value)} placeholder='Questions, objections, proof points that resonated, and the agreed next step.' /></label><Button type='submit' disabled={Boolean(mutation) || (!followUp.outcome && !followUp.notes.trim())}>{mutation === 'follow-up' ? <LoaderCircle className='spin' aria-hidden='true' /> : <CheckCircle2 aria-hidden='true' />} Save follow-up</Button></form>
     </section>
     {session.demo_active && <CommandPanel session={session} journey={journey} onOpenScreen={openPresenterScreen} onChanged={() => load({ quiet: true })} />}
@@ -939,6 +952,7 @@ const SalesDemoDashboard = () => {
   const [firstRunDismissed, setFirstRunDismissed] = useState(true)
   const launcherStartedAt = useRef(0)
   const trackedWorkspaceOpen = useRef(false)
+  const tabBarRef = useRef(null)
   const tab = tabs.some(item => item.key === router.query.tab) ? router.query.tab : 'overview'
   const sessionId = String(router.query.session || '')
 
@@ -956,6 +970,9 @@ const SalesDemoDashboard = () => {
     dispatch(salesDemoTelemetry('workspace.opened'))
   }, [allowed, dispatch])
   useEffect(() => { setFirstRunDismissed(window.localStorage.getItem('velakron:sales-demo-guide-dismissed') === 'true') }, [])
+  useEffect(() => {
+    tabBarRef.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [tab])
   useEffect(() => {
     if (!allowed || !['overview', 'sessions'].includes(tab) || sessionId) return undefined
     let inFlight = false
@@ -1024,11 +1041,11 @@ const SalesDemoDashboard = () => {
 
   return <>
     <Seo title='Sales Demo' description='Founder Sales Demo control center.' path='/app/sales-demo' noIndex />
-    <AppPageHeader eyebrow='Founder sales workspace' title='Sales Demo' description='Start the right product story, guide live prospects, and prepare reusable demos without touching customer data.' actions={<><Button variant='secondary' onClick={() => document.getElementById('sales-demo-guide')?.scrollIntoView({ behavior: 'smooth' })}><BookOpen aria-hidden='true' /> Presenter guide</Button><Button onClick={() => openLauncher()}><MonitorPlay aria-hidden='true' /> Start a demo</Button><Button variant='secondary' onClick={refresh} disabled={loading}><RefreshCw aria-hidden='true' /> Refresh</Button></>} />
-    <nav className='salesDemoTabs' aria-label='Sales Demo sections'>{tabs.map(item => <button key={item.key} type='button' className={tab === item.key ? 'is-active' : ''} onClick={() => setTab(item.key)}>{item.label}{item.key === 'sessions' && summary?.counts?.active_prospects > 0 && <strong>{summary.counts.active_prospects}</strong>}</button>)}</nav>
+    <AppPageHeader eyebrow='Founder sales workspace' title='Sales Demo' description='Start the right product story, guide live prospects, and prepare reusable demos without touching customer data.' actions={<><Button variant='secondary' onClick={() => setTab('tutorial')}><BookOpen aria-hidden='true' /> Tutorial</Button><Button onClick={() => openLauncher()}><MonitorPlay aria-hidden='true' /> Start a demo</Button><Button variant='secondary' onClick={refresh} disabled={loading}><RefreshCw aria-hidden='true' /> Refresh</Button></>} />
+    <nav ref={tabBarRef} className='salesDemoTabs' aria-label='Sales Demo sections'>{tabs.map(item => <button key={item.key} type='button' className={tab === item.key ? 'is-active' : ''} onClick={() => setTab(item.key)}>{item.label}{item.key === 'sessions' && summary?.counts?.active_prospects > 0 && <strong>{summary.counts.active_prospects}</strong>}</button>)}</nav>
     {(feedback?.message || previewLink) && <FormMessage type={feedback?.type}>{feedback?.message}{previewLink && <Button href={previewLink} target='_blank' rel='noreferrer' variant='secondary'>Open demo</Button>}</FormMessage>}
     {error && <ErrorState title='Sales Demo controls could not be loaded' description={error.message} onRetry={refresh} />}
-    {loading && !summary ? <section className='appPanel'><AppSkeleton lines={10} /></section> : <>
+    {loading && !summary && tab !== 'tutorial' ? <section className='appPanel'><AppSkeleton lines={10} /></section> : <>
       {tab === 'overview' && <div className='salesDemoOverview'>
         <section className='salesDemoStartHero'><div><p className='technicalLabel'>What would you like to do?</p><h2>Prepare the right Velakron story</h2><p>Choose the purpose first. Velakron will guide you through the template and guest role.</p><Button onClick={() => openLauncher()}><Sparkles aria-hidden='true' /> Start a demo</Button></div><div className='salesDemoStartChoices'><button type='button' onClick={() => quickPractice('oem')} disabled={Boolean(previewing)}><Building2 aria-hidden='true' /><strong>Practice OEM</strong><span>Use the latest ready template</span></button><button type='button' onClick={() => quickPractice('supplier')} disabled={Boolean(previewing)}><Factory aria-hidden='true' /><strong>Practice Supplier</strong><span>Open automatically in a new tab</span></button><button type='button' onClick={() => setTab('templates')}><PencilLine aria-hidden='true' /><strong>Create a template</strong><span>Tailor a reusable starting point</span></button><button type='button' onClick={() => openShare()}><Share2 aria-hidden='true' /><strong>Create a shared link</strong><span>Send a self-guided demo</span></button></div></section>
         <section className='salesDemoCurrentWork'><button type='button' onClick={() => setTab('sessions')}><UsersRound aria-hidden='true' /><span><small>Prospects live now</small><strong>{summary?.counts?.active_prospects || 0}</strong></span></button><button type='button' onClick={() => setTab('templates')}><PencilLine aria-hidden='true' /><span><small>Drafts to review</small><strong>{draftCount}</strong></span></button><button type='button' onClick={() => setTab('campaigns')}><Share2 aria-hidden='true' /><span><small>Active shared links</small><strong>{activeLinks}</strong></span></button><button type='button' onClick={() => (summary?.operations?.alerts?.[0] ? handleAlert(summary.operations.alerts[0]) : setTab('history'))}><AlertTriangle aria-hidden='true' /><span><small>Operational alerts</small><strong>{summary?.operations?.alerts?.length || 0}</strong></span></button></section>
@@ -1042,6 +1059,7 @@ const SalesDemoDashboard = () => {
       {tab === 'templates' && <section className='appPanel salesDemoTemplates'><TemplateEditor campaigns={campaigns} defaultPartPresetKey={defaultPartPresetKey} partPresets={partPresets} templates={templates} recipes={recipes} scenarioModules={scenarioModules} onRefresh={refresh} onLaunch={openLauncher} onShare={openShare} /></section>}
       {tab === 'campaigns' && <SalesDemoCampaignsPanel campaigns={campaigns} templates={templates} initialTemplateId={campaignTemplateId} openRequest={campaignOpenRequest} onRefresh={refresh} onActivity={() => setTab('history')} />}
       {tab === 'history' && (sessionId ? <SessionDetail sessionId={sessionId} onClose={closeSession} /> : <SalesDemoSessionExplorer history sessions={sessions} pagination={sessionPagination} onQuery={queryHistory} templates={templates} campaigns={campaigns} loading={loadingByResource.sessions} onOpen={openSession} onStart={() => openLauncher()} onShare={() => openShare()} />)}
+      {tab === 'tutorial' && <SalesDemoTutorial onNavigate={setTab} onStart={() => openLauncher()} />}
     </>}
     <SalesDemoLauncher open={launcherOpen} templates={templates} initialTemplateId={launcherTemplateId} working={Boolean(previewing)} onClose={closeLauncher} onLaunch={launchDemo} onShare={template => { launcherStartedAt.current = 0; setLauncherOpen(false); openShare(template) }} />
   </>
