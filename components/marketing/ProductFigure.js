@@ -24,7 +24,7 @@ export default function ProductFigure({ name, priority = false, caption, classNa
   const original = asset.original || asset
   const close = () => { dialog.current?.close(); setOpen(false); trigger.current?.focus() }
   const enlarge = () => { setZoom(window.innerWidth < 640 ? 2 : 1); setOpen(true); dialog.current?.showModal(); closeButton.current?.focus() }
-  return <figure className={`mk-product mk-product--${placement} ${className}`} style={asset.displayWidth ? {maxWidth:asset.displayWidth,marginInline:'auto'} : undefined}>
+  return <figure className={`mk-product mk-product--${placement} ${className}`} style={{ '--mk-product-width': `${asset.displayWidth || asset.width}px`, '--mk-product-mobile-width': `${Math.min(asset.displayWidth || asset.width, asset.mobile?.width || asset.width)}px` }}>
     <div className='mk-product__frame'>
       <button type='button' className='mk-product__open' ref={trigger} onClick={enlarge} aria-label={`Enlarge ${asset.alt}`}>
         <picture>{mobile && <source media='(max-width: 600px)' srcSet={mobile.srcSet || mobile.src} sizes={mobile.sizes} width={asset.mobile.width} height={asset.mobile.height} />}<img {...desktop} /></picture>
@@ -42,7 +42,7 @@ export default function ProductFigure({ name, priority = false, caption, classNa
       </div></div>
       <p className='mk-lightbox__instruction' role='status'>{zoom > 1 ? 'Scroll across or down to explore. Use Fit to see the whole image.' : 'Use + to inspect the detail.'}</p>
       <div className='mk-lightbox__viewport' tabIndex={0} role='region' aria-label='Scrollable product image'>
-        {open && <img src={original.src} width={original.width} height={original.height} alt={asset.alt} style={{ width: `${zoom * 100}%`, maxWidth: 'none' }} />}
+        {open && <img src={original.src} width={original.width} height={original.height} alt={asset.alt} style={{ width: `${zoom * 100}%`, maxWidth: `${original.width * zoom}px`, marginInline: 'auto' }} />}
       </div>
       <p>{caption || asset.caption} <a href={original.src} target='_blank' rel='noopener'>Open original image (new tab)</a></p>
     </dialog>

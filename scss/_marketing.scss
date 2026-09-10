@@ -292,3 +292,6 @@
 }
 
 .marketing .mk-gallery__choice button { scroll-margin-top: 100px; }
+
+.marketing .mk-product { width:100%; max-width:min(100%,var(--mk-product-width,100%)); margin-inline:auto; }
+@media(max-width:600px) { .marketing .mk-product { max-width:min(100%,var(--mk-product-mobile-width,100%)); } }
