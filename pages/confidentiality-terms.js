@@ -1,45 +1,14 @@
-import { ShieldCheck } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import Seo from '../components/Seo'
-import { loadPlatformTerms } from '../store/slices/identity'
+import Seo from '../components/marketing/MarketingSeo'
+import { withMarketing } from '../components/marketing/MarketingLayout'
+import { PageHero } from '../components/marketing/Elements'
+import terms from '../content/marketing/platformTerms.json'
 
-const ConfidentialityTerms = () => {
-  const dispatch = useDispatch()
-  const [terms, setTerms] = useState(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    dispatch(loadPlatformTerms()).then(result => {
-      if (result?.ok) setTerms(result.payload?.data?.platform_terms || null)
-      else setError('The current confidentiality terms could not be loaded. Please try again.')
-    })
-  }, [dispatch])
-
-  return <>
-    <Seo title='Platform Confidentiality Terms' description='The confidentiality duties that protect documents shared through Velakron.' path='/confidentiality-terms' />
-    <main className='legalTermsPage'>
-      <header className='legalTermsHero'>
-        <div className='legalTermsHero__icon'><ShieldCheck aria-hidden='true' /></div>
-        <p className='technicalLabel'>Platform protection</p>
-        <h1>{terms?.title || 'Velakron Platform Confidentiality Terms'}</h1>
-        <p>These terms create a common confidentiality baseline for every OEM and supplier account using Velakron.</p>
-        {terms && <small>Version {terms.version} · Effective {terms.effective_on}</small>}
-      </header>
-      {error && <section className='legalTermsDocument'><p>{error}</p></section>}
-      {!terms && !error && <section className='legalTermsDocument'><p>Loading current terms…</p></section>}
-      {terms && <article className='legalTermsDocument'>
-        {terms.sections.map(section => <section key={section.title}>
-          <h2>{section.title}</h2>
-          {section.paragraphs.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
-        </section>)}
-        <aside>
-          <strong>Electronic acceptance</strong>
-          <p>{terms.acceptance_statement}</p>
-        </aside>
-      </article>}
-    </main>
-  </>
-}
-
-export default ConfidentialityTerms
+function ConfidentialityTerms() { return <>
+  <Seo title='Platform Confidentiality Terms' description='The confidentiality duties that protect documents shared through Velakron.' path='/confidentiality-terms' />
+  <PageHero eyebrow='Platform protection' title={terms.title} action={false}><p>The common confidentiality baseline for OEM and supplier accounts using Velakron.</p><p className='mk-article-meta'>Version {terms.version} · Effective {terms.effective_on}</p></PageHero>
+  <section className='mk-section'><article className='mk-container mk-editorial'>
+    {terms.sections.map(section=><section key={section.title}><h2>{section.title}</h2>{section.paragraphs.map(paragraph=><p key={paragraph}>{paragraph}</p>)}</section>)}
+    <aside className='mk-notice'><h2>Electronic acceptance</h2><p>{terms.acceptance_statement}</p><p>Reading this page does not record acceptance. Acceptance takes place within the account activation workflow.</p></aside>
+  </article></section>
+</> }
+export default withMarketing(ConfidentialityTerms)

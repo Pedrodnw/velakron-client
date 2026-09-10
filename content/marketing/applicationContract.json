@@ -1,0 +1,18 @@
+{
+  "version": "2026-09-10",
+  "consentText": "Velakron may contact me about this application. I have read the Privacy Notice.",
+  "restrictionText": "I understand the current environment is not approved for classified information, ITAR or other export-controlled technical data, or CUI. I will not include those materials in this application.",
+  "enums": {
+    "country_region": ["United States", "Canada", "Mexico", "Outside North America"],
+    "industry": ["Space", "Aerospace", "Defense", "Robotics / automation", "Industrial equipment", "Medical manufacturing", "Other"],
+    "applicant_type": ["oem", "supplier", "both"],
+    "supplier_count_band": ["Under 20", "20–49", "50–99", "100+", "Unsure"],
+    "outsourced_parts_band": ["Under 50", "50–199", "200–499", "500+", "Unsure"],
+    "tracking_method": ["Email / calls", "Spreadsheets", "Internal ERP / MRP", "Customer / supplier portals", "Shared system", "Mixed"],
+    "production_cycle_band": ["Under 2 weeks", "2–4 weeks", "1–3 months", "Over 3 months", "Varies / unsure"],
+    "supplier_participation": ["Yes", "Possibly", "Need help", "Unsure"],
+    "oem_partner_status": ["Already invited by an OEM", "Have an interested OEM", "Exploring independently"],
+    "starting_timeframe": ["Now / next month", "1–3 months", "Later", "Exploring"],
+    "intended_data_category": ["Ordinary non-controlled data", "Controlled-data requirement", "Mixed", "Unsure"]
+  }
+}

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,8 +14,9 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { MarketingFooter, MarketingHeader } from '../components/home/VisibilityLandingPage'
-import Seo from '../components/Seo'
+import MarketingHeader from '../components/marketing/MarketingHeader'
+import MarketingFooter from '../components/marketing/MarketingFooter'
+import Seo from '../components/marketing/MarketingSeo'
 import {
   bookVisibilityDemo,
   captureVisibilityContact,
@@ -164,7 +166,10 @@ const ResultsStep = ({ result, availability, bookingError, bookingOpen, bookingP
     </div>
     <div className='assessmentResult__cta'>
       <div><p className='visibilityHome__eyebrow'>See what this would look like with your suppliers</p><h2>Turn status chasing into direct production visibility.</h2><p>See how Velakron can give your team direct visibility into supplier production and part status.</p></div>
-      <button type='button' className='assessmentPrimary' onClick={onOpenBooking}>Book a 20-Minute Demo <ArrowRight /></button>
+      <div className='mk-assessment-actions'>
+        <Link className='mk-button' href='/early-access?source=visibility_assessment'>Apply for Early Access <ArrowRight aria-hidden='true' /></Link>
+        <button type='button' className='mk-button mk-button--secondary' onClick={onOpenBooking}>Book a 20-Minute Demo <ArrowRight aria-hidden='true' /></button>
+      </div>
     </div>
     {bookingOpen && <BookingPanel {...{ availability, bookingError, bookingPending, onBook, selectedSlot, setSelectedSlot }} />}
   </section>
@@ -336,7 +341,7 @@ const VisibilityAssessment = () => {
   }
 
   const question = visibilityQuestions[questionIndex]
-  return <div className='visibilityHome assessmentPage'>
+  return <div className='marketing visibilityHome assessmentPage'>
     <Seo title='Production Visibility Assessment' description='See how much visibility your team has into supplier production in about two minutes.' path='/visibility-assessment' />
     <a className='skipLink' href='#main-content'>Skip to main content</a>
     <MarketingHeader />

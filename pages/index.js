@@ -1,13 +1,35 @@
-import Seo from '../components/Seo'
-import VisibilityLandingPage from '../components/home/VisibilityLandingPage'
+import { MessageSquare, Layers3, Clock3, CircleHelp, Factory, Building2, ShieldCheck } from 'lucide-react'
+import Seo from '../components/marketing/MarketingSeo'
+import { withMarketing } from '../components/marketing/MarketingLayout'
+import { CtaLink, SectionHeading, TextLink, WorkflowDiagram, CheckList, FinalCta } from '../components/marketing/Elements'
+import ProductFigure from '../components/marketing/ProductFigure'
+import ProductGallery from '../components/marketing/ProductGallery'
 
-const description = 'Velakron gives OEMs real-time visibility into every part, every machine, and every supplier—so teams can make faster decisions and keep production moving.'
-
-const Home = () => <>
-  <Seo title='Stop asking. Start knowing.' description={description} />
-  <VisibilityLandingPage />
-</>
-
-Home.getLayout = page => page
-
-export default Home
+const problems = [
+  [MessageSquare, 'The same question. Again.', 'Emails, calls, and meetings to find out whether a part is moving. Suppliers answering the same question for different people.'],
+  [Layers3, 'The answer is somewhere.', 'A date in a spreadsheet. A drawing in an inbox. A decision in a conversation someone else had.'],
+  [Clock3, 'A problem found too late.', 'An unclear commitment or unresolved question becomes a schedule surprise before the right people can respond.'],
+  [CircleHelp, 'Your team becomes the search engine.', 'Engineering, operations, and leadership spend time piecing together a production picture instead of acting on it.'],
+]
+function Home() {
+  return <>
+    <Seo title='Stop asking. Start knowing.' description='Shared production visibility and collaboration software for OEMs and manufacturing suppliers. See progress, resolve questions, and keep the history. Apply for Early Access.' />
+    <section className='mk-hero mk-grid-bg'><div className='mk-container mk-hero__inner'>
+      <div className='mk-hero__copy'><p className='mk-eyebrow'>Production visibility. Shared.</p><h1>Stop asking.<br /><em>Start knowing.</em></h1><p className='mk-hero__lead'>A shared production workspace for OEMs and manufacturing suppliers. Know where the work stands, what needs attention, and who needs to act next.</p><div className='mk-cohort'><span />Now welcoming a limited Early Access cohort</div><div className='mk-actions'><CtaLink /><CtaLink href='/how-it-works' secondary>See how it works</CtaLink></div><div className='mk-hero__facts'><span>OEM + supplier views</span><span>Part-specific collaboration</span><span>Production history</span></div></div>
+      <div className='mk-hero__media'><ProductFigure name='overview' priority caption='Your production picture, in one shared workspace.' /></div>
+    </div></section>
+    <section className='mk-section' id='problem'><div className='mk-container'><div className='mk-section-top'><SectionHeading eyebrow='The everyday coordination problem' title='Still chasing the status of your parts?' /><p>You should not need a round of calls to understand a production commitment. And your suppliers should not need to answer the same question twice.</p></div><div className='mk-problems'>{problems.map(([Icon,title,body]) => <article key={title}><Icon size={24} strokeWidth={1.5} aria-hidden /><h3>{title}</h3><p>{body}</p></article>)}</div></div></section>
+    <section className='mk-section mk-tint' id='product'><div className='mk-container'><SectionHeading eyebrow='From updates to understanding' title='One shared view of production.'>See the work. Understand the context. Move the next decision forward.</SectionHeading><ProductGallery /></div></section>
+    <section className='mk-section' id='how-it-works'><div className='mk-container'><div className='mk-section-top'><SectionHeading eyebrow='A connected workflow' title='From awarded work to a documented handoff.' /><TextLink href='/how-it-works'>Explore the full workflow</TextLink></div><WorkflowDiagram /></div></section>
+    <section className='mk-section mk-tint' id='solutions'><div className='mk-container'><SectionHeading eyebrow='Better together' title='Built for both sides of the commitment.'>Shared visibility works when it helps the people making the parts and the people depending on them.</SectionHeading><div className='mk-audiences'>
+      <article><Building2 size={30} strokeWidth={1.5} aria-hidden /><p className='mk-label'>For OEMs</p><h3>Know where your work stands.</h3><p>Bring supplier progress, required dates, technical context, and decisions into one production picture your team can use.</p><CheckList items={['See commitments across connected suppliers','Recognize work that needs a response','Keep engineering and operations in context']} /><TextLink href='/for-oems'>Explore the OEM view</TextLink></article>
+      <article><Factory size={30} strokeWidth={1.5} aria-hidden /><p className='mk-label'>For suppliers</p><h3>Keep customers informed, together.</h3><p>Give your connected customers a useful update, clarify the work, and keep the conversation where it belongs.</p><CheckList items={['Report progress against a clear commitment','Reduce repetitive status conversations','Keep each customer’s work appropriately scoped']} /><TextLink href='/for-suppliers'>Explore the supplier view</TextLink></article>
+    </div></div></section>
+    <section className='mk-section'><div className='mk-container mk-split'><SectionHeading eyebrow='A practical place in your process' title='Keep your internal systems. Share a clearer picture.'>Velakron focuses on the work that crosses company boundaries. Your internal planning, purchasing, and business systems still have their place.</SectionHeading><div className='mk-tool-fit'>{[['ERP / MRP', 'Your internal plan', 'Keep internal planning in your existing system. Use Velakron for shared production context with participating suppliers.'], ['Email & calls', 'The conversation', 'Keep human conversations. Give updates and decisions a lasting home beside the work.'], ['Spreadsheets', 'The shared production record', 'Reduce the effort of collecting updates and reconciling disconnected versions of the same commitment.']].map(([label,title,body]) => <div key={label}><span className='mk-label'>{label}</span><h3>{title}</h3><p>{body}</p></div>)}<small>Direct ERP integrations are outside the current Early Access scope.</small></div></div></section>
+    <section className='mk-section mk-access' id='early-access'><div className='mk-container mk-split'><div><p className='mk-eyebrow'>Early Access · a working partnership</p><h2>Bring real work.<br />Help shape what comes next.</h2><p className='mk-lead'>We’re working with a limited group of OEMs and suppliers to use Velakron through a complete production cycle.</p><p>Our initial focus is North America: teams coordinating complex outsourced parts, multiple suppliers, and production measured in weeks or months.</p><CtaLink /></div><div className='mk-exchange'><div><span className='mk-label'>You bring</span><h3>A production workflow worth improving.</h3><p>Participating teams, suitable production work, candid feedback, and paid participation.</p></div><div><span className='mk-label'>We bring</span><h3>Hands-on support from the start.</h3><p>Guided onboarding, direct access to our team, agreed discounted pricing, and a voice in product priorities.</p></div><p className='mk-fine'>Apply → Discuss fit and scope → Onboard selected partners. No payment or account creation when you apply.</p></div></div></section>
+    <section className='mk-section' id='company'><div className='mk-container mk-trust'><div><ShieldCheck size={30} strokeWidth={1.5} aria-hidden /><p className='mk-eyebrow'>Grounded in manufacturing</p><h2>Clear commitments.<br />Practical collaboration.</h2><p>Velakron grew from a familiar manufacturing problem: good teams working hard, with too much time spent reconstructing what is happening outside their own four walls.</p><TextLink href='/about'>Why we’re building Velakron</TextLink></div><div id='security'><h3>Share with the right people.</h3><p>The product uses organization, relationship, and role-based access to keep shared work scoped to the participants who need it.</p><TextLink href='/security'>Security and data handling</TextLink><div className='mk-rule' /><h3>Start with suitable data.</h3><p>The current environment is not approved for classified, ITAR/export-controlled technical data, or CUI. We discuss data requirements before onboarding.</p><TextLink href='/acceptable-use'>Read the current data restrictions</TextLink></div></div></section>
+    <section className='mk-assessment' id='resources'><div className='mk-container'><div><p className='mk-eyebrow'>Production visibility assessment</p><h2>Where does your visibility break down?</h2><p>Reflect on tracking methods, follow-up, and how early your team hears about delays.</p></div><CtaLink href='/visibility-assessment' secondary>Check your visibility</CtaLink></div></section>
+    <FinalCta />
+  </>
+}
+export default withMarketing(Home)

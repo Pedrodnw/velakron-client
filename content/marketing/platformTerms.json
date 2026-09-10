@@ -1,0 +1,83 @@
+{
+  "version": "velakron-platform-confidentiality-2026-08-25",
+  "title": "Velakron Platform Confidentiality Terms",
+  "effective_on": "2026-08-25",
+  "sections": [
+    {
+      "title": "1. Confidential Materials",
+      "paragraphs": [
+        "“Confidential Materials” means all non-public information made available through Velakron by or for an OEM, supplier, customer, or other participating organization. It includes drawings, CAD and 3D files, models, specifications, bills of material, purchase and quote information, pricing, process instructions, quality records, inspection data, photographs, messages, production updates, attachments, metadata, and any copies, extracts, notes, analyses, or derivative materials containing or reflecting that information.",
+        "Confidential Materials are protected whether or not they are marked “confidential,” and whether they are uploaded, displayed, downloaded, communicated, or generated through the platform."
+      ]
+    },
+    {
+      "title": "2. Limited permitted purpose",
+      "paragraphs": [
+        "You may access and use Confidential Materials only as reasonably necessary to evaluate, quote, plan, manufacture, inspect, deliver, or provide quality and production support for the specific work authorized by the organization that disclosed the materials (the “Permitted Purpose”).",
+        "No access through Velakron grants ownership of, or any license to, intellectual property except the narrow, temporary right to use Confidential Materials for the Permitted Purpose."
+      ]
+    },
+    {
+      "title": "3. No misuse or unauthorized disclosure",
+      "paragraphs": [
+        "You must not disclose, publish, sell, transfer, distribute, transmit, or make Confidential Materials available to any person or organization except active members of your organization who are authorized to support the Permitted Purpose and are bound by confidentiality obligations at least as protective as these terms.",
+        "You must not use Confidential Materials for another customer, a competing product, benchmarking, solicitation, personal benefit, machine-learning or artificial-intelligence training, or any purpose unrelated to the authorized work. You must not create public links, place materials in publicly accessible repositories, or send them to personal accounts.",
+        "You may copy, print, download, transform, or reproduce Confidential Materials only to the minimum extent reasonably necessary for the Permitted Purpose. Every permitted copy remains Confidential Material and must receive the same protection as the original."
+      ]
+    },
+    {
+      "title": "4. Safeguards and account responsibility",
+      "paragraphs": [
+        "You and your organization must use reasonable administrative, technical, and physical safeguards to prevent unauthorized access, use, alteration, loss, or disclosure. This includes protecting credentials, using access-controlled business systems and devices, limiting access to people with a legitimate need to know, and following Velakron security controls and instructions.",
+        "You are responsible for activity performed through your account and must not share credentials. You must promptly remove access for people who no longer require it."
+      ]
+    },
+    {
+      "title": "5. Security incidents and compelled disclosure",
+      "paragraphs": [
+        "You must promptly notify Velakron and the organization that disclosed the affected materials if you know or reasonably suspect that Confidential Materials were accessed, lost, used, or disclosed without authorization. You must cooperate in containment, investigation, remediation, and legally required notices.",
+        "If law, regulation, subpoena, or court order requires disclosure, you may disclose only the minimum legally required information and, when legally permitted, must give the disclosing organization prompt written notice and reasonable assistance in seeking protective treatment."
+      ]
+    },
+    {
+      "title": "6. Exclusions",
+      "paragraphs": [
+        "These confidentiality duties do not apply to information that you can demonstrate with contemporaneous written records: was lawfully known to you without a confidentiality duty before disclosure; became public through no breach by you or your organization; was received lawfully from a third party without a confidentiality duty; or was independently developed without use of or reference to Confidential Materials."
+      ]
+    },
+    {
+      "title": "7. Return, deletion, and continuing duties",
+      "paragraphs": [
+        "When the Permitted Purpose or an organization relationship ends, or when the disclosing organization reasonably requests it, you must stop using the affected Confidential Materials and securely return or delete copies under your control, except records that applicable law requires you to retain or copies held in routine, access-controlled backups. Retained material remains protected and may not be used for another purpose.",
+        "These duties continue for as long as the information remains confidential. Trade-secret information remains protected for as long as it qualifies for protection under applicable law."
+      ]
+    },
+    {
+      "title": "8. Optional relationship NDAs",
+      "paragraphs": [
+        "An OEM and supplier may separately sign and store an NDA for their relationship. A relationship NDA provides additional coverage and does not replace or reduce these platform terms. Each agreement governs according to its own terms, and complying with a separate NDA does not excuse noncompliance with these platform terms.",
+        "The absence, expiration, or renewal status of an optional relationship NDA does not remove the duties in these terms and does not, by itself, block authorized platform access."
+      ]
+    },
+    {
+      "title": "9. Ownership, enforcement, and beneficiaries",
+      "paragraphs": [
+        "Each organization retains all rights in the materials it discloses. Unauthorized use or disclosure may cause harm that cannot be fully repaired with money alone. Velakron and the affected disclosing organization may seek injunctive or other equitable relief, in addition to any other available remedies.",
+        "Every organization whose Confidential Materials are disclosed through Velakron is an intended third-party beneficiary of these confidentiality terms and may enforce the protections that apply to its materials."
+      ]
+    },
+    {
+      "title": "10. Regulated technical data",
+      "paragraphs": [
+        "Unless Velakron has expressly authorized it in writing under a separate agreement, the platform is not approved for classified information, ITAR- or export-controlled technical data, Controlled Unclassified Information (CUI), or other regulated data requiring special handling. These terms do not authorize uploading such material."
+      ]
+    },
+    {
+      "title": "11. Electronic acceptance",
+      "paragraphs": [
+        "By checking the acceptance box and creating or activating an account, you intentionally accept these terms electronically for yourself. If you are activating an organization administrator account, you also represent that you are authorized to accept these terms for that organization. Velakron may retain the accepted version, date and time, account identity, organization, network address, and device information as evidence of acceptance."
+      ]
+    }
+  ],
+  "acceptance_statement": "I have read and agree to the Velakron Platform Confidentiality Terms and will protect all Confidential Materials shared through Velakron. If I am activating an organization administrator account, I confirm that I am authorized to accept these terms for my organization."
+}

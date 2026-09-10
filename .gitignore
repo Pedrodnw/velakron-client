@@ -9,6 +9,8 @@ node_modules/
 # Next.js and test output
 .next/
 .next-browser/
+.next-public-site/
+.next-public-build/
 out/
 coverage/
 

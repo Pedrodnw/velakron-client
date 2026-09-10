@@ -10,8 +10,9 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { MarketingFooter, MarketingHeader } from '../components/home/VisibilityLandingPage'
-import Seo from '../components/Seo'
+import MarketingHeader from '../components/marketing/MarketingHeader'
+import MarketingFooter from '../components/marketing/MarketingFooter'
+import Seo from '../components/marketing/MarketingSeo'
 import { submitDemoRequest } from '../store/demoRequests'
 
 const initialForm = {
@@ -59,7 +60,7 @@ const RequestDemo = () => {
     setForm(initialForm)
   }
 
-  return <div className='visibilityHome demoRequestPage'>
+  return <div className='marketing visibilityHome demoRequestPage'>
     <Seo
       title='Request a Demo'
       description='Request a personalized Velakron production-visibility demonstration.'
@@ -76,7 +77,7 @@ const RequestDemo = () => {
             <p className='demoRequestHero__lead'>Tell us what you need to see. We’ll prepare a focused conversation around your suppliers, production workflow, and the decisions your team needs to make faster.</p>
             <div className='demoRequestHero__points'>
               <article><span><UsersRound /></span><div><strong>A conversation built around your operation</strong><p>We’ll focus on the programs, suppliers, and visibility gaps that matter to you.</p></div></article>
-              <article><span><Clock3 /></span><div><strong>A prompt human response</strong><p>A Velakron team member will follow up, typically within one business day.</p></div></article>
+              <article><span><Clock3 /></span><div><strong>A prompt human response</strong><p>A Velakron team member will follow up to discuss your workflow.</p></div></article>
               <article><span><ShieldCheck /></span><div><strong>No sensitive data required</strong><p>You do not need to share drawings, part files, or confidential program details.</p></div></article>
             </div>
             <div className='demoRequestHero__contact'><Mail /><span><small>Prefer email?</small><a href='mailto:info@velakron.com'>info@velakron.com</a></span></div>
@@ -87,7 +88,7 @@ const RequestDemo = () => {
               <span><CheckCircle2 aria-hidden='true' /></span>
               <p className='visibilityHome__eyebrow'>Request received</p>
               <h2 id='demo-request-title'>Thank you. Let’s set up your demo.</h2>
-              <p>Your request is now in the Velakron CRM and assigned for scheduling. A team member will contact you within one business day to choose a time.</p>
+              <p>Your request has been received. A team member will contact you to choose a time.</p>
               {success.confirmation_email_queued && <p className='demoRequestSuccess__email'><Mail aria-hidden='true' /> A confirmation email is on its way to <strong>{success.email}</strong>.</p>}
               {success.reference_id && <small>Reference: {success.reference_id}</small>}
               <button type='button' onClick={() => setSuccess(null)}>Submit another request</button>

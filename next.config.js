@@ -18,11 +18,19 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   devIndicators: false,
+  images: { qualities: [75, 85, 90] },
   turbopack: {
     root: __dirname,
   },
   sassOptions: {
     silenceDeprecations: ['import'],
+  },
+  async redirects() {
+    return [
+      { source: '/supplier', destination: '/for-suppliers', permanent: true },
+      { source: '/capabilities', destination: '/how-it-works', permanent: true },
+      { source: '/rfq', destination: '/contact', permanent: true },
+    ]
   },
   async rewrites() {
     if (process.env.NODE_ENV !== 'development' || !developmentApiProxyTarget) return []

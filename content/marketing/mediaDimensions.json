@@ -1,0 +1,42 @@
+{
+  "inspection-evidence": {
+    "width": 1600,
+    "height": 1100
+  },
+  "oem-overview": {
+    "width": 1585,
+    "height": 1090
+  },
+  "oem-worklist": {
+    "width": 1600,
+    "height": 1100
+  },
+  "part-conversation": {
+    "width": 1600,
+    "height": 1100
+  },
+  "production-history": {
+    "width": 1585,
+    "height": 1090
+  },
+  "production-issue": {
+    "width": 1585,
+    "height": 750
+  },
+  "production-record": {
+    "width": 1585,
+    "height": 1090
+  },
+  "supplier-mobile": {
+    "width": 375,
+    "height": 812
+  },
+  "supplier-update": {
+    "width": 1600,
+    "height": 1100
+  },
+  "supplier-worklist": {
+    "width": 1600,
+    "height": 1100
+  }
+}
