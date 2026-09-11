@@ -225,6 +225,7 @@
 .partAssetRail__empty p { margin: 0; font-size: 12px; line-height: 1.5; }
 
 .partViewerStage { min-width: 0; padding: 16px; background: var(--app-canvas); }
+.productionPartWorkspace .partViewerStage { scroll-margin-top: 88px; }
 .partViewerStage__toolbar { display: flex; min-height: 52px; gap: 16px; align-items: center; justify-content: space-between; padding: 0 2px 12px; }
 .partViewerStage__toolbar p { margin: 0 0 3px; }
 .partViewerStage__toolbar strong { display: block; overflow: hidden; max-width: 500px; text-overflow: ellipsis; white-space: nowrap; }
@@ -888,6 +889,7 @@
   .productionPartWorkspace__tabs button { flex: 0 0 126px; }
   .partWorkspaceTabs button { min-height: 50px; font-size: 11px; }
   .partViewerStage { padding: 10px; }
+  .productionPartWorkspace .partViewerStage { scroll-margin-top: calc(var(--app-mobile-header-height, 64px) + 76px); }
   .partViewerStage__toolbar { align-items: flex-start; flex-direction: column; }
   .partViewerStage__toolbar > div:last-child { width: 100%; }
   .partViewerStage__toolbar .vk-button { flex: 1; }
