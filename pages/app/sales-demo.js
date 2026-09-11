@@ -487,6 +487,7 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
   const [saveState, setSaveState] = useState('saved')
   const [journeyToAdd, setJourneyToAdd] = useState('')
   const [undoChange, setUndoChange] = useState(null)
+  const [captureAccounts, setCaptureAccounts] = useState({ oem_email: '', supplier_email: '' })
   const savingRef = useRef(false)
   const draftVersionRef = useRef(null)
   const savedPayload = useRef('')
@@ -707,6 +708,18 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
     await persistDraft(payload, { announce: true })
   }
 
+  const captureStartingPoint = async () => {
+    if (dirty && !await persistDraft(payload)) return
+    setWorking(true); setFeedback(null)
+    const result = await dispatch(salesDemoRequest({ url: `/templates/${selectedId}/capture-accounts`, method: 'post', data: { ...captureAccounts, version: draftVersionRef.current?.version }, requestKey: 'sales-demo-capture-accounts' }))
+    setWorking(false)
+    if (!result?.ok) { setFeedback({ type: 'error', message: safeMessage(result) }); return }
+    setCaptureAccounts({ oem_email: '', supplier_email: '' })
+    await load()
+    onRefresh()
+    setFeedback({ type: 'success', message: 'Account starting point captured. The draft includes the approved parts, orders, discussions, decisions, and history.' })
+  }
+
   const publish = async () => {
     if (dirty && !await persistDraft(payload, { announce: true })) return
     setWorking(true); setFeedback(null)
@@ -780,6 +793,14 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
       {undoChange && <aside className='salesDemoUndo'><span>{undoChange.label}.</span><Button variant='secondary' onClick={() => { setPayload(undoChange.payload); setUndoChange(null) }}>Undo</Button><button type='button' onClick={() => setUndoChange(null)} aria-label='Dismiss undo'>×</button></aside>}
       {!draftVersion && <div className='salesDemoPublishedNotice'><CheckCircle2 aria-hidden='true' /><div><strong>Published version is read-only</strong><p>Create a draft to safely update company names, people, and production scenarios.</p></div></div>}
       <form className='salesDemoTemplateForm salesDemoTemplateForm--sectioned' data-section={editorSection} onSubmit={save}>
+        <fieldset className='is-essentials' disabled={!draftVersion || working || saveState === 'saving'}>
+          <legend>Capture an account starting point</legend>
+          <p className='salesDemoTemplateForm__wide'>Copy the connected OEM and Supplier workspaces into this draft. Only the five approved Velakron model and drawing packages are included. Each demo gets its own copy; reset restores the captured story.</p>
+          <label><span>OEM account email</span><input type='email' autoComplete='off' value={captureAccounts.oem_email} onChange={event => setCaptureAccounts(current => ({ ...current, oem_email: event.target.value }))} /></label>
+          <label><span>Supplier account email</span><input type='email' autoComplete='off' value={captureAccounts.supplier_email} onChange={event => setCaptureAccounts(current => ({ ...current, supplier_email: event.target.value }))} /></label>
+          <Button type='button' onClick={captureStartingPoint} disabled={!captureAccounts.oem_email.trim() || !captureAccounts.supplier_email.trim()}>{working ? 'Capturing…' : payload.source_snapshot ? 'Recapture starting point' : 'Capture starting point'}</Button>
+          {payload.source_snapshot && <div className='salesDemoTemplateForm__wide' role='status'><strong>Captured {formatDateTime(payload.source_snapshot.captured_at)}</strong><p>{payload.source_snapshot.summary.companies.oem} + {payload.source_snapshot.summary.companies.supplier}</p><p>{payload.source_snapshot.summary.parts} approved parts · {payload.source_snapshot.summary.active_records} active orders · {payload.source_snapshot.summary.production_records} total orders · {payload.source_snapshot.summary.conversations} discussions · {payload.source_snapshot.summary.machines} machines</p><p>{payload.source_snapshot.summary.excluded_production_records} older orders excluded because they use other parts. Captured production and supplier data are preserved together; recapture to update them. Presenter wording remains editable.</p></div>}
+        </fieldset>
         <fieldset className='is-essentials' disabled={!draftVersion || working}>
           <legend>Presentation essentials</legend>
           <label className='salesDemoTemplateForm__wide'><span>Template name</span><input value={payload.name || ''} maxLength={180} onChange={event => setPayload(current => ({ ...current, name: event.target.value }))} /></label>
@@ -790,7 +811,7 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
           <label><span>Search tags</span><input value={(payload.presentation?.tags || []).join(', ')} onChange={event => setPayload(current => ({ ...current, presentation: { ...current.presentation, tags: event.target.value.split(',').map(item => item.trim()).filter(Boolean).slice(0, 12) } }))} placeholder='Quality, Aerospace, Production Block' /></label>
           <div className='salesDemoExperienceChoices salesDemoTemplateForm__wide'><span>Available guest experiences</span>{['oem', 'supplier'].map(experience => <label key={experience}><input type='checkbox' checked={(payload.supported_experiences || ['oem', 'supplier']).includes(experience)} onChange={event => setPayload(current => ({ ...current, supported_experiences: event.target.checked ? [...new Set([...(current.supported_experiences || ['oem', 'supplier']), experience])] : (current.supported_experiences || ['oem', 'supplier']).filter(item => item !== experience) }))} /> {formatLabel(experience)}</label>)}</div>
         </fieldset>
-        <fieldset className='is-essentials' disabled={!draftVersion || working}>
+        <fieldset className='is-essentials' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Part collaboration package</legend>
           <div className='salesDemoPartPresetIntro salesDemoTemplateForm__wide'>
             <div><strong>Choose the model and matching drawing used in this demo</strong><span>Each package is synthetic and includes a verified STEP model, its drawing, realistic visual anchors, cases, and inspection context.</span></div>
@@ -833,11 +854,11 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
           </article>)}</div>
           <div className='salesDemoJourneyAdd salesDemoTemplateForm__wide'><select value={journeyToAdd} onChange={event => setJourneyToAdd(event.target.value)}><option value=''>Add an outline step…</option>{journeyStepCatalog.filter(item => !(payload.journey_steps || []).some(step => step.key === item.key)).map(item => <option value={item.key} key={item.key}>{item.label}</option>)}</select><Button type='button' variant='secondary' disabled={!journeyToAdd} onClick={addJourneyStep}><Plus aria-hidden='true' /> Add step</Button></div>
         </fieldset>
-        <fieldset className='is-supporting' disabled={!draftVersion || working}>
+        <fieldset className='is-supporting' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Companies and synthetic contacts</legend>
           {['oem', 'supplier'].map(side => <div className='salesDemoCompanyEditor' key={side}><h3>{side.toUpperCase()} experience</h3><label><span>Company name</span><input value={payload.companies?.[side]?.name || ''} onChange={event => updateCompany(side, 'name', event.target.value)} /></label><label><span>First name</span><input value={payload.companies?.[side]?.contact?.first_name || ''} onChange={event => updateContact(side, 'first_name', event.target.value)} /></label><label><span>Last name</span><input value={payload.companies?.[side]?.contact?.last_name || ''} onChange={event => updateContact(side, 'last_name', event.target.value)} /></label><label><span>Title</span><input value={payload.companies?.[side]?.contact?.title || ''} onChange={event => updateContact(side, 'title', event.target.value)} /></label></div>)}
         </fieldset>
-        <fieldset className='is-supporting' disabled={!draftVersion || working}>
+        <fieldset className='is-supporting' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Relationship scenario</legend>
           <div className='salesDemoCompanyEditor'>
             <h3>Additional prospective OEM</h3>
@@ -852,7 +873,7 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
             <details className='salesDemoAdvanced salesDemoTemplateForm__wide'><summary>Advanced identifier</summary><label><span>Supplier code prefix</span><input value={payload.relationship?.supplier_code_prefix || ''} maxLength={20} onChange={event => setPayload(current => ({ ...current, relationship: { ...current.relationship, supplier_code_prefix: event.target.value } }))} /></label></details>
           </div>
         </fieldset>
-        <fieldset className='is-supporting' disabled={!draftVersion || working}>
+        <fieldset className='is-supporting' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Supplier profile and primary facility</legend>
           <div className='salesDemoCompanyEditor'>
             <h3>Supplier profile</h3>
@@ -871,17 +892,17 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
             <label><span>Time zone</span><input value={payload.facility?.timezone || ''} onChange={event => updateFacility('timezone', event.target.value)} /></label>
           </div>
         </fieldset>
-        <fieldset className='is-supporting' disabled={!draftVersion || working}>
+        <fieldset className='is-supporting' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Machines</legend>
           <div className='salesDemoCapabilityEditor'>{(payload.machines || []).map((machine, index) => <details open={index === 0} key={`${machine.shop_identifier}-${index}`}><summary><strong>{machine.shop_identifier || `Machine ${index + 1}`}</strong><span>{machine.manufacturer} {machine.model}</span></summary><article><header><span /><button type='button' onClick={() => removeMachine(index)} disabled={payload.machines.length <= 1} aria-label={`Remove machine ${machine.shop_identifier || index + 1}`}><Trash2 aria-hidden='true' /> Remove</button></header><div><label><span>Shop identifier</span><input value={machine.shop_identifier || ''} onChange={event => updateMachine(index, 'shop_identifier', event.target.value)} /></label><label><span>Manufacturer</span><input value={machine.manufacturer || ''} onChange={event => updateMachine(index, 'manufacturer', event.target.value)} /></label><label><span>Model</span><input value={machine.model || ''} onChange={event => updateMachine(index, 'model', event.target.value)} /></label><label><span>Axes</span><input type='number' min='1' max='20' value={machine.axes || ''} onChange={event => updateMachine(index, 'axes', Number(event.target.value))} /></label><label><span>Work envelope</span><input value={machine.work_envelope || ''} onChange={event => updateMachine(index, 'work_envelope', event.target.value)} /></label><details className='salesDemoAdvanced'><summary>Advanced identifier</summary><label><span>Machine type key</span><input value={machine.machine_type_key || ''} onChange={event => updateMachine(index, 'machine_type_key', event.target.value)} /></label></details></div></article></details>)}</div>
           <Button type='button' variant='secondary' onClick={addMachine}><Plus aria-hidden='true' /> Add machine</Button>
         </fieldset>
-        <fieldset className='is-supporting' disabled={!draftVersion || working}>
+        <fieldset className='is-supporting' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Certifications</legend>
           <div className='salesDemoCapabilityEditor'>{(payload.certifications || []).map((certification, index) => <details open={index === 0} key={`${certification.reference_number}-${index}`}><summary><strong>{certification.name || `Certification ${index + 1}`}</strong><span>{certification.reference_number}</span></summary><article><header><span /><button type='button' onClick={() => removeCertification(index)} aria-label={`Remove certification ${certification.name || index + 1}`}><Trash2 aria-hidden='true' /> Remove</button></header><div><label><span>Display name</span><input value={certification.name || ''} onChange={event => updateCertification(index, 'name', event.target.value)} /></label><label><span>Reference number</span><input value={certification.reference_number || ''} onChange={event => updateCertification(index, 'reference_number', event.target.value)} /></label><details className='salesDemoAdvanced'><summary>Advanced identifier</summary><label><span>Type key</span><input value={certification.type_key || ''} onChange={event => updateCertification(index, 'type_key', event.target.value)} /></label></details></div></article></details>)}</div>
           <Button type='button' variant='secondary' onClick={addCertification}><Plus aria-hidden='true' /> Add certification</Button>
         </fieldset>
-        <fieldset className='is-story' disabled={!draftVersion || working}>
+        <fieldset className='is-story' disabled={!draftVersion || working || Boolean(payload.source_snapshot)}>
           <legend>Production portfolio</legend>
           <div className='salesDemoProductionEditor'>{payload.production_records.map((record, index) => <article key={record.key}>
             <header><strong>{record.partNumber || `Record ${index + 1}`}</strong><div className='salesDemoProductionEditor__actions'><StatusBadge>{formatLabel(record.stage)}</StatusBadge><button type='button' onClick={() => moveRecord(index, -1)} disabled={index === 0} aria-label={`Move ${record.partNumber} up`}><ArrowUp aria-hidden='true' /></button><button type='button' onClick={() => moveRecord(index, 1)} disabled={index === payload.production_records.length - 1} aria-label={`Move ${record.partNumber} down`}><ArrowDown aria-hidden='true' /></button><button type='button' onClick={() => duplicateRecord(index)} aria-label={`Duplicate ${record.partNumber}`}><CopyPlus aria-hidden='true' /></button><button type='button' onClick={() => removeRecord(index)} disabled={payload.production_records.length <= 1} aria-label={`Remove ${record.partNumber}`}><Trash2 aria-hidden='true' /></button></div></header>
@@ -889,9 +910,9 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
               <label className='salesDemoApprovedPart'><span>Approved model and drawing</span><select value={partPresets.find(preset => preset.part_number === record.partNumber)?.key || ''} onChange={event => setPayload(current => selectApprovedPart(current, index, partPresets.find(preset => preset.key === event.target.value)))}><option value='' disabled>Choose an approved Velakron part</option>{partPresets.map(preset => <option key={preset.key} value={preset.key}>{preset.part_number} · {preset.name.replace(' [Synthetic]', '')}</option>)}</select></label>
               <label className='salesDemoApprovedPart'><span>Part name</span><input value={record.partName || ''} readOnly /></label>
               <label><span>Drawing revision</span><input value={record.revision || ''} readOnly /></label>
-              <label><span>Stage</span><select value={record.stage} onChange={event => updateRecord(index, 'stage', event.target.value)}><option value='assigned'>Assigned</option><option value='accepted'>Accepted</option><option value='material_ordered'>Material ordered</option><option value='material_received'>Material received</option><option value='programming'>Programming</option><option value='in_production'>In production</option><option value='inspection'>Inspection</option><option value='ready_to_ship'>Ready to ship</option><option value='shipped'>Shipped</option><option value='delivered'>Delivered</option><option value='quality_review'>Quality review</option><option value='approved'>Approved</option></select></label>
+              <label><span>Stage</span><select value={record.stage} onChange={event => updateRecord(index, 'stage', event.target.value)}><option value='assigned'>Assigned</option><option value='accepted'>Accepted</option><option value='material_ordered'>Material ordered</option><option value='material_received'>Material received</option><option value='programming'>Programming</option><option value='in_production'>In production</option><option value='inspection'>Inspection</option>{payload.source_snapshot && <><option value='heat_treatment'>Heat treatment</option><option value='first_article_inspection'>First article inspection</option></>}<option value='ready_to_ship'>Ready to ship</option><option value='shipped'>Shipped</option><option value='delivered'>Delivered</option><option value='quality_review'>Quality review</option><option value='approved'>Approved</option></select></label>
               <label><span>Supplier acceptance</span><select value={record.acceptance || 'accepted'} onChange={event => updateRecord(index, 'acceptance', event.target.value)}><option value='pending'>Pending</option><option value='accepted'>Accepted</option></select></label>
-              <label><span>Lifecycle</span><select value={record.lifecycle || 'active'} onChange={event => updateRecord(index, 'lifecycle', event.target.value)}><option value='active'>Active</option><option value='completed'>Completed</option></select></label>
+              <label><span>Lifecycle</span><select value={record.lifecycle || 'active'} onChange={event => updateRecord(index, 'lifecycle', event.target.value)}><option value='active'>Active</option><option value='completed'>Completed</option>{payload.source_snapshot && <option value='archived'>Archived</option>}</select></label>
               <label><span>Schedule state</span><select value={record.health || 'on_schedule'} onChange={event => updateRecord(index, 'health', event.target.value)}><option value='on_schedule'>On schedule</option><option value='needs_attention'>Needs attention</option><option value='at_risk'>At risk</option><option value='delayed'>Delayed</option></select></label>
               <label><span>Quantity</span><input type='number' min='1' value={record.quantity} onChange={event => updateRecord(index, 'quantity', Number(event.target.value))} /></label>
               <label><span>Required arrival (days from start)</span><input type='number' min='-365' max='730' value={record.requiredOffset ?? ''} onChange={event => updateRecord(index, 'requiredOffset', event.target.value === '' ? null : Number(event.target.value))} /></label>
