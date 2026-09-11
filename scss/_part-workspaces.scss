@@ -137,7 +137,7 @@
 .productionPartThumbnail .modelViewer--thumbnail .modelViewer__state svg { width: 22px; height: 22px; }
 .productionPartWorkspace { min-width: 0; margin-bottom: 0; }
 .productionPartWorkspace > .partNextStep { margin: 0; border: 0; border-bottom: 1px solid var(--app-border); border-radius: 0; }
-.partWorkspaceTabs.productionPartWorkspace__tabs { grid-template-columns: repeat(8, minmax(96px, 1fr)); overflow-x: hidden; }
+.partWorkspaceTabs.productionPartWorkspace__tabs { grid-template-columns: repeat(7, minmax(96px, 1fr)); overflow-x: hidden; }
 .productionPartWorkspace__tabs button { min-width: 0; gap: 6px; padding-inline: 7px; font-size: 11px; text-align: center; }
 .productionPartWorkspace__feedback { padding: 14px 18px 0; }
 .productionPartWorkspace__overview { padding: 20px; }
@@ -184,7 +184,7 @@
 
 .partWorkspaceTabs {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border-bottom: 1px solid var(--app-border);
   background: var(--app-surface);
 
@@ -836,7 +836,7 @@
 @media (max-width: 1500px) {
   .partVisualWorkspace { grid-template-columns: 190px minmax(400px, 1fr); }
   .partContextRail { display: none; }
-  .partWorkspaceTabs { overflow-x: auto; grid-template-columns: repeat(6, minmax(150px, 1fr)); }
+  .partWorkspaceTabs { overflow-x: auto; grid-template-columns: repeat(5, minmax(150px, 1fr)); }
 }
 
 @media (max-width: $tablet) {
@@ -884,7 +884,7 @@
   .partNextStep__queue { margin-top: 8px; }
   .partNextStep__queue button { width: 100%; border-radius: 7px; justify-content: flex-start; }
   .partNextStep__queue button span { margin-left: auto; }
-  .partWorkspaceTabs { position: sticky; z-index: 4; top: var(--app-mobile-header-height, 64px); grid-template-columns: repeat(6, minmax(132px, 1fr)); }
+  .partWorkspaceTabs { position: sticky; z-index: 4; top: var(--app-mobile-header-height, 64px); grid-template-columns: repeat(5, minmax(132px, 1fr)); }
   .partWorkspaceTabs.productionPartWorkspace__tabs { display: flex; width: 100%; min-width: 0; overflow-x: auto; }
   .productionPartWorkspace__tabs button { flex: 0 0 126px; }
   .partWorkspaceTabs button { min-height: 50px; font-size: 11px; }
