@@ -20,6 +20,7 @@ import { loadRelationships, relationshipSelectors } from '../../store/slices/ent
 import { trackProductEvent } from '../../store/slices/entities/platformAdministration'
 import { inspectionSelectors, loadInspectionQueue } from '../../store/slices/entities/inspection'
 import LinkWrap from '../../components/LinkWrap'
+import ProductionPendingActions from '../../components/app/ProductionPendingActions'
 import { loadPartActionItems, partSelectors } from '../../store/slices/entities/parts'
 
 const views = {
@@ -158,7 +159,7 @@ const Production = () => {
     { key: 'company', label: type === 'supplier' ? 'OEM customer' : 'Supplier', render: company },
     { key: 'po', label: 'PO', render: item => <div className='tablePrimary'><strong>{item.po_number || '—'}</strong><span>{item.po_line_number ? `Line ${item.po_line_number}` : item.public_reference}</span></div> },
     { key: 'status', label: 'Stage', render: item => <StageBadge value={item.current_stage || item.acceptance_status} /> },
-    { key: 'health', label: 'Schedule', render: item => <ScheduleHealthBadge value={item.schedule_health} /> },
+    { key: 'health', label: 'Schedule / next action', render: item => <><ScheduleHealthBadge value={item.schedule_health} /><ProductionPendingActions record={item} /></> },
     { key: 'required', label: 'Required arrival', render: item => formatDate(item.required_delivery_date) },
     { key: 'actions', label: '', render: item => <Button href={recordHref(item)} variant='secondary' className='tableAction'>Open <ExternalLink aria-hidden='true' /></Button> },
   ]
@@ -186,7 +187,7 @@ const Production = () => {
     </div>
     {error && <ErrorState description={error.message} onRetry={refresh} />}
     <section className='appPanel appPanel--table productionDesktopTable'>{showListSkeleton && !records.length ? <AppSkeleton lines={8} /> : <DataTable caption='Production records' columns={columns} rows={records} emptyTitle='No production records in this view' emptyDescription={type === 'oem' ? 'Create an awarded-work record or adjust the filters.' : 'Assigned work will appear here when an OEM sends it to your company.'} />}</section>
-    <section className='productionMobileCards' aria-label='Production records'>{records.map(item => <RecordCard key={item.id} href={recordHref(item)} eyebrow={item.public_reference} title={recordTitle(item)} description={company(item)} badges={<>{item.export_control === 'itar' && <StatusBadge tone='danger'>ITAR</StatusBadge>}<StageBadge value={item.current_stage || item.acceptance_status} /><ScheduleHealthBadge value={item.schedule_health} /></>} facts={[{ label: 'PO', value: item.po_number }, { label: 'Required arrival', value: formatDate(item.required_delivery_date) }, { label: 'Expected ship', value: formatDate(item.expected_ship_date) }]} actionLabel='Open' />)}</section>
+    <section className='productionMobileCards' aria-label='Production records'>{records.map(item => <RecordCard key={item.id} href={recordHref(item)} eyebrow={item.public_reference} title={recordTitle(item)} description={company(item)} badges={<>{item.export_control === 'itar' && <StatusBadge tone='danger'>ITAR</StatusBadge>}<StageBadge value={item.current_stage || item.acceptance_status} /><ScheduleHealthBadge value={item.schedule_health} /><ProductionPendingActions record={item} /></>} facts={[{ label: 'PO', value: item.po_number }, { label: 'Required arrival', value: formatDate(item.required_delivery_date) }, { label: 'Expected ship', value: formatDate(item.expected_ship_date) }]} actionLabel='Open' />)}</section>
     <Pagination meta={pagination} onPageChange={page => updateFilters({ page })} label='Production pages' />
   </>
 }
