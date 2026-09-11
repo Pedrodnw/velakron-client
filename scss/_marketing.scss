@@ -293,5 +293,18 @@
 
 .marketing .mk-gallery__choice button { scroll-margin-top: 100px; }
 
+// Keep restored context visually distinct within related page sections.
+.marketing {
+  .mk-content-divider { margin-top:56px; padding-top:48px; border-top:1px solid #cfdae7; }
+  .mk-assessment-inline { display:flex; align-items:center; justify-content:space-between; gap:32px; >div { max-width:760px; } >.mk-button { flex-shrink:0; } }
+  .mk-gallery__description p { margin:0 0 12px; font-size:inherit; &:last-child { margin-bottom:0; } }
+}
+@media(max-width:767px) {
+  .marketing {
+    .mk-content-divider { margin-top:36px; padding-top:32px; }
+    .mk-assessment-inline { display:block; >.mk-button { margin-top:18px; } }
+  }
+}
+
 .marketing .mk-product { width:100%; max-width:min(100%,var(--mk-product-width,100%)); margin-inline:auto; }
 @media(max-width:600px) { .marketing .mk-product { max-width:min(100%,var(--mk-product-mobile-width,100%)); } }

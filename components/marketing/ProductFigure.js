@@ -1,5 +1,5 @@
 import { getImageProps } from 'next/image'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Maximize2, Minus, Plus, X } from 'lucide-react'
 import { productMedia } from '../../content/marketing/media'
 
@@ -15,16 +15,29 @@ export default function ProductFigure({ name, priority = false, caption, classNa
   const dialog = useRef(null)
   const trigger = useRef(null)
   const closeButton = useRef(null)
+  const viewport = useRef(null)
   const [open, setOpen] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [screenDensity, setScreenDensity] = useState(1)
+  const [viewportWidth, setViewportWidth] = useState(1)
+  const [viewportHeight, setViewportHeight] = useState(1)
+  useEffect(() => {
+    if (!open) return
+    const measure = () => { setScreenDensity(window.devicePixelRatio || 1); setViewportWidth(viewport.current?.clientWidth || window.innerWidth); setViewportHeight(parseFloat(window.getComputedStyle(viewport.current).maxHeight) || window.innerHeight * .7) }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [open])
   if (!asset) return null
-  const propsFor = (image, sizes) => getImageProps({ src: image.src, width: image.width, height: image.height, alt: asset.alt, sizes, quality: 90, unoptimized: Boolean(image.lossless), loading: priority ? 'eager' : 'lazy', fetchPriority: priority ? 'high' : undefined }).props
+  const propsFor = (image, sizes) => ({ ...getImageProps({ src: image.src, width: image.width, height: image.height, alt: asset.alt, sizes, quality: 90, unoptimized: Boolean(image.lossless), loading: priority ? 'eager' : 'lazy', fetchPriority: priority ? 'high' : undefined }).props, ...(image.srcSet ? { srcSet: image.srcSet, sizes } : {}) })
   const desktop = propsFor(asset, imageSizes[placement] || imageSizes.feature)
   const mobile = asset.mobile && propsFor(asset.mobile, 'calc(100vw - 40px)')
   const original = asset.original || asset
+  const fitWidth = Math.min(viewportWidth, viewportHeight * original.width / original.height, original.width / screenDensity)
+  const maxZoom = Math.min(3, Math.max(1, original.width / (screenDensity * fitWidth)))
   const close = () => { dialog.current?.close(); setOpen(false); trigger.current?.focus() }
-  const enlarge = () => { setZoom(window.innerWidth < 640 ? 2 : 1); setOpen(true); dialog.current?.showModal(); closeButton.current?.focus() }
-  return <figure className={`mk-product mk-product--${placement} ${className}`} style={{ '--mk-product-width': `${asset.displayWidth || asset.width}px`, '--mk-product-mobile-width': `${Math.min(asset.displayWidth || asset.width, asset.mobile?.width || asset.width)}px` }}>
+  const enlarge = () => { setZoom(1); setScreenDensity(window.devicePixelRatio || 1); setOpen(true); dialog.current?.showModal(); setViewportWidth(viewport.current?.clientWidth || window.innerWidth); closeButton.current?.focus() }
+  return <figure className={`mk-product mk-product--${placement} ${className}`} style={{ '--mk-product-width': `${asset.displayWidth || asset.width}px`, '--mk-product-mobile-width': `${Math.min(asset.displayWidth || asset.width, asset.mobile?.displayWidth || asset.mobile?.width || asset.width)}px` }}>
     <div className='mk-product__frame'>
       <button type='button' className='mk-product__open' ref={trigger} onClick={enlarge} aria-label={`Enlarge ${asset.alt}`}>
         <picture>{mobile && <source media='(max-width: 600px)' srcSet={mobile.srcSet || mobile.src} sizes={mobile.sizes} width={asset.mobile.width} height={asset.mobile.height} />}<img {...desktop} /></picture>
@@ -37,12 +50,12 @@ export default function ProductFigure({ name, priority = false, caption, classNa
       <div className='mk-lightbox__toolbar'><span>Product detail</span><div className='mk-lightbox__controls'>
         <button type='button' onClick={() => setZoom(value => Math.max(1, value - .5))} disabled={zoom === 1} aria-label='Zoom out'><Minus size={18} aria-hidden /></button>
         <button type='button' className='mk-lightbox__fit' onClick={() => setZoom(1)} aria-label='Fit image to window'>Fit</button>
-        <button type='button' onClick={() => setZoom(value => Math.min(3, value + .5))} disabled={zoom === 3} aria-label='Zoom in'><Plus size={18} aria-hidden /></button>
+        <button type='button' onClick={() => setZoom(value => Math.min(maxZoom, value + .5))} disabled={zoom >= maxZoom} aria-label='Zoom in'><Plus size={18} aria-hidden /></button>
         <button type='button' ref={closeButton} onClick={close} autoFocus aria-label='Close enlarged image'><X size={22} aria-hidden /></button>
       </div></div>
-      <p className='mk-lightbox__instruction' role='status'>{zoom > 1 ? 'Scroll across or down to explore. Use Fit to see the whole image.' : 'Use + to inspect the detail.'}</p>
-      <div className='mk-lightbox__viewport' tabIndex={0} role='region' aria-label='Scrollable product image'>
-        {open && <img src={original.src} width={original.width} height={original.height} alt={asset.alt} style={{ width: `${zoom * 100}%`, maxWidth: `${original.width * zoom}px`, marginInline: 'auto' }} />}
+      <p className='mk-lightbox__instruction' role='status'>{zoom > 1 ? 'Scroll across or down to explore. Use Fit to see the whole image.' : maxZoom > 1 ? 'Use + to inspect the detail.' : 'Showing the full available detail for your screen.'}</p>
+      <div ref={viewport} className='mk-lightbox__viewport' tabIndex={0} role='region' aria-label='Scrollable product image'>
+        {open && <img src={original.src} width={original.width} height={original.height} alt={asset.alt} style={{ width: `${fitWidth * Math.min(zoom, maxZoom)}px`, maxWidth: `${original.width / screenDensity}px`, marginInline: 'auto' }} />}
       </div>
       <p>{caption || asset.caption} <a href={original.src} target='_blank' rel='noopener'>Open original image (new tab)</a></p>
     </dialog>

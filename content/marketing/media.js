@@ -1,13 +1,13 @@
 import dimensions from './mediaDimensions.json'
-// Lossless actual-product crops. Model-bearing captures use VLK-4001 Rev A.
-// Provenance: docs/acceptance/public-site/ux-refresh/manifest.json.
-const image = name => ({src:`/images/marketing/${name}.webp`,...dimensions[name],lossless:true})
-const figure = (name,alt,caption,takeaway,{mobile,displayWidth}={}) => ({...image(`${name}-v2`),alt,caption,takeaway,displayWidth,original:{...image(`${name}-v2`),src:`/images/marketing/${name}-v2.png`},...(mobile ? {mobile:image(`${mobile}-v2`)} : {})})
+// Fresh 3× actual-product captures with lossless responsive variants. Model-bearing captures use VLK-4001 Rev A.
+// Provenance: docs/acceptance/public-site/content-restoration/media-manifest.json.
+const image = name => ({src:`/images/marketing/${name}.webp`,...dimensions[name],srcSet:dimensions[name].variants.map(({src,width}) => `${src} ${width}w`).join(', '),lossless:true})
+const figure = (name,alt,caption,takeaway,{mobile,displayWidth}={}) => ({...image(`${name}-v3`),alt,caption,takeaway,displayWidth:displayWidth || dimensions[`${name}-v3`].displayWidth,original:{...image(`${name}-v3`),src:`/images/marketing/${name}-v3.png`},...(mobile ? {mobile:image(`${mobile}-v3`)} : {})})
 export const productMedia = {
   overview:figure('overview','OEM attention queue with current VLK-4001 bell-crank thumbnails, dates, stages, and attention reasons.','Start with the production records that need a response.','The required arrival, supplier forecast, and next action appear together.',{mobile:'overview-mobile'}),
   worklist:figure('overview','OEM attention queue showing VLK-4001 production commitments.','Find the commitments that need a closer look.','See which production record needs your team’s response.',{mobile:'overview-mobile'}),
   record:figure('record','Production commitment for VLK-4001 Rev A, including quantity, supplier, required arrival, and expected ship date.','One commitment, with the customer’s requirement and supplier’s forecast.','Required arrival and expected ship are separate dates.',{mobile:'record-mobile'}),
-  conversation:figure('conversation','Bearing-bore clarification for the VLK-4001 bell crank, linked to revision A and a responsible company.','Keep a technical question with its revision and next response.','The bearing-bore question identifies the company responsible for the next response.',{mobile:'conversation-mobile'}),
+  conversation:figure('conversation','Bearing-bore clarification for the VLK-4001 bell crank, with the question and requested company response.','Keep a technical question with its revision and next response.','The bearing-bore question identifies the company responsible for the next response.',{mobile:'conversation-mobile'}),
   issue:figure('issue','Production block explaining the concern and identifying the company responsible for the next response.','A production concern with an explicit next response.','The current step and responsible company are visible.',{mobile:'issue-mobile'}),
   inspection:figure('inspection','Accepted first-article inspection result for VLK-4001, showing a bearing-bore measurement of 1.2501 inches.','Read the recorded measurement against the requirement.','Measured 1.2501 in · allowed range 1.2490–1.2510 in · Pass.',{mobile:'inspection-mobile'}),
   nonconformance:figure('nonconformance','Approved rework disposition for a nonconformance affecting a VLK-4001 production lot.','Keep the rework instructions, approval, and verification connected.','Three affected parts were reworked; the retained record includes OEM verification.',{mobile:'nonconformance-mobile'}),

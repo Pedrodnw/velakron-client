@@ -1,110 +1,261 @@
 {
-  "inspection-evidence": {
-    "width": 1600,
-    "height": 1100
+  "conversation-mobile-v3": {
+    "width": 1290,
+    "height": 2109,
+    "displayWidth": 430,
+    "variants": [
+      {
+        "src": "/images/marketing/conversation-mobile-v3-1x.webp",
+        "width": 430
+      },
+      {
+        "src": "/images/marketing/conversation-mobile-v3.webp",
+        "width": 1290
+      }
+    ]
   },
-  "oem-overview": {
-    "width": 1585,
-    "height": 1090
+  "conversation-v3": {
+    "width": 2700,
+    "height": 1824,
+    "displayWidth": 900,
+    "variants": [
+      {
+        "src": "/images/marketing/conversation-v3-1x.webp",
+        "width": 900
+      },
+      {
+        "src": "/images/marketing/conversation-v3.webp",
+        "width": 2700
+      }
+    ]
   },
-  "part-conversation": {
-    "width": 1600,
-    "height": 1100
+  "history-mobile-v3": {
+    "width": 1101,
+    "height": 1632,
+    "displayWidth": 367,
+    "variants": [
+      {
+        "src": "/images/marketing/history-mobile-v3-1x.webp",
+        "width": 367
+      },
+      {
+        "src": "/images/marketing/history-mobile-v3.webp",
+        "width": 1101
+      }
+    ]
   },
-  "production-issue": {
-    "width": 1585,
-    "height": 750
+  "history-v3": {
+    "width": 2505,
+    "height": 1284,
+    "displayWidth": 835,
+    "variants": [
+      {
+        "src": "/images/marketing/history-v3-1x.webp",
+        "width": 835
+      },
+      {
+        "src": "/images/marketing/history-v3.webp",
+        "width": 2505
+      }
+    ]
   },
-  "production-record": {
-    "width": 1585,
-    "height": 1090
+  "inspection-mobile-v3": {
+    "width": 1290,
+    "height": 1941,
+    "displayWidth": 430,
+    "variants": [
+      {
+        "src": "/images/marketing/inspection-mobile-v3-1x.webp",
+        "width": 430
+      },
+      {
+        "src": "/images/marketing/inspection-mobile-v3.webp",
+        "width": 1290
+      }
+    ]
   },
-  "supplier-mobile": {
-    "width": 375,
-    "height": 812
+  "inspection-v3": {
+    "width": 2700,
+    "height": 1359,
+    "displayWidth": 900,
+    "variants": [
+      {
+        "src": "/images/marketing/inspection-v3-1x.webp",
+        "width": 900
+      },
+      {
+        "src": "/images/marketing/inspection-v3.webp",
+        "width": 2700
+      }
+    ]
   },
-  "supplier-update-vlk": {
-    "width": 1600,
-    "height": 1100
+  "issue-mobile-v3": {
+    "width": 1290,
+    "height": 2343,
+    "displayWidth": 430,
+    "variants": [
+      {
+        "src": "/images/marketing/issue-mobile-v3-1x.webp",
+        "width": 430
+      },
+      {
+        "src": "/images/marketing/issue-mobile-v3.webp",
+        "width": 1290
+      }
+    ]
   },
-  "supplier-worklist-vlk": {
-    "width": 1600,
-    "height": 1100
+  "issue-v3": {
+    "width": 2700,
+    "height": 1896,
+    "displayWidth": 900,
+    "variants": [
+      {
+        "src": "/images/marketing/issue-v3-1x.webp",
+        "width": 900
+      },
+      {
+        "src": "/images/marketing/issue-v3.webp",
+        "width": 2700
+      }
+    ]
   },
-  "oem-worklist-vlk": {
-    "width": 1600,
-    "height": 1100
+  "nonconformance-mobile-v3": {
+    "width": 1182,
+    "height": 2853,
+    "displayWidth": 394,
+    "variants": [
+      {
+        "src": "/images/marketing/nonconformance-mobile-v3-1x.webp",
+        "width": 394
+      },
+      {
+        "src": "/images/marketing/nonconformance-mobile-v3.webp",
+        "width": 1182
+      }
+    ]
   },
-  "production-history-vlk": {
-    "width": 1585,
-    "height": 1228
+  "nonconformance-v3": {
+    "width": 2568,
+    "height": 2313,
+    "displayWidth": 856,
+    "variants": [
+      {
+        "src": "/images/marketing/nonconformance-v3-1x.webp",
+        "width": 856
+      },
+      {
+        "src": "/images/marketing/nonconformance-v3.webp",
+        "width": 2568
+      }
+    ]
   },
-  "conversation-mobile-v2": {
-    "width": 374,
-    "height": 763
+  "overview-mobile-v3": {
+    "width": 1035,
+    "height": 1428,
+    "displayWidth": 345,
+    "variants": [
+      {
+        "src": "/images/marketing/overview-mobile-v3-1x.webp",
+        "width": 345
+      },
+      {
+        "src": "/images/marketing/overview-mobile-v3.webp",
+        "width": 1035
+      }
+    ]
   },
-  "conversation-v2": {
-    "width": 790,
-    "height": 493
+  "overview-v3": {
+    "width": 2655,
+    "height": 1716,
+    "displayWidth": 885,
+    "variants": [
+      {
+        "src": "/images/marketing/overview-v3-1x.webp",
+        "width": 885
+      },
+      {
+        "src": "/images/marketing/overview-v3.webp",
+        "width": 2655
+      }
+    ]
   },
-  "history-mobile-v2": {
-    "width": 314,
-    "height": 524
+  "record-mobile-v3": {
+    "width": 1149,
+    "height": 2427,
+    "displayWidth": 383,
+    "variants": [
+      {
+        "src": "/images/marketing/record-mobile-v3-1x.webp",
+        "width": 383
+      },
+      {
+        "src": "/images/marketing/record-mobile-v3.webp",
+        "width": 1149
+      }
+    ]
   },
-  "history-v2": {
-    "width": 924,
-    "height": 424
+  "record-v3": {
+    "width": 2589,
+    "height": 1437,
+    "displayWidth": 863,
+    "variants": [
+      {
+        "src": "/images/marketing/record-v3-1x.webp",
+        "width": 863
+      },
+      {
+        "src": "/images/marketing/record-v3.webp",
+        "width": 2589
+      }
+    ]
   },
-  "inspection-mobile-v2": {
-    "width": 338,
-    "height": 213
+  "supplier-mobile-v3": {
+    "width": 1221,
+    "height": 1734,
+    "displayWidth": 407,
+    "variants": [
+      {
+        "src": "/images/marketing/supplier-mobile-v3-1x.webp",
+        "width": 407
+      },
+      {
+        "src": "/images/marketing/supplier-mobile-v3-2x.webp",
+        "width": 814
+      },
+      {
+        "src": "/images/marketing/supplier-mobile-v3.webp",
+        "width": 1221
+      }
+    ]
   },
-  "inspection-v2": {
-    "width": 805,
-    "height": 354
+  "update-mobile-v3": {
+    "width": 1290,
+    "height": 1824,
+    "displayWidth": 430,
+    "variants": [
+      {
+        "src": "/images/marketing/update-mobile-v3-1x.webp",
+        "width": 430
+      },
+      {
+        "src": "/images/marketing/update-mobile-v3.webp",
+        "width": 1290
+      }
+    ]
   },
-  "issue-mobile-v2": {
-    "width": 390,
-    "height": 575
-  },
-  "issue-v2": {
-    "width": 835,
-    "height": 605
-  },
-  "nonconformance-mobile-v2": {
-    "width": 374,
-    "height": 535
-  },
-  "nonconformance-v2": {
-    "width": 790,
-    "height": 401
-  },
-  "overview-mobile-v2": {
-    "width": 412,
-    "height": 463
-  },
-  "overview-v2": {
-    "width": 876,
-    "height": 568
-  },
-  "record-mobile-v2": {
-    "width": 383,
-    "height": 402
-  },
-  "record-v2": {
-    "width": 952,
-    "height": 450
-  },
-  "supplier-mobile-v2": {
-    "width": 375,
-    "height": 810
-  },
-  "update-mobile-v2": {
-    "width": 390,
-    "height": 620
-  },
-  "update-v2": {
-    "width": 480,
-    "height": 610
+  "update-v3": {
+    "width": 1440,
+    "height": 1830,
+    "displayWidth": 480,
+    "variants": [
+      {
+        "src": "/images/marketing/update-v3-1x.webp",
+        "width": 480
+      },
+      {
+        "src": "/images/marketing/update-v3.webp",
+        "width": 1440
+      }
+    ]
   }
 }
