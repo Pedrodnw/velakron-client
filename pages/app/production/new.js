@@ -41,7 +41,7 @@ const NewProductionRecord = () => {
     setFeedback(null)
     const result = await dispatch(createProductionRecord(payload))
     if (!result?.ok) {
-      setFeedback({ type: 'error', message: resultError(result, 'We could not save this production record.') })
+      setFeedback({ type: 'error', message: resultError(result, 'We could not save this production record.'), code: result.error?.code, details: result.error?.details })
       return
     }
     const id = result.payload?.data?.record?.id
