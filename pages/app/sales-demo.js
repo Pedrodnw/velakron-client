@@ -1,5 +1,6 @@
 import { useAppDialog } from '../../components/app/AppDialogProvider'
 import { normalizeApprovedParts, selectApprovedPart } from '../../components/app/sales-demo/approvedParts'
+import { changedTemplateFields } from '../../components/app/sales-demo/templateDraft'
 import {
   Activity,
   AlertTriangle,
@@ -674,7 +675,8 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
     setSaveState('saving')
     if (announce) setFeedback(null)
     const serialized = JSON.stringify(nextPayload)
-    const result = await dispatch(salesDemoRequest({ url: `/templates/${selectedId}/draft`, method: 'patch', data: { version: currentDraft.version, payload: nextPayload }, requestKey: 'sales-demo-save-draft' }))
+    const changes = changedTemplateFields(savedPayload.current, nextPayload)
+    const result = await dispatch(salesDemoRequest({ url: `/templates/${selectedId}/draft`, method: 'patch', data: { version: currentDraft.version, changes }, requestKey: 'sales-demo-save-draft' }))
     savingRef.current = false
     if (!result?.ok) {
       setSaveState('error')
