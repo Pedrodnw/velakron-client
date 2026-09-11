@@ -8,6 +8,7 @@ import { getAuthStatus } from '../../store/slices/auth'
 import { captureVisualContextPreview } from './visualContextPreview'
 import { importStepInDisposableWorker } from './stepImportClient'
 import { registerModelViewer, requestModelViewer } from './modelViewerLease'
+import { modelFitDistance } from './modelFraming'
 
 const modelBytesPromises = new Map()
 const EMPTY_ITEMS = Object.freeze([])
@@ -447,8 +448,7 @@ const ModelViewer = ({
           if (box.isEmpty()) return
           const center = box.getCenter(new THREE.Vector3())
           const size = box.getSize(new THREE.Vector3())
-          const maximum = Math.max(size.x, size.y, size.z, 0.001)
-          const distance = (maximum / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)))) * 1.22
+          const distance = modelFitDistance(size, camera.fov, camera.aspect)
           camera.near = Math.max(distance / 1000, 0.001)
           camera.far = Math.max(distance * 1000, 1000)
           const viewDirection = new THREE.Vector3(1, -1, 0.72).normalize().multiplyScalar(distance)
