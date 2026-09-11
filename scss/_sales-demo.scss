@@ -435,6 +435,7 @@
 
   fieldset {
     display: grid;
+    min-width: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin: 0;
@@ -446,9 +447,10 @@
   }
 
   legend { padding: 0 7px; color: var(--app-text); font-size: 13px; font-weight: 750; }
-  label { display: grid; gap: 6px; }
+  label { display: grid; min-width: 0; gap: 6px; }
   label > span { color: var(--app-text-secondary); font-size: 11px; font-weight: 700; }
-  input, select, textarea { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid var(--app-border-strong); border-radius: 7px; background: var(--app-surface); color: var(--app-text); font: inherit; }
+  input, select, textarea { width: 100%; min-width: 0; min-height: 42px; padding: 10px 12px; border: 1px solid var(--app-border-strong); border-radius: 7px; background: var(--app-surface); color: var(--app-text); font: inherit; }
+  .salesDemoApprovedPart { grid-column: span 2; }
   &__wide { grid-column: 1 / -1; }
 
   > footer {
@@ -833,6 +835,7 @@
 }
 
 @media (max-width: 620px) {
+  .salesDemoTemplateForm .salesDemoApprovedPart { grid-column: 1; }
   .salesDemoControlPanel form,
   .salesDemoTemplateForm fieldset,
   .salesDemoCompanyEditor,

@@ -1,4 +1,5 @@
 import { useAppDialog } from '../../components/app/AppDialogProvider'
+import { normalizeApprovedParts, selectApprovedPart } from '../../components/app/sales-demo/approvedParts'
 import {
   Activity,
   AlertTriangle,
@@ -204,7 +205,7 @@ const CommandPanel = ({ session, journey, onChanged, onOpenScreen }) => {
     if (actionType === 'production.quality_issue') Object.assign(payload, { explanation: text, requested_action: requestedAction })
     if (actionType === 'production.expected_ship') payload.expected_ship_date = date
     if (actionType === 'production.advance_stage') Object.assign(payload, { stage, reason: 'Synthetic presenter update' })
-    if (actionType === 'production.assign') Object.assign(payload, { part_number: 'VK-DEMO-NEW', part_name: 'Priority flight component [Synthetic]', quantity: 12, required_offset: 14 })
+    if (actionType === 'production.assign') Object.assign(payload, { quantity: 12, required_offset: 14 })
     if (actionType === 'inspection.review_package') Object.assign(payload, { decision: inspectionDecision, note: text })
     setPending(true)
     setFeedback(null)
@@ -500,7 +501,8 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
     const next = result.payload?.data?.template
     const editable = next?.draft_version || next?.published_version
     setTemplate(next)
-    const nextPayload = editable?.payload ? clone(editable.payload) : null
+    let nextPayload = editable?.payload ? clone(editable.payload) : null
+    const storedPayload = nextPayload ? JSON.stringify(nextPayload) : ''
     if (nextPayload) {
       nextPayload.schema_version = 'sales-demo-template-v2'
       nextPayload.presentation ||= { persona: 'Cross-functional evaluation team', use_case: 'full_platform', duration_minutes: 20, tags: ['Full Platform'] }
@@ -520,14 +522,8 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
       preset_key: defaultPartPresetKey || partPresets[0]?.key || '',
       production_record_key: nextPayload.production_records?.[0]?.key || '',
     }
-    const selectedPreset = partPresets.find(item => item.key === nextPayload?.part_workspace?.preset_key)
-    if (nextPayload && selectedPreset) nextPayload.production_records = nextPayload.production_records.map(record => record.key === nextPayload.part_workspace.production_record_key ? {
-      ...record,
-      partNumber: selectedPreset.part_number,
-      partName: selectedPreset.name,
-      revision: selectedPreset.revision,
-    } : record)
-    savedPayload.current = nextPayload ? JSON.stringify(nextPayload) : ''
+    if (nextPayload) nextPayload = normalizeApprovedParts(nextPayload, partPresets)
+    savedPayload.current = storedPayload
     setPayload(nextPayload)
     setDraftVersion(next?.draft_version || null)
     draftVersionRef.current = next?.draft_version || null
@@ -631,7 +627,7 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
   const duplicateRecord = index => setPayload(current => {
     const source = current.production_records[index]
     const suffix = Date.now().toString(36).slice(-5)
-    const copy = { ...clone(source), key: `${source.key}-${suffix}`, reference: `${source.reference}-${suffix.toUpperCase()}`, partNumber: `${source.partNumber}-${suffix.toUpperCase()}` }
+    const copy = { ...clone(source), key: `${source.key}-${suffix}`, reference: `${source.reference}-${suffix.toUpperCase()}` }
     return { ...current, production_records: [...current.production_records.slice(0, index + 1), copy, ...current.production_records.slice(index + 1)] }
   })
   const removeRecord = index => setPayload(current => {
@@ -888,8 +884,9 @@ const TemplateEditor = ({ campaigns, defaultPartPresetKey, partPresets, template
           <div className='salesDemoProductionEditor'>{payload.production_records.map((record, index) => <article key={record.key}>
             <header><strong>{record.partNumber || `Record ${index + 1}`}</strong><div className='salesDemoProductionEditor__actions'><StatusBadge>{formatLabel(record.stage)}</StatusBadge><button type='button' onClick={() => moveRecord(index, -1)} disabled={index === 0} aria-label={`Move ${record.partNumber} up`}><ArrowUp aria-hidden='true' /></button><button type='button' onClick={() => moveRecord(index, 1)} disabled={index === payload.production_records.length - 1} aria-label={`Move ${record.partNumber} down`}><ArrowDown aria-hidden='true' /></button><button type='button' onClick={() => duplicateRecord(index)} aria-label={`Duplicate ${record.partNumber}`}><CopyPlus aria-hidden='true' /></button><button type='button' onClick={() => removeRecord(index)} disabled={payload.production_records.length <= 1} aria-label={`Remove ${record.partNumber}`}><Trash2 aria-hidden='true' /></button></div></header>
             <div>
-              <label><span>Part number</span><input value={record.partNumber || ''} onChange={event => updateRecord(index, 'partNumber', event.target.value)} /></label>
-              <label><span>Part name</span><input value={record.partName || ''} onChange={event => updateRecord(index, 'partName', event.target.value)} /></label>
+              <label className='salesDemoApprovedPart'><span>Approved model and drawing</span><select value={partPresets.find(preset => preset.part_number === record.partNumber)?.key || ''} onChange={event => setPayload(current => selectApprovedPart(current, index, partPresets.find(preset => preset.key === event.target.value)))}><option value='' disabled>Choose an approved Velakron part</option>{partPresets.map(preset => <option key={preset.key} value={preset.key}>{preset.part_number} · {preset.name.replace(' [Synthetic]', '')}</option>)}</select></label>
+              <label className='salesDemoApprovedPart'><span>Part name</span><input value={record.partName || ''} readOnly /></label>
+              <label><span>Drawing revision</span><input value={record.revision || ''} readOnly /></label>
               <label><span>Stage</span><select value={record.stage} onChange={event => updateRecord(index, 'stage', event.target.value)}><option value='assigned'>Assigned</option><option value='accepted'>Accepted</option><option value='material_ordered'>Material ordered</option><option value='material_received'>Material received</option><option value='programming'>Programming</option><option value='in_production'>In production</option><option value='inspection'>Inspection</option><option value='ready_to_ship'>Ready to ship</option><option value='shipped'>Shipped</option><option value='delivered'>Delivered</option><option value='quality_review'>Quality review</option><option value='approved'>Approved</option></select></label>
               <label><span>Supplier acceptance</span><select value={record.acceptance || 'accepted'} onChange={event => updateRecord(index, 'acceptance', event.target.value)}><option value='pending'>Pending</option><option value='accepted'>Accepted</option></select></label>
               <label><span>Lifecycle</span><select value={record.lifecycle || 'active'} onChange={event => updateRecord(index, 'lifecycle', event.target.value)}><option value='active'>Active</option><option value='completed'>Completed</option></select></label>
