@@ -23,3 +23,12 @@ export const validateVisibilityContact = contact => {
 }
 
 export const firstVisibilityContactError = errors => visibilityContactFieldOrder.find(field => errors?.[field]) || ''
+
+export const visibilityContactErrorSummary = errors => {
+  const invalidFields = visibilityContactFieldOrder.filter(field => errors?.[field])
+  if (!invalidFields.length) return ''
+  if (invalidFields.length === 1 && invalidFields[0] === 'consent') {
+    return 'Contact permission is required. Please check the highlighted box below.'
+  }
+  return 'Please correct the information marked below.'
+}

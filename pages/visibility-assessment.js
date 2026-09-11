@@ -27,7 +27,7 @@ import {
   saveVisibilityAnswers,
   startVisibilityAssessment,
 } from '../store/visibilityAssessment'
-import { firstVisibilityContactError, validateVisibilityContact } from '../store/visibilityContact'
+import { firstVisibilityContactError, validateVisibilityContact, visibilityContactErrorSummary } from '../store/visibilityContact'
 
 export const visibilityQuestions = [
   { key: 'supplier_count', label: 'How many outside suppliers are you actively managing?', note: 'Count the suppliers your team relies on for active production.', options: [['1_10', '1–10'], ['11_50', '11–50'], ['51_200', '51–200'], ['200_plus', '200+']] },
@@ -266,7 +266,7 @@ const VisibilityAssessment = () => {
       const next = { ...contactErrors }
       delete next[name]
       setContactErrors(next)
-      setError(Object.keys(next).length ? 'Please correct the information marked below.' : '')
+      setError(visibilityContactErrorSummary(next))
     }
   }
 
@@ -285,7 +285,7 @@ const VisibilityAssessment = () => {
     const validationErrors = validateVisibilityContact(contact)
     if (Object.keys(validationErrors).length) {
       setContactErrors(validationErrors)
-      setError('Please correct the information marked below.')
+      setError(visibilityContactErrorSummary(validationErrors))
       focusContactError(validationErrors)
       return
     }
@@ -295,7 +295,7 @@ const VisibilityAssessment = () => {
     if (!response?.ok) {
       const fieldErrors = response?.error?.details || {}
       setContactErrors(fieldErrors)
-      setError(Object.keys(fieldErrors).length ? 'Please correct the information marked below.' : errorMessage(response))
+      setError(visibilityContactErrorSummary(fieldErrors) || errorMessage(response))
       focusContactError(fieldErrors)
       return
     }
