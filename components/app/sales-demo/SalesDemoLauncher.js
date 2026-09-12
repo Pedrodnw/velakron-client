@@ -1,6 +1,7 @@
 import { Building2, ExternalLink, Factory, MonitorPlay, Share2, Sparkles } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../design-system'
+import FormMessage from '../../auth/FormMessage'
 import CrmModal from '../crm/CrmModal'
 
 const idOf = value => String(value?.id || value?._id || value || '')
@@ -10,7 +11,8 @@ const templateMeta = template => {
   return payload.presentation || {}
 }
 
-const SalesDemoLauncher = ({ open, templates, initialTemplateId = '', working, onClose, onLaunch, onShare }) => {
+const SalesDemoLauncher = ({ open, templates, initialTemplateId = '', working, error = '', onClose, onLaunch, onShare }) => {
+  const errorRef = useRef(null)
   const published = useMemo(() => templates.filter(item => item.published_version), [templates])
   const [step, setStep] = useState(1)
   const [purpose, setPurpose] = useState('practice')
@@ -19,6 +21,10 @@ const SalesDemoLauncher = ({ open, templates, initialTemplateId = '', working, o
   const [label, setLabel] = useState('')
   const [prospectName, setProspectName] = useState('')
   const [companyName, setCompanyName] = useState('')
+
+  useEffect(() => {
+    if (open && error) errorRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [open, error])
 
   useEffect(() => {
     if (!open) return
@@ -79,6 +85,7 @@ const SalesDemoLauncher = ({ open, templates, initialTemplateId = '', working, o
         {supported.includes('supplier') && <button type='button' className={experience === 'supplier' ? 'is-selected' : ''} onClick={() => setExperience('supplier')}><Factory aria-hidden='true' /><strong>Supplier workspace</strong><span>Assignments, production updates, collaboration, and inspection.</span></button>}
       </div>{purpose === 'share' && <p className='salesDemoLauncher__hint'>You can let visitors choose their role during link setup.</p>}</section>}
       {step === 4 && <section className='salesDemoLauncherReview'><p className='technicalLabel'>Review and launch</p><div><span><small>Purpose</small><strong>{purpose === 'presenter_led' ? 'Presenter-led demo' : purpose === 'share' ? 'Shared demo link' : 'Private practice'}</strong></span><span><small>Template</small><strong>{selected?.name}</strong></span><span><small>Guest role</small><strong>{experience === 'oem' ? 'OEM' : 'Supplier'}</strong></span></div>{purpose !== 'share' && <div className='salesDemoLauncherPersonalize'><label><span>Label this demo <small>Optional</small></span><input value={label} maxLength={180} onChange={event => setLabel(event.target.value)} placeholder={purpose === 'practice' ? 'Example: Monday rehearsal' : 'Example: Acme discovery call'} /><small>This helps you recognize it later.</small></label><label><span>Prospect name <small>Optional</small></span><input value={prospectName} maxLength={160} onChange={event => setProspectName(event.target.value)} placeholder='Example: Jamie Rivera' /></label><label><span>Prospect company <small>Optional</small></span><input value={companyName} maxLength={180} onChange={event => setCompanyName(event.target.value)} placeholder='Example: Acme Aerospace' /></label></div>}<aside><strong>What happens next</strong><p>{purpose === 'share' ? 'You will choose link details, expiration, and whether the link follows future template versions.' : `A new isolated ${experience.toUpperCase()} workspace opens in another tab. It will be clearly marked as a private Sales Demo.`}</p></aside></section>}
+      {error && <div ref={errorRef}><FormMessage type='error'>{error}</FormMessage></div>}
     </div>
   </CrmModal>
 }

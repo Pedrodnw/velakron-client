@@ -1017,6 +1017,7 @@ const SalesDemoDashboard = () => {
   const openSession = session => router.replace({ pathname: router.pathname, query: { tab: session.status === 'active' ? 'sessions' : 'history', session: idOf(session) } }, undefined, { shallow: true })
   const closeSession = () => router.replace({ pathname: router.pathname, query: { tab } }, undefined, { shallow: true })
   const openLauncher = template => {
+    setFeedback(null)
     launcherStartedAt.current = Date.now()
     dispatch(salesDemoTelemetry('launcher.opened'))
     setLauncherTemplateId(idOf(template))
@@ -1081,7 +1082,7 @@ const SalesDemoDashboard = () => {
       {tab === 'history' && (sessionId ? <SessionDetail sessionId={sessionId} onClose={closeSession} /> : <SalesDemoSessionExplorer history sessions={sessions} pagination={sessionPagination} onQuery={queryHistory} templates={templates} campaigns={campaigns} loading={loadingByResource.sessions} onOpen={openSession} onStart={() => openLauncher()} onShare={() => openShare()} />)}
       {tab === 'tutorial' && <SalesDemoTutorial onNavigate={setTab} onStart={() => openLauncher()} />}
     </>}
-    <SalesDemoLauncher open={launcherOpen} templates={templates} initialTemplateId={launcherTemplateId} working={Boolean(previewing)} onClose={closeLauncher} onLaunch={launchDemo} onShare={template => { launcherStartedAt.current = 0; setLauncherOpen(false); openShare(template) }} />
+    <SalesDemoLauncher open={launcherOpen} templates={templates} initialTemplateId={launcherTemplateId} working={Boolean(previewing)} error={feedback?.type === 'error' ? feedback.message : ''} onClose={closeLauncher} onLaunch={launchDemo} onShare={template => { launcherStartedAt.current = 0; setLauncherOpen(false); openShare(template) }} />
   </>
 }
 
