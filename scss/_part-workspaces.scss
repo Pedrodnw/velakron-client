@@ -328,7 +328,7 @@
 .partPdfControlGroup label input { width: 35px; border: 0; outline: 0; background: transparent; color: var(--app-text); font: inherit; font-size: 10px; font-weight: 800; text-align: center; }
 .partPdfControlGroup label b { font-size: 9px; font-weight: 700; }
 .partPdfControlGroup .partPdfToolbar__scale { min-width: 49px; font-variant-numeric: tabular-nums; }
-.partPdfWorkspace { display: grid; grid-template-columns: minmax(0, 1fr); height: clamp(540px, 63vh, 690px); min-height: 540px; }
+.partPdfWorkspace { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: clamp(540px, 63vh, 690px); min-height: 540px; }
 .partPdfWorkspace.has-page-rail { grid-template-columns: 150px minmax(0, 1fr); }
 .partPdfPageRail { overflow-x: hidden; overflow-y: auto; padding: 14px 10px; border-right: 1px solid var(--app-border); background: #f8fafc; scrollbar-width: thin; }
 .partPdfPageRail button { display: grid; width: 100%; gap: 7px; margin: 0 0 11px; padding: 7px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--app-text-muted); cursor: pointer; text-align: center; }
@@ -337,12 +337,12 @@
 .partPdfPageRail button > span { display: grid; min-height: 78px; place-items: center; overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background: #fff; box-shadow: 0 3px 9px rgba(22, 38, 63, .08); }
 .partPdfPageRail canvas { display: block; max-width: 100%; max-height: 118px; }
 .partPdfPageRail strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
-.partPdfViewport { position: relative; overflow: auto; min-width: 0; background-color: #edf1f6; background-image: linear-gradient(rgba(32, 54, 82, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(32, 54, 82, .035) 1px, transparent 1px); background-size: 28px 28px; scrollbar-color: #b8c1ce transparent; }
+.partPdfViewport { position: relative; overflow: auto; min-width: 0; min-height: 0; background-color: #edf1f6; background-image: linear-gradient(rgba(32, 54, 82, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(32, 54, 82, .035) 1px, transparent 1px); background-size: 28px 28px; scrollbar-color: #b8c1ce transparent; }
 .partPdfSheet { position: relative; z-index: 1; min-width: 1px; min-height: 1px; margin: 22px auto; background: #fff; box-shadow: 0 12px 34px rgba(20, 35, 55, .16), 0 0 0 1px rgba(20, 35, 55, .07); touch-action: pan-x pan-y; }
 .partPdfSheet canvas { display: block; background: #fff; }
 .partPdfDrawing.is-annotating .partPdfSheet { cursor: crosshair; touch-action: none; }
 .partPdfDrawing.is-annotating .partPdfSheet canvas { pointer-events: none; }
-.partPdfRendering { position: sticky; z-index: 5; top: 12px; display: flex; width: fit-content; gap: 7px; align-items: center; margin: 12px auto -46px; padding: 8px 11px; border: 1px solid var(--app-border); border-radius: 999px; background: rgba(255, 255, 255, .94); color: var(--app-text-muted); box-shadow: 0 7px 20px rgba(22, 38, 63, .12); font-size: 9px; font-weight: 750; }
+.partPdfRendering { position: absolute; z-index: 5; top: 12px; left: 50%; transform: translateX(-50%); display: flex; width: fit-content; gap: 7px; align-items: center; margin: 0; padding: 8px 11px; border: 1px solid var(--app-border); border-radius: 999px; background: rgba(255, 255, 255, .94); color: var(--app-text-muted); box-shadow: 0 7px 20px rgba(22, 38, 63, .12); font-size: 9px; font-weight: 750; }
 .partPdfRendering svg { width: 14px; }
 .partPdfDrawing .partDrawingAnchor b { position: absolute; top: -9px; left: -9px; display: grid; width: 17px; height: 17px; place-items: center; border: 2px solid #fff; border-radius: 999px; background: var(--vk-info); color: #fff; box-shadow: 0 2px 7px rgba(22, 38, 63, .24); font-size: 8px; line-height: 1; }
 .partPdfDrawing .partDrawingAnchor.is-selected b { background: var(--vk-warning); }
@@ -915,7 +915,8 @@
   .partPdfControlGroup button:not(.partPdfToolbar__scale):not(.partPdfToolbar__fitWidth) { font-size: 0; }
   .partPdfControlGroup button svg { margin: 0; }
   .partPdfWorkspace,
-  .partPdfWorkspace.has-page-rail { height: min(64vh, 580px); min-height: 430px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .partPdfWorkspace.has-page-rail { height: min(64vh, 580px); min-height: 430px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .partPdfWorkspace.has-page-rail { grid-template-rows: auto minmax(0, 1fr); }
   .partPdfPageRail { display: flex; overflow-x: auto; overflow-y: hidden; gap: 8px; padding: 8px; border-right: 0; border-bottom: 1px solid var(--app-border); }
   .partPdfPageRail button { width: 86px; min-width: 86px; margin: 0; }
   .partPdfPageRail button > span { min-height: 58px; }
