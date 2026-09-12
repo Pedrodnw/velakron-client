@@ -55,6 +55,24 @@ describe('Collaboration V2 client contracts', () => {
     expect(html).toContain('draft is preserved')
     expect(html).toMatch(/<button[^>]*type="submit"[^>]*disabled=""/)
   })
+  it('explains unknown scope without implying that any quantity is unaffected', () => {
+    const item = { id: 'formal', production_record: 'primary', category: 'non_conformance', workflow: { version: FORMAL_V2, state: 'supplier_scope_required', current_actor_side: 'supplier', data: {} } }
+    const html = render(FormalDetail, { item, context: {}, files: [], record: { id: 'primary', quantity: 50 } })
+    expect(html).toContain('Affected parts awaiting supplier confirmation')
+    expect(html).not.toContain('outside the reported scope')
+    expect(html).not.toContain('NaN')
+    const form = render(FormalActionForm, { item, record: { quantity: 50 }, action: { key: 'submit_affected_scope', label: 'Confirm affected parts', data_kind: 'affected_scope' } })
+    expect(form).toContain('Production quantity: 50')
+    expect(form).toContain('Affected quantity')
+    expect(form).toContain('Lot (optional)')
+    expect(form).toMatch(/type="number"[^>]*required=""[^>]*min="1"/)
+  })
+  it('uses primary production scope when showing the formal record from another production', () => {
+    const item = { id: 'formal', category: 'non_conformance', workflow: { version: FORMAL_V2, data: { affected_scope: { affected_quantity: 3 } } } }
+    const html = render(FormalDetail, { item, detail: { affected_production_records: [{ id: 'primary', quantity: 20, primary: true }] }, context: {}, files: [], record: { id: 'related', quantity: 100 } })
+    expect(html).toContain('17 outside the reported scope')
+    expect(html).not.toContain('97 outside')
+  })
   it('renders production-only approval, named investigation ownership, and legacy history', () => {
     const accepted = render(TechnicalAcceptance, { acceptance: { change: { original_condition: 'Original drawing condition', accepted_change: 'Accepted synthetic process', effectivity: 'This lot only' }, approval: { actor: { display_name: 'OEM reviewer' }, occurred_at: '2026-09-07T12:00:00Z' } } })
     expect(accepted).toContain('Accepted for this production only')

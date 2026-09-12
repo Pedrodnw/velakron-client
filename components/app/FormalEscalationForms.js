@@ -33,29 +33,51 @@ export const ResolutionFields = ({ value, onChange, files, visualAnchor, evidenc
     {value.technical_change && <fieldset className='formalV2__fieldset'><legend>Proposed production exception</legend>{[['original_condition', 'Original condition'], ['accepted_change', 'Proposed change'], ['reason', 'Technical justification'], ['effectivity', 'Effectivity: lot, quantity, serial range, or scope']].map(([key, label]) => <TextField key={key} label={label} value={value.technical_change[key]} onChange={next => set('technical_change', { ...value.technical_change, [key]: next })} />)}<EvidenceSelect emptyHint={evidenceHint} files={files} value={value.technical_change.attachment_ids} onChange={next => set('technical_change', { ...value.technical_change, attachment_ids: next })} /></fieldset>}
   </>
 }
+const emptyScope = () => ({ affected_quantity: '', produced_quantity: '', lot: '', serial_start: '', serial_end: '', shipment_reference: '', quantity_override_reason: '', evidence_ids: [] })
+const scopePayload = value => ({ ...value, affected_quantity: Number(value.affected_quantity), produced_quantity: value.produced_quantity ? Number(value.produced_quantity) : null })
+export const AffectedScopeFields = ({ value, onChange, record, files, evidenceHint }) => {
+  const set = (field, next) => onChange({ ...value, [field]: next })
+  const exceeds = Number(value.affected_quantity) > Number(value.produced_quantity || record?.quantity) || Number(value.produced_quantity) > Number(record?.quantity)
+  return <fieldset className='formalV2__fieldset'>
+    <legend>Affected parts</legend>
+    <p>Production quantity: {record?.quantity ?? 'Unknown'}{record?.public_reference ? ` · ${record.public_reference}` : ''}. Identify the affected quantity and any known lot, serial, or shipment details.</p>
+    <div className='productionFormGrid'>
+      <TextField type='number' label='Affected quantity' value={value.affected_quantity} onChange={next => set('affected_quantity', next)} min='1' step='1' />
+      <TextField type='number' label='Quantity produced' value={value.produced_quantity} onChange={next => set('produced_quantity', next)} min='1' step='1' required={false} />
+      {[['lot', 'Lot'], ['serial_start', 'First serial'], ['serial_end', 'Last serial'], ['shipment_reference', 'Shipment reference']].map(([field, label]) => <TextField key={field} type='text' label={label} value={value[field]} onChange={next => set(field, next)} required={false} minLength={1} maxLength={240} />)}
+    </div>
+    {exceeds && <TextField label='Explain quantity beyond this production' value={value.quantity_override_reason} onChange={next => set('quantity_override_reason', next)} maxLength={1000} />}
+    <EvidenceSelect emptyHint={evidenceHint} files={files} value={value.evidence_ids} onChange={next => set('evidence_ids', next)} />
+  </fieldset>
+}
 export const FormalCreationForm = ({ record, organizationType, files = [], relatedRecords = [], formalRecords = [], defaultRelatedFormal = '', onSubmit, onCancel, pending, unavailable = false, escalation = false, onDraftChange, version = 0 }) => {
   const [reviewedVersion, setReviewedVersion] = useState(version)
   const [category, setCategory] = useState('issue')
   const [explanation, setExplanation] = useState('')
-  const [scope, setScope] = useState({ affected_quantity: '', produced_quantity: '', lot: '', serial_start: '', serial_end: '', shipment_reference: '', quantity_override_reason: '', evidence_ids: [] })
+  const [scope, setScope] = useState(emptyScope)
+  const [provideScope, setProvideScope] = useState(organizationType !== 'oem')
   const [resolution, setResolution] = useState(null)
   const [related, setRelated] = useState([])
   const [formal, setFormal] = useState(defaultRelatedFormal ? [defaultRelatedFormal] : [])
   const [key] = useState(newCommandKey)
   const group = useId()
-  const setScopeField = (field, value) => setScope(current => ({ ...current, [field]: value }))
-  const exceeds = Number(scope.affected_quantity) > Number(scope.produced_quantity || record?.quantity) || Number(scope.produced_quantity) > Number(record?.quantity)
   return <form className='drawerForm formalV2' onChange={() => onDraftChange?.(true)} onSubmit={async event => {
     event.preventDefault()
     if (unavailable || reviewedVersion !== version) return
-    const initial = category === 'non_conformance' ? { affected_scope: { ...scope, affected_quantity: Number(scope.affected_quantity), produced_quantity: scope.produced_quantity ? Number(scope.produced_quantity) : null } } : category === 'issue' && resolution ? { resolution } : {}
+    const initial = category === 'non_conformance' ? (provideScope ? { affected_scope: scopePayload(scope) } : {}) : category === 'issue' && resolution ? { resolution } : {}
     const result = await onSubmit({ category, explanation, initial, related_production_record_ids: related, related_formal_record_ids: formal, idempotency_key: key, version: reviewedVersion })
     if (result?.ok) onDraftChange?.(false)
   }}>
     <p>{escalation ? 'Escalation preserves the complete conversation and makes it read-only. Continue all decisions and evidence in the new formal record.' : `Create a shared formal record for ${record?.public_reference || 'this production'}.`}</p>
     <fieldset className='attentionCategoryField'><legend>Choose the required response</legend><div className='formalV2__categories'>{FORMAL_CATEGORIES.map(item => <label key={item.value} className={`attentionCategoryOption ${category === item.value ? 'attentionCategoryOption--selected' : ''}`}><input type='radio' name={group} checked={category === item.value} onChange={() => setCategory(item.value)} /><span><strong>{item.label}</strong><small>{item.description}</small></span></label>)}</div></fieldset>
     <TextField label='What requires formal action?' value={explanation} onChange={setExplanation} maxLength={1000} />
-    {category === 'non_conformance' && <fieldset className='formalV2__fieldset'><legend>Affected scope</legend><p>Production quantity: {record?.quantity ?? 'Unknown'}. Only the quantity identified below is affected by this Non-Conformance.</p><div className='productionFormGrid'><TextField type='number' label='Affected quantity' value={scope.affected_quantity} onChange={value => setScopeField('affected_quantity', value)} min='1' step='1' /><TextField type='number' label='Quantity produced' value={scope.produced_quantity} onChange={value => setScopeField('produced_quantity', value)} min='1' step='1' required={false} />{[['lot', 'Lot'], ['serial_start', 'First serial'], ['serial_end', 'Last serial'], ['shipment_reference', 'Shipment reference']].map(([field, label]) => <TextField key={field} type='text' label={label} value={scope[field]} onChange={value => setScopeField(field, value)} required={false} minLength={1} maxLength={240} />)}</div>{exceeds && <TextField label='Explain quantity beyond this production' value={scope.quantity_override_reason} onChange={value => setScopeField('quantity_override_reason', value)} maxLength={1000} />}<EvidenceSelect emptyHint={escalation ? 'Attach evidence to the source conversation before escalating.' : undefined} files={files} value={scope.evidence_ids} onChange={value => setScopeField('evidence_ids', value)} /></fieldset>}
+    {category === 'non_conformance' && <>
+      {organizationType === 'oem' && <>
+        <p className='formalV2__notice'>The supplier will confirm the affected quantity and any lot, serial, or shipment details before continuing with containment and investigation. You can escalate now without those details.</p>
+        <label className='productionCheck'><input type='checkbox' checked={provideScope} onChange={event => setProvideScope(event.target.checked)} /><span><strong>Provide known affected-part details</strong><small>Optional. Include them only if you already know the affected quantity.</small></span></label>
+      </>}
+      {provideScope && <AffectedScopeFields value={scope} onChange={setScope} record={record} files={files} evidenceHint={escalation ? 'Attach evidence to the source conversation before escalating.' : undefined} />}
+    </>}
     {category === 'issue' && organizationType === 'supplier' && <><label className='productionCheck'><input type='checkbox' checked={Boolean(resolution)} onChange={event => setResolution(event.target.checked ? emptyResolution() : null)} /><span><strong>Include a proposed resolution</strong><small>The Issue will go directly to OEM approval.</small></span></label>{resolution && <ResolutionFields value={resolution} onChange={setResolution} files={files} evidenceHint={escalation ? 'Attach evidence to the source conversation before escalating.' : undefined} />}</>}
     {!!(relatedRecords.length || formalRecords.length) && <details className='formalV2__links' open={Boolean(defaultRelatedFormal)}><summary>Link other records (optional){related.length + formal.length > 0 && ` · ${related.length + formal.length} selected`}</summary>
     {!!relatedRecords.length && <fieldset className='partCaseLinks'><legend>Additional affected production records (optional)</legend>{relatedRecords.map(item => <label key={idOf(item)}><input type='checkbox' checked={related.includes(idOf(item))} onChange={event => setRelated(event.target.checked ? [...related, idOf(item)] : related.filter(id => id !== idOf(item)))} /><span>{item.public_reference}</span></label>)}</fieldset>}
@@ -68,21 +90,23 @@ export const FormalCreationForm = ({ record, organizationType, files = [], relat
 
 const initialActionData = (action, item) => {
   const data = item.workflow?.data || {}
+  if (action === 'submit_affected_scope') return data.affected_scope || emptyScope()
   if (action === 'submit_resolution') return data.resolution || emptyResolution()
   if (action === 'submit_investigation') return data.investigation || { owner_membership_id: '', preliminary_cause: '', root_cause: '', method: '', notes: '' }
   if (action === 'submit_disposition') return data.disposition || { type: 'rework', instructions: '', reason: '', verification_plan: '' }
   return { summary: '', attachment_ids: [] }
 }
-export const FormalActionForm = ({ item, action, participants = [], files = [], pending, unavailable = false, onSubmit, onCancel, onDraftChange }) => {
+export const FormalActionForm = ({ item, action, record, participants = [], files = [], pending, unavailable = false, onSubmit, onCancel, onDraftChange }) => {
   const [data, setData] = useState(() => initialActionData(action.key, item))
   const [reviewedVersion, setReviewedVersion] = useState(item.version)
   const [note, setNote] = useState('')
   const set = (field, value) => setData(current => ({ ...current, [field]: value }))
   const labels = { submit_containment: 'Containment and affected-part isolation', complete_corrective_action: 'Corrective action completed', submit_evidence: 'Verification evidence and results', verify_and_close: 'OEM final verification', add_message: 'Message' }
-  return <form className='drawerForm formalV2' onChange={() => onDraftChange?.(true)} onSubmit={event => { event.preventDefault(); if (!unavailable && reviewedVersion === item.version) onSubmit({ action: action.key, version: reviewedVersion, data: action.data_kind || action.key === 'add_message' ? data : {}, note }) }}>
+  return <form className='drawerForm formalV2' onChange={() => onDraftChange?.(true)} onSubmit={event => { event.preventDefault(); if (!unavailable && reviewedVersion === item.version) onSubmit({ action: action.key, version: reviewedVersion, data: action.data_kind === 'affected_scope' ? scopePayload(data) : action.data_kind || action.key === 'add_message' ? data : {}, note }) }}>
     <h3>{action.label}</h3>
     {action.key === 'release_production' && <p>Release this Block only when production may safely resume. Any other active Block will continue to prevent progress.</p>}
     {action.key === 'approve_resolution' && <p>{item.category === 'production_block' ? 'Approve the supplier’s solution. Production remains blocked until you separately release production.' : 'Approve the proposed resolution and permanently close this Issue.'}</p>}
+    {action.data_kind === 'affected_scope' && <><p>The OEM escalated this concern before the affected parts were confirmed. Identify the scope here; containment and investigation follow.</p><AffectedScopeFields value={data} onChange={setData} record={record} files={files} evidenceHint={item.originating_conversation ? 'Use shared evidence from the source conversation.' : undefined} /></>}
     {action.data_kind === 'resolution' && <ResolutionFields value={data} onChange={setData} files={files} visualAnchor={item.visual_anchor} />}
     {action.data_kind === 'investigation' && <><label className='selectField'><span>Supplier investigation owner</span><select value={data.owner_membership_id} onChange={event => set('owner_membership_id', event.target.value)} required><option value=''>Choose an active supplier member</option>{participants.map(person => <option value={person.id} key={person.id}>{person.name}</option>)}</select></label>{[['preliminary_cause', 'Preliminary cause', false], ['root_cause', 'Root cause', true], ['method', 'Investigation method and findings', true], ['notes', 'Investigation notes', false]].map(([field, label, required]) => <TextField key={field} label={label} required={required} value={data[field]} onChange={value => set(field, value)} />)}</>}
     {action.data_kind === 'disposition' && <><label className='selectField'><span>Proposed disposition</span><select value={data.type} onChange={event => set('type', event.target.value)}>{['use_as_is', 'repair', 'rework', 'scrap', 'return'].map(type => <option key={type} value={type}>{formatLabel(type)}</option>)}</select></label><TextField label={`${formatLabel(data.type)} instructions and scope`} value={data.instructions} onChange={value => set('instructions', value)} /><TextField label='Disposition justification' value={data.reason} onChange={value => set('reason', value)} /><TextField label='Verification plan' value={data.verification_plan} onChange={value => set('verification_plan', value)} /></>}
