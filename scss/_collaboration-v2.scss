@@ -9,6 +9,7 @@
   button:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--vk-focus-ring); outline-offset: 3px; }
   .textAreaField, .selectField { min-width: 0; }
   .textAreaField textarea { min-height: 100px; resize: vertical; }
+  .textAreaField textarea.autoGrowingTextarea { overflow-y: hidden; resize: none; }
   .selectField input { width: 100%; border: 1px solid var(--vk-workspace-border-strong); border-radius: 8px; padding: 12px; background: var(--vk-workspace-surface); color: inherit; font: inherit; }
   .drawerForm { margin-top: 20px; }
   .partCaseMessages__thread article { grid-template-columns: minmax(0, 1fr); width: 100%; }

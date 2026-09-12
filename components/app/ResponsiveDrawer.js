@@ -1,9 +1,10 @@
 import { X } from 'lucide-react'
 import { useEffect, useId, useRef } from 'react'
 
-const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
+const ResponsiveDrawer = ({ open, title, children, footer, onClose, wide = false }) => {
   const titleId = useId()
   const drawerRef = useRef(null)
+  const backdropRef = useRef(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
@@ -20,6 +21,21 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
     }
     const previousRootOverflow = document.documentElement.style.overflow
     const scrollbarGap = Math.max(0, window.innerWidth - document.documentElement.clientWidth)
+    const viewport = window.visualViewport
+    let viewportFrame
+    const fitViewport = () => {
+      if (!backdropRef.current || (viewport && viewport.scale !== 1)) return
+      backdropRef.current.style.setProperty('--drawer-height', `${viewport?.height || window.innerHeight}px`)
+      backdropRef.current.style.setProperty('--drawer-top', `${viewport?.offsetTop || 0}px`)
+    }
+    const scheduleViewport = () => {
+      cancelAnimationFrame(viewportFrame)
+      viewportFrame = requestAnimationFrame(fitViewport)
+    }
+    fitViewport()
+    viewport?.addEventListener('resize', scheduleViewport)
+    viewport?.addEventListener('scroll', scheduleViewport)
+    window.addEventListener('resize', scheduleViewport)
     document.documentElement.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
     document.body.style.position = 'fixed'
@@ -40,20 +56,24 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
       else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
     }
-    drawerRef.current?.focus()
+    drawerRef.current?.focus({ preventScroll: true })
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
+      cancelAnimationFrame(viewportFrame)
+      viewport?.removeEventListener('resize', scheduleViewport)
+      viewport?.removeEventListener('scroll', scheduleViewport)
+      window.removeEventListener('resize', scheduleViewport)
       document.documentElement.style.overflow = previousRootOverflow
       Object.assign(document.body.style, previousBody)
-      window.scrollTo(0, scrollPosition)
-      previousFocus?.focus?.()
+      window.scrollTo({ top: scrollPosition, left: 0, behavior: 'instant' })
+      previousFocus?.focus?.({ preventScroll: true })
     }
   }, [open])
 
   if (!open) return null
 
-  return <div className='drawerBackdrop' role='presentation' onMouseDown={event => {
+  return <div className='drawerBackdrop' ref={backdropRef} role='presentation' onMouseDown={event => {
     if (event.target === event.currentTarget) onClose()
   }}>
     <aside className={`responsiveDrawer${wide ? ' responsiveDrawer--wide' : ''}`} role='dialog' aria-modal='true' aria-labelledby={titleId} tabIndex={-1} ref={drawerRef}>
@@ -62,6 +82,7 @@ const ResponsiveDrawer = ({ open, title, children, onClose, wide = false }) => {
         <button type='button' aria-label='Close panel' onClick={onClose}><X aria-hidden='true' /></button>
       </header>
       <div className='responsiveDrawer__body' onWheel={event => event.stopPropagation()} onTouchMove={event => event.stopPropagation()}>{children}</div>
+      {footer && <footer className='responsiveDrawer__footer'>{footer}</footer>}
     </aside>
   </div>
 }

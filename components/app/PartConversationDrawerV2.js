@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { ArrowUpRight, Paperclip, ShieldAlert } from 'lucide-react'
 import { Button } from '../design-system'
 import FormMessage from '../auth/FormMessage'
@@ -11,6 +11,7 @@ import { CONVERSATION_V2, newCommandKey } from '../../store/collaborationV2'
 
 const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], relatedCompanyName, organizationType, pending, feedback, onClose, onCreate, onMessage, onAction, onPromote, onOpenFormal, onOpenAnchor, onUpload, onDownloadAttachment, selectedAnchor, itarControlled, upload, visual }) => {
   const item = itemDetail?.item
+  const createFormId = useId()
   const [draft, setDraft] = useState({ title: '', description: '', topic: 'general', priority: 'normal', due_at: '' })
   const [query, setQuery] = useState('')
   const [reply, setReply] = useState('')
@@ -49,9 +50,10 @@ const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], r
   }
   const waiting = item?.needs_response_from === 'none' ? 'Open discussion — no response requested' : item?.needs_response_from === organizationType ? 'Your company’s response is requested' : `Waiting on ${relatedCompanyName || (organizationType === 'supplier' ? 'OEM' : 'supplier')}`
   const canWrite = item?.state === 'open' && has('close')
-  return <ResponsiveDrawer open title={mode === 'create' ? 'New conversation' : item?.title || 'Conversation'} onClose={close} wide>
+  const createActions = mode === 'create' && <><Button type='button' variant='secondary' onClick={close}>Cancel</Button><Button type='submit' form={createFormId} disabled={pending}>{pending ? 'Starting…' : 'Start conversation'}</Button></>
+  return <ResponsiveDrawer open title={mode === 'create' ? 'New conversation' : item?.title || 'Conversation'} onClose={close} wide footer={createActions}>
     <div className='formalV2'><FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-      {mode === 'create' ? <form className='drawerForm' onSubmit={async event => {
+      {mode === 'create' ? <form id={createFormId} className='drawerForm' onSubmit={async event => {
         event.preventDefault()
         const result = await onCreate({ ...draft, collaboration_version: CONVERSATION_V2, version: 0, idempotency_key: key, share_id: idOf(shares[0]), production_record_ids: [idOf(record)] })
         if (result?.ok) setDirty(false)
@@ -59,10 +61,9 @@ const Conversation = ({ mode, itemDetail, productionRecords = [], shares = [], r
         <p>Discuss a question with {relatedCompanyName || 'the other company'} on {record?.public_reference || 'this production'}. Messages do not assign responsibility.</p>
         {selectedAnchor && <div className='formalV2__notice'><strong>Visual reference included</strong><p>{selectedAnchor.label || 'Selected drawing or model feature'}</p>{selectedAnchor.visual_preview?.data_url && <img className='formalV2__preview' src={selectedAnchor.visual_preview.data_url} alt='Selected technical context' />}</div>}
         <TextField type='text' label='Title' value={draft.title} onChange={title => setDraft(value => ({ ...value, title }))} minLength={3} maxLength={240} />
-        <TextField label='Message' value={draft.description} onChange={description => setDraft(value => ({ ...value, description }))} minLength={3} maxLength={6000} />
+        <TextField label='Message' autoGrow value={draft.description} onChange={description => setDraft(value => ({ ...value, description }))} minLength={3} maxLength={6000} />
         <div className='productionFormGrid'><label className='selectField'><span>Topic (optional)</span><select value={draft.topic} onChange={event => setDraft(value => ({ ...value, topic: event.target.value }))}>{['general', 'drawing', 'model', 'requirement', 'tooling', 'manufacturing', 'quality'].map(topic => <option key={topic} value={topic}>{formatLabel(topic)}</option>)}</select></label><label className='selectField'><span>Priority</span><select value={draft.priority} onChange={event => setDraft(value => ({ ...value, priority: event.target.value }))}>{['low', 'normal', 'high'].map(priority => <option key={priority} value={priority}>{formatLabel(priority)}</option>)}</select></label></div>
         <TextField type='date' label='Due date' value={draft.due_at} onChange={due_at => setDraft(value => ({ ...value, due_at }))} required={false} />
-        <footer><Button type='button' variant='secondary' onClick={close}>Cancel</Button><Button type='submit' disabled={pending}>Start conversation</Button></footer>
       </form> : item && <>
         <div className='formalV2__heading'><StatusBadge tone={item.state === 'escalated' ? 'warning' : item.state === 'closed' ? 'success' : 'info'}>{formatLabel(item.state)}</StatusBadge><span>{formatLabel(item.topic || 'general')} · {formatLabel(item.priority)} priority</span></div>
         <div className='formalV2__notice' role='status'><strong>{item.state === 'escalated' ? 'Continue in the formal record' : item.state === 'closed' ? 'Conversation closed' : waiting}</strong><p>{item.state === 'escalated' ? 'This source conversation, evidence, and visual context are preserved as a read-only record.' : item.state === 'closed' ? item.closing_summary : 'Either company may close the conversation with a summary. Use Needs response to explicitly request the other company’s action.'}</p>{item.state === 'escalated' && <Button variant='secondary' onClick={() => onOpenFormal?.(idOf(item.escalated_attention))}>Open linked formal record <ArrowUpRight aria-hidden='true' /></Button>}</div>

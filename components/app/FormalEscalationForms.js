@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { Button } from '../design-system'
 import { formatLabel } from './formatters'
 import { newCommandKey } from '../../store/collaborationV2'
+import AutoGrowingTextarea from './AutoGrowingTextarea'
 
 export const FORMAL_CATEGORIES = [
   { value: 'issue', label: 'Issue', description: 'Request a supplier resolution and OEM approval. Production can continue.' },
@@ -11,11 +12,12 @@ export const FORMAL_CATEGORIES = [
 export const formalLabel = category => FORMAL_CATEGORIES.find(item => item.value === category)?.label || formatLabel(category)
 export const idOf = value => String(value?.id || value?._id || value || '')
 
-export const TextField = ({ label, value = '', onChange, required = true, minLength = 8, maxLength = 3000, type, ...props }) => {
+export const TextField = ({ label, value = '', onChange, required = true, minLength = 8, maxLength = 3000, type, autoGrow = false, ...props }) => {
   const id = useId()
+  const Textarea = autoGrow ? AutoGrowingTextarea : 'textarea'
   return <label className={type ? 'selectField' : 'textAreaField'} htmlFor={id}><span>{label}{!required && ' (optional)'}</span>{type
     ? <input id={id} type={type} value={value} onChange={event => onChange(event.target.value)} required={required} minLength={minLength} maxLength={maxLength} {...props} />
-    : <textarea id={id} value={value} onChange={event => onChange(event.target.value)} required={required} minLength={minLength} maxLength={maxLength} {...props} />}</label>
+    : <Textarea id={id} value={value} onChange={event => onChange(event.target.value)} required={required} minLength={minLength} maxLength={maxLength} {...props} />}</label>
 }
 export const EvidenceSelect = ({ files = [], value = [], onChange, emptyHint = 'Add shared evidence in the production record’s Documents or Photos tab, then select it here.' }) => {
   const available = files.filter(file => file.state === 'available' && file.visibility === 'shared')
