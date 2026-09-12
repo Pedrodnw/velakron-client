@@ -24,6 +24,7 @@ import FormMessage from '../../../components/auth/FormMessage'
 import { resultError } from '../../../components/auth/utils'
 import { Button } from '../../../components/design-system'
 import { getActiveOrganization, getFeatureEnabled, getHasPermission } from '../../../store/slices/appContext'
+import { getPartWorkspaceInspectionEnabled } from '../../../store/partWorkspaceFeatures'
 import { isViewableModel, suggestedPartAssetRole } from '../../../store/modelFiles'
 import {
   addPartRequirement,
@@ -69,7 +70,7 @@ const PartWorkspace = () => {
   const allowed = useSelector(getHasPermission('part.read'))
   const canCreateProduction = useSelector(getHasPermission('production_record.create'))
   const enabled = useSelector(getFeatureEnabled('part_workspaces'))
-  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
+  const inspectionEnabled = useSelector(getPartWorkspaceInspectionEnabled)
   const detail = useSelector(partSelectors.getDetailById(id))
   const loading = useSelector(partSelectors.getDetailLoading)
   const mutating = useSelector(partSelectors.getMutating)
@@ -128,8 +129,13 @@ const PartWorkspace = () => {
   }, [revisionDetail?.revision, revisionId])
   useEffect(() => {
     const requestedTab = String(router.query.tab || '')
+    if (requestedTab === 'inspection' && !inspectionEnabled) {
+      setTab('requirements')
+      router.replace({ pathname: router.pathname, query: { ...router.query, tab: 'requirements' } }, undefined, { shallow: true })
+      return
+    }
     if (tabs.some(([key]) => key === requestedTab)) setTab(requestedTab)
-  }, [router.query.tab, tabs])
+  }, [inspectionEnabled, router, tabs])
 
   const revisions = detail?.revisions || []
   const revision = revisionDetail?.revision
@@ -317,7 +323,7 @@ const PartWorkspace = () => {
   return <>
     <Seo title={`${part.part_number} Part Workspace`} description='Revisioned technical collaboration workspace.' path={`/app/parts/${id}`} noIndex />
     <Button href='/app/parts' variant='secondary' className='backButton'><ArrowLeft aria-hidden='true' /> Part workspaces</Button>
-    <AppPageHeader eyebrow='Part workspace' title={`${part.part_number} · ${part.name}`} description={part.description || 'One controlled source of truth for technical files, requirements, inspection definitions, and production reuse.'} actions={<>{revision && <Button variant='secondary' onClick={() => dispatch(exportPartDecisionRegister(id, revisionId))}><Download aria-hidden='true' /> Export register</Button>}{allowedActions.can_create_revision && revisions.length > 0 && !draftRevision && <Button variant='secondary' onClick={() => openDrawer('clone')}><Copy aria-hidden='true' /> New revision</Button>}{draftRevision && revisionId !== revisionIdOf(draftRevision) && <Button variant='secondary' onClick={() => setRevisionId(revisionIdOf(draftRevision))}><Layers3 aria-hidden='true' /> Continue draft {draftRevision.revision}</Button>}</>} />
+    <AppPageHeader eyebrow='Part workspace' title={`${part.part_number} · ${part.name}`} description={part.description || 'One controlled source of truth for technical files, requirements, and production reuse.'} actions={<>{revision && <Button variant='secondary' onClick={() => dispatch(exportPartDecisionRegister(id, revisionId))}><Download aria-hidden='true' /> Export register</Button>}{allowedActions.can_create_revision && revisions.length > 0 && !draftRevision && <Button variant='secondary' onClick={() => openDrawer('clone')}><Copy aria-hidden='true' /> New revision</Button>}{draftRevision && revisionId !== revisionIdOf(draftRevision) && <Button variant='secondary' onClick={() => setRevisionId(revisionIdOf(draftRevision))}><Layers3 aria-hidden='true' /> Continue draft {draftRevision.revision}</Button>}</>} />
     {feedback && <FormMessage type={feedback.type}>{feedback.message}</FormMessage>}
     {revision?.export_control === 'itar' && <div className='itarRecordBanner partItarBanner'><ShieldAlert aria-hidden='true' /><div><p className='technicalLabel'>ITAR-controlled part revision</p><strong>Every model, drawing, and technical file requires a fresh access confirmation.</strong><p>Access is private, short-lived, and included in the audit record. Do not expose the screen or file to unauthorized people.</p></div></div>}
     <section className='partWorkspaceShell'>
@@ -328,7 +334,7 @@ const PartWorkspace = () => {
       </header>
       <div className='partWorkspaceContext'><div><CheckCircle2 aria-hidden='true' /><span><small>Revision status</small><strong>{formatLabel(revision?.lifecycle_state)}</strong></span></div><div><FileUp aria-hidden='true' /><span><small>Controlled package</small><strong>{assets.length} file{assets.length === 1 ? '' : 's'} · {revisionDetail?.requirements?.length || 0} requirement{revisionDetail?.requirements?.length === 1 ? '' : 's'}</strong></span></div><div><Send aria-hidden='true' /><span><small>Production use</small><strong>{productionRecords.length} linked record{productionRecords.length === 1 ? '' : 's'}</strong></span></div></div>
       <section className={`partNextStep partNextStep--${nextStep.tone}`}><span className='partNextStep__icon'>{nextStep.tone === 'warning' ? <AlertTriangle aria-hidden='true' /> : nextStep.tone === 'draft' ? <Layers3 aria-hidden='true' /> : nextStep.tone === 'info' ? <Info aria-hidden='true' /> : <CheckCircle2 aria-hidden='true' />}</span><div><p className='technicalLabel'>{nextStep.eyebrow}</p><h2>{nextStep.title}</h2><p>{nextStep.description}</p></div>{nextStep.action && <div className='partNextStep__action'>{nextStep.action.kind === 'release' && <Button onClick={openReleaseReview}>{nextStep.action.label}</Button>}{nextStep.action.kind === 'tab' && <Button variant='secondary' onClick={() => setTab(nextStep.action.tab)}>{nextStep.action.label}</Button>}{nextStep.action.kind === 'production' && <Button href={`/app/production/new?part_revision_id=${revisionId}`}>{nextStep.action.label}</Button>}</div>}</section>
-      <nav className='partWorkspaceTabs' aria-label='Part workspace views'>{tabs.filter(([key]) => key !== 'inspection').map(([key, label, Icon]) => <button type='button' key={key} className={tab === key ? 'is-active' : ''} onClick={() => { setFeedback(null); setTab(key) }}><Icon aria-hidden='true' /> {label}</button>)}</nav>
+      <nav className='partWorkspaceTabs' aria-label='Part workspace views'>{tabs.map(([key, label, Icon]) => <button type='button' key={key} className={tab === key ? 'is-active' : ''} onClick={() => { setFeedback(null); setTab(key) }}><Icon aria-hidden='true' /> {label}</button>)}</nav>
 
       {tab === 'overview' && <section className='partOverview'>
         <article className='partWorkspacePanel partOverview__definition'><header><div><p className='technicalLabel'>Controlled definition</p><h2>Revision {revision?.revision}</h2><p>{revision?.engineering_note || 'This workspace keeps the released technical definition, discussion, and production use together.'}</p></div></header><dl className='partOverviewFacts'><div><dt>Material</dt><dd>{revision?.material || 'Not specified'}</dd></div><div><dt>Finish / coating</dt><dd>{revision?.finish || 'Not specified'}</dd></div><div><dt>Process</dt><dd>{revision?.process_summary || 'Not specified'}</dd></div><div><dt>Classification</dt><dd>{revision?.export_control === 'itar' ? 'ITAR controlled' : 'Standard controlled data'}</dd></div><div><dt>Files</dt><dd>{assets.length}</dd></div><div><dt>Requirements</dt><dd>{revisionDetail?.requirements?.length || 0}</dd></div></dl></article>

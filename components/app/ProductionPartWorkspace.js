@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { getFeatureEnabled, getHasPermission } from '../../store/slices/appContext'
+import { getHasPermission } from '../../store/slices/appContext'
+import { getPartWorkspaceInspectionEnabled } from '../../store/partWorkspaceFeatures'
 import { fileTransferFetchOptions, resolveFileTransferTarget } from '../../store/fileTransfer'
 import { isViewableModel, preferredPartThumbnailAsset } from '../../store/modelFiles'
 import {
@@ -223,7 +224,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
   const partId = idOf(record.part)
   const revisionId = idOf(record.part_revision)
   const inspectionPlanId = idOf(record.inspection_plan)
-  const inspectionEnabled = useSelector(getFeatureEnabled('inspection'))
+  const inspectionEnabled = useSelector(getPartWorkspaceInspectionEnabled)
   const formalState = useSelector(productionCollaborationSelectors.getRecord(record.id))
   const v2Enabled = useSelector(state => state.appContext.features?.collaboration_v2 === true)
   const canCreateCase = useSelector(getHasPermission('part.collaboration.create'))
@@ -304,7 +305,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
   const acknowledgedIds = new Set((revisionDetail?.review?.requirement_acknowledgements || []).map(item => idOf(item.requirement)))
   const unacknowledged = requestedRequirements.filter(item => !acknowledgedIds.has(idOf(item)))
   const requirementsNeedingAction = organization?.type === 'supplier' ? unacknowledged : []
-  const activeInspectionRuns = inspectionRuns.filter(item => !['accepted', 'cancelled'].includes(item.state))
+  const activeInspectionRuns = inspectionEnabled ? inspectionRuns.filter(item => !['accepted', 'cancelled'].includes(item.state)) : []
   const inspectionRunsNeedingAction = activeInspectionRuns.filter(item => item.current_actor_side === organization?.type)
   const inspectionRunsWaitingOnPartner = activeInspectionRuns.filter(item => item.current_actor_side !== 'none' && item.current_actor_side !== organization?.type)
   const casesWaitingOnPartner = openCases.filter(item => item.current_actor_side !== 'none' && item.current_actor_side !== organization?.type)
@@ -340,8 +341,13 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
   }, [dispatch, inspectionEnabled, inspectionPlanId, partId, record.id, revisionId])
   useEffect(() => {
     const requested = String(router.query.part_tab || '')
+    if (requested === 'inspection' && !inspectionEnabled) {
+      setTab('requirements')
+      router.replace({ pathname: router.pathname, query: { ...router.query, part_tab: 'requirements' } }, undefined, { shallow: true })
+      return
+    }
     if (tabs.some(([key]) => key === requested)) setTab(requested)
-  }, [router.query.part_tab, tabs])
+  }, [inspectionEnabled, router, tabs])
   useEffect(() => {
     const collaborationId = String(router.query.collaboration || '')
     if (!collaborationId || caseDrawer.open) return
@@ -365,6 +371,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
   }, [caseDrawer.open, revealViewer, tab])
 
   const selectTab = key => {
+    if (key === 'inspection' && !inspectionEnabled) key = 'requirements'
     setFeedback(null)
     setTab(key)
     const query = { ...router.query, part_tab: key }
@@ -636,7 +643,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
     ? 'Review the complete queue below. Each action remains tied to this production and released revision.'
     : partnerActionCount
       ? `${partnerActionCount} open item${partnerActionCount === 1 ? ' is' : 's are'} currently owned by ${partnerName}. You can still review the technical record and conversation.`
-      : 'No open cases, acknowledgements, or inspection decisions are waiting on either company.'
+      : inspectionEnabled ? 'No open cases, acknowledgements, or inspection decisions are waiting on either company.' : 'No open cases or acknowledgements are waiting on either company.'
   const requirementTabCount = organization?.type === 'supplier'
     ? requirementsNeedingAction.length + (supplierReviewOpen && !requirementsNeedingAction.length ? 1 : 0)
     : unacknowledged.length
@@ -649,7 +656,7 @@ const ProductionPartWorkspace = ({ record, organization, onEditDetails, onModelT
         <div><p className='technicalLabel'>Part collaboration status</p><h2>{responsibilityTitle}</h2><p>{responsibilityDescription}</p>{(myActionCount || partnerActionCount) > 0 && <div className='partNextStep__queue' aria-label='Open technical work'>{openCases.length > 0 && <button type='button' onClick={() => selectTab('cases')}><MessageSquareText aria-hidden='true' /> {openCases.length} case{openCases.length === 1 ? '' : 's'} <span>{myCases.length ? `${myCases.length} yours` : `with ${partnerName}`}</span></button>}{(unacknowledged.length > 0 || supplierReviewOpen) && <button type='button' onClick={() => selectTab('requirements')}><Check aria-hidden='true' /> {unacknowledged.length || 1} acknowledgement{(unacknowledged.length || 1) === 1 ? '' : 's'} <span>{organization?.type === 'supplier' ? 'for your company' : `with ${partnerName}`}</span></button>}{activeInspectionRuns.length > 0 && <button type='button' onClick={() => selectTab('inspection')}><ClipboardCheck aria-hidden='true' /> {activeInspectionRuns.length} inspection stage{activeInspectionRuns.length === 1 ? '' : 's'} <span>{inspectionRunsNeedingAction.length ? `${inspectionRunsNeedingAction.length} yours` : `with ${partnerName}`}</span></button>}</div>}</div>
         {myActionCount > 0 && <div className='partNextStep__action'><Button variant='secondary' onClick={() => myCases.length ? openCase(myCases[0]) : selectTab(requirementsNeedingAction.length || supplierReviewOpen ? 'requirements' : 'inspection')}>Open next action</Button></div>}
       </header>
-      <nav className='partWorkspaceTabs productionPartWorkspace__tabs' role='tablist' aria-label='Production part collaboration views'>{tabs.filter(([key]) => key !== 'inspection').map(([key, label, Icon]) => { const count = tabCount(key); return <button type='button' role='tab' aria-selected={tab === key} key={key} className={tab === key ? 'is-active' : ''} onClick={() => selectTab(key)}><Icon aria-hidden='true' /> {label}{count > 0 && <span>{count}</span>}</button> })}</nav>
+      <nav className='partWorkspaceTabs productionPartWorkspace__tabs' role='tablist' aria-label='Production part collaboration views'>{tabs.map(([key, label, Icon]) => { const count = tabCount(key); return <button type='button' role='tab' aria-selected={tab === key} key={key} className={tab === key ? 'is-active' : ''} onClick={() => selectTab(key)}><Icon aria-hidden='true' /> {label}{count > 0 && <span>{count}</span>}</button> })}</nav>
       {feedback && <div className='productionPartWorkspace__feedback'><FormMessage type={feedback.type}>{feedback.message}</FormMessage></div>}
 
       {tab === 'overview' && <section className='partOverview productionPartWorkspace__overview'>
