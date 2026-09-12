@@ -1,0 +1,11 @@
+.route {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface);
+
+  p { display: grid; gap: 4px; margin: 0; font-size: 13px; color: var(--app-text-secondary); }
+  strong { font-size: 16px; line-height: 1.4; color: var(--app-text); overflow-wrap: anywhere; }
+}

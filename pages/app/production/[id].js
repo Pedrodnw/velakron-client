@@ -39,6 +39,7 @@ import {
 } from '../../../store/slices/entities/productionRecords'
 import { loadPart, partSelectors } from '../../../store/slices/entities/parts'
 import { productionUnits } from '../../../components/app/ProductionRecordForm'
+import ProductionStageForm from '../../../components/app/ProductionStageForm'
 import {
   acknowledgeProductionAttention,
   applyProductionAttentionWorkflowAction,
@@ -148,41 +149,6 @@ const MachineForm = ({ record, machines, pending, feedback, onSubmit }) => {
     <label className='selectField' htmlFor='record-machine'><span>Primary machine</span><select id='record-machine' value={machineId} onChange={event => setMachineId(event.target.value)}><option value=''>No machine assigned</option>{machines.map(machine => <option value={machine.id} key={machine.id}>{machine.shop_identifier} — {machine.manufacturer} {machine.model}</option>)}</select></label>
     <FormField id='machine-change-reason' label='Optional note' value={reason} onChange={event => setReason(event.target.value)} />
     <FormActions pending={pending} submitLabel='Save machine' icon={Cog} />
-  </form>
-}
-
-const validStageTargets = (workflow, record, actorType) => {
-  const stages = workflow?.stages || []
-  const current = record.current_workflow_step_id
-    ? stages.findIndex(item => item.id === record.current_workflow_step_id)
-    : stages.findIndex(item => item.key === record.current_stage)
-  return stages.filter((stage, index) => {
-    if (stage.owner !== actorType || index === current || ['accepted', 'delivered', 'quality_review', 'approved'].includes(stage.key)) return false
-    if (index < current) return index > 1
-    return stages.slice(current + 1, index).every(item => item.skippable)
-  })
-}
-
-const StageForm = ({ record, workflow, actorType, pending, feedback, onSubmit }) => {
-  const targets = validStageTargets(workflow, record, actorType)
-  const [stepId, setStepId] = useState(targets[0]?.id || '')
-  const [reason, setReason] = useState('')
-  const [note, setNote] = useState('')
-  const [shipmentDate, setShipmentDate] = useState('')
-  const target = targets.find(item => item.id === stepId)
-  const currentIndex = record.current_workflow_step_id
-    ? workflow?.stages?.findIndex(item => item.id === record.current_workflow_step_id) ?? -1
-    : workflow?.stages?.findIndex(item => item.key === record.current_stage) ?? -1
-  const targetIndex = workflow?.stages?.findIndex(item => item.id === stepId) ?? -1
-  const reasonNeeded = targetIndex < currentIndex || targetIndex > currentIndex + 1
-  return <form className='drawerForm' onSubmit={event => { event.preventDefault(); onSubmit({ stage: target?.key, workflow_step_id: target?.id, reason, note, shipment_date: target?.key === 'shipped' ? shipmentDate : undefined, version: record.version, idempotency_key: requestKey('stage') }) }}>
-    <p>This record follows the route selected by the OEM. Required stages cannot be skipped; moving backward requires a reason.</p>
-    <FormMessage type={feedback?.type}>{feedback?.message}</FormMessage>
-    <label className='selectField' htmlFor='next-stage'><span>New production stage</span><select id='next-stage' value={stepId} onChange={event => setStepId(event.target.value)} required>{targets.map(item => <option key={item.id} value={item.id}>{item.label}{item.skippable ? ' (optional)' : ''}</option>)}</select></label>
-    {target?.key === 'shipped' && <FormField id='shipment-date' label='Shipment date' type='date' value={shipmentDate} onInput={event => setShipmentDate(event.target.value)} onBlur={event => setShipmentDate(event.target.value)} required />}
-    <label className='textAreaField' htmlFor='stage-reason'><span>{reasonNeeded ? 'Required explanation' : 'Optional reason'}</span><textarea id='stage-reason' value={reason} onChange={event => setReason(event.target.value)} minLength={reasonNeeded ? 8 : undefined} maxLength={1000} required={reasonNeeded} /></label>
-    <label className='textAreaField' htmlFor='stage-note'><span>Optional shared note</span><textarea id='stage-note' value={note} onChange={event => setNote(event.target.value)} maxLength={2000} /></label>
-    <FormActions pending={pending} submitLabel='Update production stage' icon={RefreshCw} />
   </form>
 }
 
@@ -489,7 +455,7 @@ const ProductionRecordDetail = () => {
       {drawer === 'decline' && <ReasonForm pending={pending} feedback={feedback} danger description='Declining returns the decision to the OEM. A reason is required and remains in history.' submitLabel='Decline assignment' onSubmit={reason => run(() => dispatch(declineProductionRecord(record.id, { reason, version: record.version, idempotency_key: requestKey('decline') })), 'Assignment declined.')} />}
       {drawer === 'assign' && <AssignmentForm record={record} relationships={relationships} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionRecord(record.id, payload)), 'Supplier assignment saved.')} />}
       {drawer === 'machine' && <MachineForm record={record} machines={activeMachines} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(assignProductionMachine(record.id, payload)), 'Primary machine saved.')} />}
-      {drawer === 'stage' && <StageForm record={record} workflow={workflow} actorType={organization.type} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(transitionProductionRecord(record.id, payload)), 'Production stage updated.')} />}
+      {drawer === 'stage' && <ProductionStageForm record={record} workflow={workflow} actorType={organization.type} pending={pending} feedback={feedback} onSubmit={payload => run(() => dispatch(transitionProductionRecord(record.id, payload)), 'Production stage updated.')} />}
       {drawer === 'forecast' && <ForecastForm v2Enabled={v2Enabled} record={record} pending={collaboration?.mutating} feedback={feedback} onSubmit={async payload => {
         const { report_issue: reportIssue, issue, attention_category: attentionCategory, ...forecast } = payload
         const updated = await runInline(() => dispatch(updateProductionForecast(record.id, forecast)), 'Shipping forecast updated.')
