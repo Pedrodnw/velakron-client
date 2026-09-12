@@ -1002,8 +1002,8 @@ const SalesDemoDashboard = () => {
       inFlight = true
       try {
         await Promise.all([
-          dispatch(loadSalesDemoSummary()),
-          dispatch(loadSalesDemoSessions({ view: 'active', page_size: 100 })),
+          dispatch(loadSalesDemoSummary({ background: true })),
+          dispatch(loadSalesDemoSessions({ view: 'active', page_size: 100 }, { background: true })),
         ])
       } finally {
         inFlight = false

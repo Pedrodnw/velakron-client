@@ -20,6 +20,7 @@ const slice = createSlice({
   name: 'salesDemos',
   initialState,
   reducers: {
+    backgroundRequested: state => { state.error = null },
     summaryRequested: state => { state.loadingByResource.summary = true; state.error = null },
     sessionsRequested: state => { state.loadingByResource.sessions = true; state.error = null },
     templatesRequested: state => { state.loadingByResource.templates = true; state.error = null },
@@ -62,20 +63,20 @@ const resourceActions = {
   mutation: { started: actions.mutationRequested.type, failed: actions.mutationFailed.type },
 }
 
-const request = ({ url, method = 'get', data, params, requestKey, onSuccess, resource = 'mutation' }) => apiCallBegan({
+const request = ({ url, method = 'get', data, params, requestKey, onSuccess, resource = 'mutation', background = false }) => apiCallBegan({
   url,
   method,
   data,
   params,
   organizationScoped: true,
   requestKey,
-  onStart: resourceActions[resource].started,
+  onStart: background ? actions.backgroundRequested.type : resourceActions[resource].started,
   onSuccess: onSuccess || (resource === 'mutation' ? actions.mutationReceived.type : undefined),
   onError: resourceActions[resource].failed,
 })
 
-export const loadSalesDemoSummary = () => request({ url: '/sales-demos/summary', requestKey: 'sales-demo-summary', resource: 'summary', onSuccess: actions.summaryReceived.type })
-export const loadSalesDemoSessions = params => request({ url: '/sales-demos/sessions', params, requestKey: 'sales-demo-sessions', resource: 'sessions', onSuccess: actions.sessionsReceived.type })
+export const loadSalesDemoSummary = ({ background = false } = {}) => request({ url: '/sales-demos/summary', requestKey: 'sales-demo-summary', resource: 'summary', onSuccess: actions.summaryReceived.type, background })
+export const loadSalesDemoSessions = (params, { background = false } = {}) => request({ url: '/sales-demos/sessions', params, requestKey: 'sales-demo-sessions', resource: 'sessions', onSuccess: actions.sessionsReceived.type, background })
 export const loadSalesDemoTemplates = () => request({ url: '/sales-demos/templates', requestKey: 'sales-demo-templates', resource: 'templates', onSuccess: actions.templatesReceived.type })
 export const loadSalesDemoCampaigns = () => request({ url: '/sales-demos/campaigns', requestKey: 'sales-demo-campaigns', resource: 'campaigns', onSuccess: actions.campaignsReceived.type })
 
