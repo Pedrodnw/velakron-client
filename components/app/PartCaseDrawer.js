@@ -5,7 +5,7 @@ import FormField from '../auth/FormField'
 import FormMessage from '../auth/FormMessage'
 import { Button } from '../design-system'
 import { formatDateTime, formatLabel, statusTone } from './formatters'
-import PartAssetViewer from './PartAssetViewer'
+import LegacyVisualReference from './LegacyVisualReference'
 import ResponsiveDrawer from './ResponsiveDrawer'
 import PartConversationDrawerV2 from './PartConversationDrawerV2'
 import StatusBadge from './StatusBadge'
@@ -257,10 +257,7 @@ const LegacyPartCaseDrawer = ({
                 ? <div className='partCaseVisual__notice'><CircleAlert aria-hidden='true' /><strong>Visual preview unavailable</strong><span>{linkedVisual.error}</span></div>
                 : linkedVisual?.preview
                   ? <StoredVisualReference source={linkedVisual.source} alt={`Saved visual reference for ${item.title}`} />
-                  : <div className='partCaseVisual__legacyCapture'>
-                    <PartAssetViewer asset={linkedVisual?.asset} source={linkedVisual?.source} loading={linkedVisual?.loading} anchors={[item.visual_anchor]} selectedAnchorId={item.visual_anchor.id || item.visual_anchor._id} onPreviewReady={onVisualPreviewReady} />
-                    {!linkedVisual?.loading && <span>Saving this visual reference…</span>}
-                  </div>}
+                  : <LegacyVisualReference key={`${item.id || item._id}:${item.visual_anchor.id || item.visual_anchor._id}`} anchor={item.visual_anchor} visual={linkedVisual} title={item.title} onPreviewReady={onVisualPreviewReady} />}
           </div>
         </section>}
         <section className='partCaseAttachments'><header><h3><Paperclip aria-hidden='true' /> Evidence and files</h3></header>{upload && <p><LoaderCircle className='spin' aria-hidden='true' /> {upload.filename} · {upload.progress}%</p>}{itemDetail.attachments?.length ? <ul>{itemDetail.attachments.map(file => <li key={file.id || file._id}><span>{file.display_filename || file.original_filename}</span><div>{file.export_control === 'itar' && <ShieldAlert aria-hidden='true' />}<Button type='button' variant='secondary' onClick={() => onDownloadAttachment?.(file)}><Paperclip aria-hidden='true' /> Download</Button></div></li>)}</ul> : <p>No files attached.</p>}</section>
@@ -278,7 +275,7 @@ export default function PartCaseDrawer(props) {
       ? <div className='partCaseVisual__notice'><ShieldAlert aria-hidden='true' /><strong>ITAR verification required</strong><span>Open the full viewer to confirm authorized access.</span></div>
       : props.linkedVisual?.error ? <p>{props.linkedVisual.error}</p>
         : props.linkedVisual?.preview ? <StoredVisualReference source={props.linkedVisual.source} alt={`Saved visual reference for ${item.title}`} />
-          : <PartAssetViewer asset={props.linkedVisual?.asset} source={props.linkedVisual?.source} loading={props.linkedVisual?.loading} anchors={[item.visual_anchor]} selectedAnchorId={item.visual_anchor.id || item.visual_anchor._id} onPreviewReady={item.state === 'open' ? props.onVisualPreviewReady : undefined} />}</div>
+          : <LegacyVisualReference key={`${item.id || item._id}:${item.visual_anchor.id || item.visual_anchor._id}`} anchor={item.visual_anchor} visual={props.linkedVisual} title={item.title} onPreviewReady={item.state === 'open' ? props.onVisualPreviewReady : undefined} />}</div>
     return <PartConversationDrawerV2 {...props} visual={visual} />
   }
   return <LegacyPartCaseDrawer {...props} />

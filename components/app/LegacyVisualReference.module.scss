@@ -1,0 +1,13 @@
+.capture {
+  position: relative;
+  height: clamp(320px, 44vh, 500px);
+  overflow: hidden;
+}
+
+.renderer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
