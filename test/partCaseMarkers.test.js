@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildModelCaseMarkers, modelCaseMarkersForAsset } from '../components/app/partCaseMarkers'
+import { buildModelCaseMarkers, casesForProduction, modelCaseMarkersForAsset, productionVisualAnchors } from '../components/app/partCaseMarkers'
 
 const anchor = (id, sourceAsset = 'asset-a') => ({
   id,
@@ -9,6 +9,27 @@ const anchor = (id, sourceAsset = 'asset-a') => ({
 })
 
 describe('part case markers', () => {
+  it('starts a new order without earlier-order model or drawing annotations', () => {
+    const anchors = [anchor('model'), { id: 'drawing', kind: 'drawing_region' }]
+    const history = [{ id: 'old', production_records: ['older-order'], visual_anchor: 'model' }, { id: 'old-drawing', primary_production_record: 'older-order', visual_anchor: 'drawing' }]
+    const cases = casesForProduction(history, 'new-order')
+    expect(cases).toEqual([])
+    expect(buildModelCaseMarkers(anchors, cases)).toEqual([])
+    expect(productionVisualAnchors(anchors, cases)).toEqual([])
+    expect(casesForProduction(history, 'older-order')).toEqual(history)
+  })
+
+  it('retains current-order, shared requirement, formal and explicitly opened history references', () => {
+    const anchors = ['current', 'requirement', 'formal', 'history', 'unused'].map(id => anchor(id))
+    const cases = casesForProduction([
+      { id: 'current-case', primary_production_record: { _id: 'new-order' }, visual_anchor: { id: 'current' } },
+      { id: 'linked-case', production_records: [{ id: 'new-order' }], visual_anchor: 'current' },
+      { id: 'old-case', production_records: ['older-order'], visual_anchor: 'history' },
+    ], 'new-order')
+    expect(cases.map(item => item.id)).toEqual(['current-case', 'linked-case'])
+    expect(productionVisualAnchors(anchors, cases, [{ visual_anchor: 'requirement' }], [{ visual_anchor: 'formal' }], 'history').map(item => item.id)).toEqual(['current', 'requirement', 'formal', 'history'])
+  })
+
   it('numbers cases by creation order and keeps cases sharing an anchor individually clickable', () => {
     const sharedAnchor = anchor('anchor-a')
     const markers = buildModelCaseMarkers([sharedAnchor], [

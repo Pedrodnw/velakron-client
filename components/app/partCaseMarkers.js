@@ -18,6 +18,19 @@ const byCreatedAt = (left, right) => {
 
 export const caseTypePresentation = type => CASE_TYPE_PRESENTATION[type] || defaultPresentation
 
+export const casesForProduction = (cases = [], productionId) => {
+  const id = idOf(productionId)
+  return id ? cases.filter(item => idOf(item.primary_production_record) === id
+    || (item.production_records || []).some(record => idOf(record) === id)) : []
+}
+
+export const productionVisualAnchors = (anchors = [], cases = [], requirements = [], formalRecords = [], selectedAnchorId = '') => {
+  const referencedIds = new Set([...cases, ...requirements, ...formalRecords].map(item => idOf(item.visual_anchor)).filter(Boolean))
+  // An explicitly opened historical case must still reveal its own saved view.
+  if (selectedAnchorId) referencedIds.add(idOf(selectedAnchorId))
+  return anchors.filter(anchor => referencedIds.has(idOf(anchor)))
+}
+
 export const buildModelCaseMarkers = (anchors = [], cases = []) => {
   const anchorById = new Map(anchors.map(anchor => [idOf(anchor), anchor]))
   const orderedCases = [...cases].sort(byCreatedAt)
@@ -56,4 +69,3 @@ export const modelCaseMarkersForAsset = (markers = [], asset = null) => {
   const assetId = idOf(asset)
   return markers.filter(marker => !marker.sourceAssetId || marker.sourceAssetId === assetId)
 }
-
