@@ -253,7 +253,17 @@ export const promotePartCollaboration = (id, data) => (dispatch, getState) => {
 }
 export const startPartReview = id => mutate({ url: `/part-reviews/${id}/start`, data: {} })
 export const requestPartReviewChanges = (id, note) => mutate({ url: `/part-reviews/${id}/request-changes`, data: { note } })
-export const acknowledgePartRequirement = (reviewId, requirementId) => mutate({ url: `/part-reviews/${reviewId}/requirements/${requirementId}/acknowledge`, data: {} })
+export const acknowledgePartRequirement = (reviewId, requirementId, { partId, revisionId } = {}) => async dispatch => {
+  // An already-open demo can still have a cached revision without its review.
+  if (!reviewId && partId && revisionId) {
+    const refreshed = await dispatch(loadPartRevision(partId, revisionId))
+    if (!refreshed?.ok) return refreshed
+    const review = refreshed.payload?.data?.review
+    reviewId = review?.id || review?._id
+  }
+  if (!reviewId) return { ok: false, error: { message: 'Your supplier review could not be loaded. Refresh the record and try again.' } }
+  return dispatch(mutate({ url: `/part-reviews/${reviewId}/requirements/${requirementId}/acknowledge`, data: {} }))
+}
 export const acknowledgePartRevision = (reviewId, note = '') => mutate({ url: `/part-reviews/${reviewId}/acknowledge`, data: { note } })
 
 const upload = ({ intentUrl, finalizeUrl, file, intentData }) => async dispatch => {
