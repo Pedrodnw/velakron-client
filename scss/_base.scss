@@ -37,6 +37,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+// Mobile panning or reserved scrollbar space can expose the document canvas
+// beyond the workspace. Keep that space light only on operational pages.
+html:has(.appLayout),
+body:has(.appLayout) {
+  color-scheme: light;
+  background: #fff;
+}
+
 a {
   color: inherit;
   text-decoration: none;

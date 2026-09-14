@@ -227,6 +227,7 @@
 .partViewerStage { min-width: 0; padding: 16px; background: var(--app-canvas); }
 .productionPartWorkspace .partViewerStage { scroll-margin-top: 88px; }
 .partViewerStage__toolbar { display: flex; min-height: 52px; gap: 16px; align-items: center; justify-content: space-between; padding: 0 2px 12px; }
+.partViewerStage__toolbar > div { min-width: 0; max-width: 100%; }
 .partViewerStage__toolbar p { margin: 0 0 3px; }
 .partViewerStage__toolbar strong { display: block; overflow: hidden; max-width: 500px; text-overflow: ellipsis; white-space: nowrap; }
 .partViewerStage__toolbar > div:last-child { display: flex; gap: 7px; }
@@ -337,7 +338,7 @@
 .partPdfPageRail button > span { display: grid; min-height: 78px; place-items: center; overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background: #fff; box-shadow: 0 3px 9px rgba(22, 38, 63, .08); }
 .partPdfPageRail canvas { display: block; max-width: 100%; max-height: 118px; }
 .partPdfPageRail strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
-.partPdfViewport { position: relative; overflow: auto; min-width: 0; min-height: 0; background-color: #edf1f6; background-image: linear-gradient(rgba(32, 54, 82, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(32, 54, 82, .035) 1px, transparent 1px); background-size: 28px 28px; scrollbar-color: #b8c1ce transparent; }
+.partPdfViewport { position: relative; overflow: auto; overscroll-behavior-x: contain; min-width: 0; min-height: 0; background-color: #edf1f6; background-image: linear-gradient(rgba(32, 54, 82, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(32, 54, 82, .035) 1px, transparent 1px); background-size: 28px 28px; scrollbar-color: #b8c1ce transparent; }
 .partPdfSheet { position: relative; z-index: 1; min-width: 1px; min-height: 1px; margin: 22px auto; background: #fff; box-shadow: 0 12px 34px rgba(20, 35, 55, .16), 0 0 0 1px rgba(20, 35, 55, .07); touch-action: pan-x pan-y; }
 .partPdfSheet canvas { display: block; background: #fff; }
 .partPdfDrawing.is-annotating .partPdfSheet { cursor: crosshair; touch-action: none; }
