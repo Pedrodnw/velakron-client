@@ -22,6 +22,7 @@ import dynamicEndpoint from './dynamicEndpoint'
 import salesDemos from './salesDemos'
 import parts from './parts'
 import inspection from './inspection'
+import salesPartners from './salesPartners'
 
 export default combineReducers({
   auditEvents,
@@ -47,4 +48,5 @@ export default combineReducers({
   salesDemos,
   parts,
   inspection,
+  salesPartners,
 })

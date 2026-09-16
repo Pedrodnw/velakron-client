@@ -18,12 +18,15 @@ const routeTrails = [
   { match: '/app/certifications', items: [[null, 'Certifications']] },
   { match: '/app/dynamic-endpoint', items: [[null, 'Dynamic Endpoint']] },
   { match: '/app/sales-demo', items: [[null, 'Sales Demo']] },
+  { match: '/app/sales-partner', items: [[null, 'Partner portal']] },
   { match: '/admin/action-center', items: [[null, 'Action center']] },
   { match: '/admin/organizations/[id]', items: [['/admin/organizations', 'Organizations'], [null, 'Company details']] },
   { match: '/admin/organizations', items: [[null, 'Organizations']] },
   { match: '/admin/users', items: [[null, 'Users']] },
   { match: '/admin/suppliers', items: [[null, 'Supplier reviews']] },
   { match: '/admin/relationships', items: [[null, 'Relationships']] },
+  { match: '/admin/sales-partners/[id]', items: [['/admin/sales-partners', 'Sales Partners'], [null, 'Partner details']] },
+  { match: '/admin/sales-partners', items: [[null, 'Sales Partners']] },
   { match: '/admin', items: [[null, 'Audit and usage']] },
 ]
 

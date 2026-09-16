@@ -19,6 +19,11 @@ const itemsByOrganizationType = {
     { href: '/app/suppliers', label: 'Customers', icon: 'relationships', permission: 'relationship.read' },
     { href: '/app/team', label: 'Team', icon: 'team', permission: 'membership.read' },
   ],
+  sales_partner: [
+    { href: '/app', label: 'Overview', icon: 'overview', exact: true },
+    { href: '/app/sales-partner', label: 'Partner portal', icon: 'partner', permission: 'sales_partner.profile.read' },
+    { href: '/app/team', label: 'Portal access', icon: 'team', permission: 'membership.read' },
+  ],
   velakron: [
     { href: '/app', label: 'Overview', icon: 'overview', exact: true },
     { href: '/admin/action-center', label: 'Action center', icon: 'actions', permission: 'platform.support' },
@@ -26,6 +31,7 @@ const itemsByOrganizationType = {
     { href: '/app/tasks', label: 'Tasks & priorities', icon: 'tasks', permission: 'internal_task.read' },
     { href: '/app/sales-demo', label: 'Sales Demo', icon: 'salesDemo', permission: 'sales_demo.read' },
     { href: '/app/billing-admin', label: 'Billing', icon: 'billing', permission: 'billing.support' },
+    { href: '/admin/sales-partners', label: 'Sales Partners', icon: 'partner', permission: 'sales_partner.commission.manage' },
     { href: '/app/dynamic-endpoint', label: 'Dynamic Endpoint', icon: 'dynamic', permission: 'dynamic_endpoint.manage' },
     { href: '/app/team', label: 'Internal team', icon: 'team', permission: 'membership.read' },
     { href: '/admin/organizations', label: 'Organizations', icon: 'organization', permission: 'platform.support' },

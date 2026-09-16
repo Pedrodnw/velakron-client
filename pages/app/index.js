@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, BellRing, Building2, CircleCheck, Clock3, Factory, Handshake, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
+import { Activity, AlertTriangle, BadgeDollarSign, BellRing, Building2, CircleCheck, Clock3, Factory, HandCoins, Handshake, Link2, ListChecks, PackageCheck, UsersRound } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -21,6 +21,7 @@ import FounderTaskCard from '../../components/app/tasks/FounderTaskCard'
 import PlatformActionQueue from '../../components/app/PlatformActionQueue'
 import ProductionRecordCard from '../../components/app/ProductionRecordCard'
 import { ProductionCardImages } from '../../components/app/ProductionCardThumbnail'
+import { loadSalesPartnerPortal, salesPartnerSelectors } from '../../store/slices/entities/salesPartners'
 
 const metric = value => String(value ?? '—')
 const positiveTone = (value, activeTone) => Number(value || 0) > 0 ? activeTone : 'success'
@@ -118,6 +119,34 @@ const FounderDashboard = () => {
   </>
 }
 
+const SalesPartnerDashboard = () => {
+  const dispatch = useDispatch()
+  const portal = useSelector(salesPartnerSelectors.getCurrent)
+  const loading = useSelector(salesPartnerSelectors.getCurrentLoading)
+  const error = useSelector(salesPartnerSelectors.getCurrentError)
+  useEffect(() => { dispatch(loadSalesPartnerPortal()) }, [dispatch])
+  if (loading && !portal) return <section className='appPanel'><AppSkeleton lines={7} /></section>
+  if (error && !portal) return <ErrorState title='The Sales Partner overview is unavailable' description={error.message} onRetry={() => dispatch(loadSalesPartnerPortal())} />
+  const activeMembers = (portal?.members || []).filter(item => item.status === 'active').length
+  const activeLinks = (portal?.referral_links || []).filter(item => item.status === 'active').length
+  const submissions = (portal?.referral_links || []).reduce((sum, item) => sum + Number(item.submission_count || 0), 0)
+  const pendingCents = Number(portal?.totals?.accrued || 0) + Number(portal?.totals?.approved || 0)
+  const formatMoney = cents => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(cents || 0) / 100)
+  return <>
+    <section className='metricGrid metricGrid--priority' aria-label='Sales Partner overview'>
+      <MetricCard label='Active team' value={activeMembers} detail='Sales representatives on the referral roster' icon={UsersRound} tone='info' href='/app/sales-partner' />
+      <MetricCard label='Active links' value={activeLinks} detail={`${submissions} submitted demo request${submissions === 1 ? '' : 's'}`} icon={Link2} tone='accent' href='/app/sales-partner' />
+      <MetricCard label='Pending finder’s fees' value={formatMoney(pendingCents)} detail='Accrued or approved, not yet paid' icon={BadgeDollarSign} tone={pendingCents ? 'warning' : 'success'} href='/app/sales-partner' />
+      <MetricCard label='Paid to date' value={formatMoney(portal?.totals?.paid)} detail='Bundled partner payments recorded' icon={HandCoins} tone='success' href='/app/sales-partner' />
+    </section>
+    <section className='appPanel'>
+      <header className='appPanel__header'><div><p className='technicalLabel'>Partner readiness</p><h2>{portal?.profile?.agreement_acceptance ? 'Referral program active' : 'Complete your partner agreement'}</h2></div><Button href='/app/sales-partner'>{portal?.profile?.agreement_acceptance ? 'Open partner portal' : 'Review and sign'}</Button></header>
+      <p>{portal?.agreement_current ? 'Manage team members and referral links, then follow CRM attribution, monthly finder’s-fee statements, and bundled ACH payments.' : 'An authorized Sales Partner administrator must accept the current online agreement before adding representatives or assigning referral links.'}</p>
+      <p className='dashboardMetricContext'>Agreement: {portal?.profile?.agreement_acceptance ? 'signed' : 'required'} <span aria-hidden='true'>·</span> ACH payout: {formatLabel(portal?.profile?.payout?.status || 'unconfigured')}</p>
+    </section>
+  </>
+}
+
 const OperationalDashboard = ({ organization }) => {
   const dispatch = useDispatch()
   const summary = useSelector(productionCollaborationSelectors.getSummary)
@@ -185,6 +214,8 @@ const PortalOverview = () => {
       ? 'oem_dashboard'
       : organization.type === 'supplier'
         ? 'supplier_dashboard'
+        : organization.type === 'sales_partner'
+          ? 'sales_partner_dashboard'
         : membership?.role === 'founder' ? 'founder_workspace' : 'platform_admin'
     dispatch(trackProductEvent('dashboard.viewed', surface))
   }, [dispatch, membership?.role, organization?.id, organization?.type])
@@ -193,10 +224,10 @@ const PortalOverview = () => {
     <AppPageHeader
       eyebrow={`${formatLabel(organization.type)} workspace`}
       title={organization.name}
-      description={organization.type === 'velakron' ? (membership?.role === 'founder' ? 'Align company priorities, owners, and deadlines without opening customer or platform administration data.' : 'Operate the platform through narrow, audited controls. Customer production access remains reason-gated and read-only.') : organization.type === 'supplier' ? 'Your most urgent production tasks are shown first.' : 'Portfolio health, supplier progress, and attention reasons in one view.'}
+      description={organization.type === 'velakron' ? (membership?.role === 'founder' ? 'Align company priorities, owners, and deadlines without opening customer or platform administration data.' : 'Operate the platform through narrow, audited controls. Customer production access remains reason-gated and read-only.') : organization.type === 'sales_partner' ? 'Referral activity, finder’s-fee readiness, and payout status for your Sales Partner program.' : organization.type === 'supplier' ? 'Your most urgent production tasks are shown first.' : 'Portfolio health, supplier progress, and attention reasons in one view.'}
       actions={<StatusBadge tone={statusTone(organization.status)}>{formatLabel(membership.role)} · {formatLabel(organization.status)}</StatusBadge>}
     />
-    {organization.type === 'velakron' ? (membership?.role === 'founder' ? <FounderDashboard /> : <PlatformDashboard organization={organization} />) : <OperationalDashboard organization={organization} />}
+    {organization.type === 'velakron' ? (membership?.role === 'founder' ? <FounderDashboard /> : <PlatformDashboard organization={organization} />) : organization.type === 'sales_partner' ? <SalesPartnerDashboard /> : <OperationalDashboard organization={organization} />}
   </>
 }
 

@@ -17,6 +17,7 @@ import {
   ScrollText,
   UserRound,
   UsersRound,
+  HandCoins,
 } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
@@ -46,6 +47,7 @@ const icons = {
   crm: BriefcaseBusiness,
   salesDemo: MonitorPlay,
   billing: CreditCard,
+  partner: HandCoins,
 }
 
 const AppNavigation = ({ onNavigate }) => {

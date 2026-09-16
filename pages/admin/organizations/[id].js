@@ -57,7 +57,7 @@ const OrganizationDetail = () => {
     const value = supportReason()
     if (!value || !detail?.organization) return
     setFeedback(null)
-    const role = detail.organization.type === 'supplier' ? 'supplier_admin' : detail.organization.type === 'oem' ? 'oem_admin' : 'velakron_admin'
+    const role = detail.organization.type === 'supplier' ? 'supplier_admin' : detail.organization.type === 'oem' ? 'oem_admin' : detail.organization.type === 'sales_partner' ? 'sales_partner_admin' : 'velakron_admin'
     const result = await dispatch(invitePlatformOrganizationAdmin(detail.organization.id, { ...invite, role }, value))
     if (!result?.ok) return setFeedback({ type: 'error', message: resultError(result, 'The invitation could not be issued.') })
     setInvite({ first_name: '', last_name: '', email: '' }); setFeedback({ type: 'success', message: 'Administrator invitation issued.' }); load()

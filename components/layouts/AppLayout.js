@@ -25,6 +25,8 @@ const roleLabels = {
   oem_viewer: 'Company viewer',
   supplier_admin: 'Supplier administrator',
   supplier_user: 'Supplier member',
+  sales_partner_admin: 'Sales Partner administrator',
+  sales_partner_viewer: 'Sales Partner viewer',
 }
 
 const AppLayout = ({ children, wide = false }) => {

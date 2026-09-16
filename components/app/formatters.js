@@ -1,5 +1,6 @@
 const exactLabels = {
   oem: 'OEM',
+  sales_partner: 'Sales Partner',
   oem_admin: 'OEM administrator',
   oem_user: 'OEM member',
   oem_viewer: 'OEM view-only member',
@@ -31,6 +32,8 @@ export const formatRole = role => ({
   oem_user: 'OEM member',
   oem_viewer: 'OEM view-only member',
   supplier_admin: 'Supplier administrator',
+  sales_partner_admin: 'Sales Partner administrator',
+  sales_partner_viewer: 'Sales Partner viewer',
   supplier_user: 'Supplier member',
   supplier_viewer: 'Supplier view-only member',
 }[role] || formatLabel(role))

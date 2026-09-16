@@ -39,6 +39,7 @@ const rolesForOrganization = type => ({
   velakron: ['velakron_admin', 'founder'],
   oem: ['oem_admin', 'oem_user', 'oem_viewer'],
   supplier: ['supplier_admin', 'supplier_user', 'supplier_viewer'],
+  sales_partner: ['sales_partner_admin', 'sales_partner_viewer'],
 }[type] || [])
 
 const emptyInvite = { first_name: '', last_name: '', email: '', role: '', message: '' }

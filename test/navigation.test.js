@@ -20,6 +20,15 @@ describe('role-aware application navigation', () => {
     expect(labels('velakron', ['billing.support'])).toEqual(['Overview', 'Billing', 'Account'])
   })
 
+  it('keeps Sales Partner portal work distinct from Velakron administration', () => {
+    expect(labels('sales_partner', ['sales_partner.profile.read', 'membership.read']))
+      .toEqual(['Overview', 'Partner portal', 'Portal access', 'Account'])
+    expect(labels('sales_partner', ['sales_partner.profile.read']))
+      .toEqual(['Overview', 'Partner portal', 'Account'])
+    expect(labels('velakron', ['sales_partner.commission.manage']))
+      .toEqual(['Overview', 'Sales Partners', 'Account'])
+  })
+
   it('shows supplier-specific work, machines, and company profile navigation', () => {
     expect(labels('supplier', [
       'production_record.read',
