@@ -2,6 +2,7 @@ import {
   BadgeDollarSign,
   Check,
   Copy,
+  Download,
   FileSignature,
   HandCoins,
   Landmark,
@@ -57,6 +58,7 @@ const SalesPartnerPortal = () => {
   const canManageProfile = useSelector(getHasPermission('sales_partner.profile.manage'))
   const canSign = useSelector(getHasPermission('sales_partner.agreement.sign'))
   const canManageMembers = useSelector(getHasPermission('sales_partner.member.manage'))
+  const canReadLinks = useSelector(getHasPermission('sales_partner.referral.read'))
   const canManageLinks = useSelector(getHasPermission('sales_partner.referral.manage'))
   const portal = useSelector(salesPartnerSelectors.getCurrent)
   const loading = useSelector(salesPartnerSelectors.getCurrentLoading)
@@ -147,6 +149,11 @@ const SalesPartnerPortal = () => {
 
   const activeMembers = useMemo(() => (portal?.members || []).filter(item => item.status === 'active'), [portal?.members])
   const activeLinks = useMemo(() => (portal?.referral_links || []).filter(item => item.status === 'active'), [portal?.referral_links])
+  const activeLinkByMember = useMemo(() => activeLinks.reduce((links, item) => {
+    const memberId = idOf(item.member)
+    if (memberId && !links.has(memberId)) links.set(memberId, item)
+    return links
+  }, new Map()), [activeLinks])
   const linkVisits = (portal?.referral_links || []).reduce((sum, item) => sum + Number(item.visit_count || 0), 0)
   const linkSubmissions = (portal?.referral_links || []).reduce((sum, item) => sum + Number(item.submission_count || 0), 0)
   const pendingCommission = Number(portal?.totals?.accrued || 0) + Number(portal?.totals?.approved || 0)
@@ -163,6 +170,21 @@ const SalesPartnerPortal = () => {
     { key: 'external_reference', label: 'Internal reference', render: item => item.external_reference || '—' },
     { key: 'status', label: 'Status', render: item => <StatusBadge tone={statusTone(item.status)}>{formatLabel(item.status)}</StatusBadge> },
     { key: 'joined_at', label: 'Added', render: item => formatDate(item.joined_at) },
+    ...(canReadLinks ? [{
+      key: 'flyer',
+      label: 'Referral flyer',
+      render: item => {
+        const activeLink = activeLinkByMember.get(idOf(item))
+        if (item.status !== 'active') return <span className='partnerFlyerUnavailable'>Restore member first</span>
+        if (!activeLink) return <span className='partnerFlyerUnavailable'>Assign a link first</span>
+        return <Button
+          variant='secondary'
+          className='tableAction'
+          href={`${process.env.NEXT_PUBLIC_API_URL || ''}/sales-partners/current/members/${encodeURIComponent(idOf(item))}/referral-flyer`}
+          title={`Uses ${activeLink.label || 'the newest active referral link'}`}
+        ><Download aria-hidden='true' />Download flyer</Button>
+      },
+    }] : []),
     ...(canManageMembers ? [{ key: 'actions', label: '', render: item => <Button variant='secondary' className='tableAction' disabled={pending === `member-${item.id}`} onClick={() => setMemberStatus(item, item.status === 'active' ? 'inactive' : 'active')}>{pending === `member-${item.id}` ? <LoaderCircle className='spin' aria-hidden='true' /> : item.status === 'active' ? <UserMinus aria-hidden='true' /> : <RotateCcw aria-hidden='true' />}{item.status === 'active' ? 'Remove' : 'Restore'}</Button> }] : []),
   ]
   const linkColumns = [
@@ -230,7 +252,7 @@ const SalesPartnerPortal = () => {
     </div>
 
     <section className='appPanel'>
-      <header className='appPanel__header'><div><p className='technicalLabel'>Referral roster</p><h2>Sales team members</h2><p>Roster records identify the individual who receives credit. They do not create portal accounts.</p></div></header>
+      <header className='appPanel__header'><div><p className='technicalLabel'>Referral roster</p><h2>Sales team members</h2><p>Roster records identify the individual who receives credit. Each active member can download a flyer with a QR code for their newest active referral link.</p></div></header>
       {canManageMembers && <form className='partnerInlineForm' onSubmit={submitMember}>
         <label><span>First name</span><input value={member.first_name} onChange={event => setMember(value => ({ ...value, first_name: event.target.value }))} required /></label>
         <label><span>Last name</span><input value={member.last_name} onChange={event => setMember(value => ({ ...value, last_name: event.target.value }))} /></label>
