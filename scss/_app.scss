@@ -5112,6 +5112,17 @@
   margin-bottom: 16px;
 }
 
+.partnerInvitationDelivery {
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+
+  small {
+    color: var(--app-text-muted);
+    font-size: 10px;
+  }
+}
+
 .partnerSetupCard {
   position: relative;
   overflow: hidden;

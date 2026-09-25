@@ -1,4 +1,4 @@
-import { ExternalLink, HandCoins, LoaderCircle, Plus, Search, ShieldCheck } from 'lucide-react'
+import { ExternalLink, HandCoins, LoaderCircle, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
@@ -10,6 +10,7 @@ import {
   ResponsiveDrawer,
   StatusBadge,
 } from '../../components/app'
+import { useAppDialog } from '../../components/app/AppDialogProvider'
 import { formatDate, formatLabel } from '../../components/app/formatters'
 import FormMessage from '../../components/auth/FormMessage'
 import { resultError } from '../../components/auth/utils'
@@ -20,6 +21,7 @@ import { getHasPermission } from '../../store/slices/appContext'
 import {
   enrollSalesPartner,
   loadSalesPartnersAdmin,
+  resendSalesPartnerInvitation,
   salesPartnerSelectors,
 } from '../../store/slices/entities/salesPartners'
 
@@ -28,9 +30,19 @@ const emptyEnrollment = {
   message: 'Welcome to the Velakron Sales Partner program.',
 }
 const money = cents => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(cents || 0) / 100)
+const deliveryPresentation = delivery => {
+  if (delivery?.state === 'completed' || delivery?.provider_state === 'submitted') return { label: 'Submitted to Gmail', tone: 'success' }
+  if (delivery?.state === 'claimed') return { label: 'Sending', tone: 'info' }
+  if (delivery?.state === 'retryable') return { label: 'Retrying', tone: 'warning' }
+  if (delivery?.state === 'dead' || delivery?.provider_state === 'failed') return { label: 'Failed', tone: 'danger' }
+  if (delivery?.state === 'captured') return { label: 'Captured locally', tone: 'neutral' }
+  if (delivery?.state === 'pending' || delivery?.state === 'queued') return { label: 'Queued', tone: 'info' }
+  return { label: 'Not tracked', tone: 'neutral' }
+}
 
 const SalesPartnersAdmin = () => {
   const dispatch = useDispatch()
+  const ask = useAppDialog()
   const allowed = useSelector(getHasPermission('sales_partner.commission.manage'))
   const partners = useSelector(salesPartnerSelectors.getPartners)
   const loading = useSelector(salesPartnerSelectors.getAdminLoading)
@@ -40,6 +52,7 @@ const SalesPartnersAdmin = () => {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [enrollment, setEnrollment] = useState(emptyEnrollment)
   const [pending, setPending] = useState(false)
+  const [resendingId, setResendingId] = useState('')
   const [feedback, setFeedback] = useState(null)
   const reasonRef = useRef(null)
 
@@ -74,16 +87,43 @@ const SalesPartnersAdmin = () => {
     setDrawerOpen(false)
     dispatch(loadSalesPartnersAdmin(value))
   }
+  const resendInvitation = async item => {
+    const invitation = item.invitation
+    const organizationId = item.organization?.id || item.organization?._id
+    if (!organizationId || !invitation?.id || !['pending', 'expired'].includes(invitation.status)) return
+    if (!await ask({
+      title: `Resend invitation to ${invitation.email}?`,
+      description: 'This sends a new secure invitation link and starts a fresh expiration window. Any previous unused invitation link will stop working.',
+      confirmLabel: 'Resend invitation',
+    })) return
+    const value = validReason()
+    if (!value) return
+    setResendingId(invitation.id); setFeedback(null)
+    const result = await dispatch(resendSalesPartnerInvitation(organizationId, invitation.id, value))
+    setResendingId('')
+    if (!result?.ok) { setFeedback({ type: 'error', message: resultError(result, 'The invitation could not be resent.') }); return }
+    setFeedback({ type: 'success', message: `Invitation resent to ${invitation.email}.` })
+    dispatch(loadSalesPartnersAdmin(value))
+  }
   if (!allowed) return <PermissionDenied description='Sales Partner administration is restricted to Velakron platform administrators.' />
   const columns = [
     { key: 'organization', label: 'Sales Partner', render: item => <div className='tablePrimary'><strong>{item.organization?.name}</strong><span>{item.organization?.primary_contact?.email}</span></div> },
     { key: 'status', label: 'Program status', render: item => <StatusBadge tone={item.profile?.status === 'active' ? 'success' : item.profile?.status === 'pending_agreement' ? 'warning' : 'danger'}>{formatLabel(item.profile?.status)}</StatusBadge> },
+    { key: 'invitation', label: 'Invitation', render: item => item.invitation ? <StatusBadge tone={item.invitation.status === 'accepted' ? 'success' : item.invitation.status === 'pending' ? 'warning' : item.invitation.status === 'expired' ? 'danger' : 'neutral'}>{formatLabel(item.invitation.status)}</StatusBadge> : <StatusBadge tone='neutral'>Not found</StatusBadge> },
+    { key: 'expiration', label: 'Invitation expires', render: item => item.invitation?.expires_at ? formatDate(item.invitation.expires_at) : '—' },
+    { key: 'delivery', label: 'Email delivery', render: item => {
+      const delivery = deliveryPresentation(item.invitation?.email_delivery)
+      return <div className='partnerInvitationDelivery'><StatusBadge tone={delivery.tone}>{delivery.label}</StatusBadge><small>{item.invitation?.email_delivery?.queued_at ? `Queued ${formatDate(item.invitation.email_delivery.queued_at)}` : 'No delivery record'}</small></div>
+    } },
     { key: 'payout', label: 'ACH', render: item => <StatusBadge tone={item.profile?.payout?.status === 'verified' ? 'success' : item.profile?.payout?.status === 'pending_review' ? 'warning' : 'neutral'}>{formatLabel(item.profile?.payout?.status)}</StatusBadge> },
     { key: 'members', label: 'Active reps', render: item => item.active_member_count },
     { key: 'fees', label: 'Finder’s fees', render: item => `${money(item.profile?.early_access_finder_fee_cents)} Early Access · ${money(item.profile?.annual_subscription_finder_fee_cents)} annual` },
     { key: 'pending', label: 'Pending fees', render: item => money(item.pending_commission_cents) },
     { key: 'created', label: 'Enrolled', render: item => formatDate(item.profile?.created_at) },
-    { key: 'actions', label: '', render: item => <Button href={`/admin/sales-partners/${item.organization?.id || item.organization?._id}`} variant='secondary' className='tableAction'>Open <ExternalLink aria-hidden='true' /></Button> },
+    { key: 'actions', label: '', render: item => <div className='tableActions'>
+      {['pending', 'expired'].includes(item.invitation?.status) && <Button variant='secondary' className='tableAction' disabled={resendingId === item.invitation.id} onClick={() => resendInvitation(item)}>{resendingId === item.invitation.id ? <LoaderCircle className='spin' aria-hidden='true' /> : <RefreshCw aria-hidden='true' />}{resendingId === item.invitation.id ? 'Resending…' : 'Resend invitation'}</Button>}
+      <Button href={`/admin/sales-partners/${item.organization?.id || item.organization?._id}`} variant='secondary' className='tableAction'>Open <ExternalLink aria-hidden='true' /></Button>
+    </div> },
   ]
   return <>
     <Seo title='Sales Partners' description='Enroll and administer Velakron Sales Partners.' path='/admin/sales-partners' noIndex />

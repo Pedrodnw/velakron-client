@@ -63,6 +63,12 @@ export const loadSalesPartnersAdmin = reason => scoped({
 })
 
 export const enrollSalesPartner = (data, reason) => scoped({ url: '/sales-partners/admin/enroll', method: 'post', data, headers: supportHeaders(reason) })
+export const resendSalesPartnerInvitation = (organizationId, invitationId, reason) => scoped({
+  url: `/organizations/${organizationId}/invitations/${invitationId}/resend`,
+  method: 'post',
+  headers: supportHeaders(reason),
+  requestKey: `sales-partner-invitation-resend-${invitationId}`,
+})
 export const loadSalesPartnerAdminDetail = (id, reason) => scoped({
   url: `/sales-partners/admin/${id}`,
   headers: supportHeaders(reason),
