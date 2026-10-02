@@ -28,6 +28,7 @@ import { resultError } from '../../components/auth/utils'
 import { Button } from '../../components/design-system'
 import PortalPageLayout from '../../components/app/PortalPageLayout'
 import Seo from '../../components/Seo'
+import SubscriptionAgreementDialog from '../../components/app/SubscriptionAgreementDialog'
 import { apiCallBegan } from '../../store/api'
 import { getActiveOrganization, getHasPermission } from '../../store/slices/appContext'
 
@@ -57,6 +58,9 @@ const Billing = () => {
   const [feedback, setFeedback] = useState(null)
   const [pendingAction, setPendingAction] = useState('')
   const [confirmation, setConfirmation] = useState(null)
+  const [checkoutOrder, setCheckoutOrder] = useState(null)
+
+  useEffect(() => { setCheckoutOrder(null); setConfirmation(null) }, [organization?.id])
 
   const load = useCallback(async () => {
     if (!canRead || !organization?.id) return
@@ -128,7 +132,9 @@ const Billing = () => {
     const config = change === 'start'
       ? { action: plan.code, url: '/billing/checkout', data: { plan_code: plan.code }, redirectField: 'checkout_url', successMessage: `${plan.name} checkout is ready.` }
       : { action: plan.code, url: '/billing/change-plan', data: { plan_code: plan.code }, successMessage: change === 'upgrade' ? `Upgrade to ${plan.name} requested.` : `Downgrade to ${plan.name} scheduled for renewal.` }
-    if (change === 'downgrade') {
+    if (change === 'start') {
+      setCheckoutOrder({ kind: 'annual', plan, amount_cents: plan.annual_amount_cents, currency: plan.currency, order_hash: plan.agreement_order_hash, config })
+    } else if (change === 'downgrade') {
       setConfirmation({
         title: `Schedule ${plan.name} for renewal?`,
         description: `Your current plan remains active until ${formatBillingDate(summary.subscription.current_period_end)}. The lower seat limit will apply at renewal.`,
@@ -193,7 +199,7 @@ const Billing = () => {
         <p>Start for {formatBillingMoney(pilotOffer.fee_cents, pilotOffer.currency)}. The full pilot fee is credited if you convert to the annual plan.</p>
         <small>Offer available through {formatBillingDate(pilotOffer.expires_at)}.</small>
       </div>
-      {pilotOffer.status === 'sent' && canManage && <Button disabled={Boolean(pendingAction)} onClick={() => mutate({ action: 'pilot', url: `/billing/pilot-offers/${pilotOffer.id}/checkout`, redirectField: 'checkout_url', successMessage: 'Pilot checkout is ready.' })}>{pendingAction === 'pilot' ? <LoaderCircle className='spin' aria-hidden='true' /> : <Sparkles aria-hidden='true' />} Start pilot</Button>}
+      {pilotOffer.status === 'sent' && canManage && <Button disabled={Boolean(pendingAction)} onClick={() => setCheckoutOrder({ kind: 'pilot', plan: pilotOffer.plan, amount_cents: pilotOffer.fee_cents, currency: pilotOffer.currency, duration_days: pilotOffer.duration_days, conversion_credit_cents: pilotOffer.conversion_credit_cents, order_hash: pilotOffer.agreement_order_hash, config: { action: 'pilot', url: `/billing/pilot-offers/${pilotOffer.id}/checkout`, redirectField: 'checkout_url', successMessage: 'Pilot checkout is ready.' } })}>{pendingAction === 'pilot' ? <LoaderCircle className='spin' aria-hidden='true' /> : <Sparkles aria-hidden='true' />} Start pilot</Button>}
     </section>}
 
     {summary?.subscription && <section className='billingUsageGrid'>
@@ -228,6 +234,22 @@ const Billing = () => {
 
     {!canManage && <p className='billingReadOnlyNotice'><ShieldCheck aria-hidden='true' /> You can review billing information. An OEM administrator manages plans and payment details.</p>}
 
+    <section className='appPanel subscriptionAgreementHistory'>
+      <header className='billingSectionHeader'><div><p className='technicalLabel'>Subscription agreement</p><h2>Agreement records</h2><p>Acceptance is recorded before checkout; it does not confirm payment.</p></div><FileText aria-hidden='true' /></header>
+      <p><a href='/subscription-agreement' target='_blank' rel='noopener noreferrer'>Read the current Subscription Agreement</a></p>
+      {(summary?.agreement_acceptances || []).map(record => <article key={record.id}>
+        <div><strong>{record.commercial_snapshot.plan.plan_name} · {record.commercial_snapshot.kind === 'pilot' ? 'Early Access' : 'Annual'}</strong><p>Accepted by {record.accepted_by_name || record.accepted_by_email} · {formatBillingDate(record.accepted_at)}<br /><small>{record.version}</small></p></div>
+        <Button variant='secondary' href={`/app/subscription-agreements/${record.id}`}>View accepted copy <ExternalLink aria-hidden='true' /></Button>
+      </article>)}
+      {!summary?.agreement_acceptances?.length && <p>No subscription agreement acceptance has been recorded for this organization.</p>}
+    </section>
+
+    <SubscriptionAgreementDialog order={checkoutOrder} agreement={catalog?.agreement} organizationName={organization?.name} error={feedback?.type === 'error' ? feedback.message : ''} pending={Boolean(pendingAction)} onClose={() => setCheckoutOrder(null)} onAccept={async consent => {
+      if (!checkoutOrder || pendingAction) return
+      const config = checkoutOrder.config
+      if (await mutate({ ...config, data: { ...config.data, agreement_acceptance: consent } })) setCheckoutOrder(null)
+    }} />
+
     <ConfirmationDialog
       open={Boolean(confirmation)}
       title={confirmation?.title}
@@ -236,7 +258,7 @@ const Billing = () => {
       danger={confirmation?.danger}
       confirmDisabled={Boolean(pendingAction)}
       onClose={() => setConfirmation(null)}
-      onConfirm={async () => { if (await confirmation.run()) setConfirmation(null) }}
+    onConfirm={async () => { if (await confirmation.run()) setConfirmation(null) }}
     />
   </>
 }

@@ -2,7 +2,7 @@ import { AlertTriangle, X } from 'lucide-react'
 import { useEffect, useId, useRef } from 'react'
 import { Button } from '../design-system'
 
-const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onClose, danger = false, confirmDisabled = false, children }) => {
+const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm', cancelLabel = 'Cancel', onConfirm, onClose, danger = false, confirmDisabled = false, icon: Icon = AlertTriangle, children }) => {
   const titleId = useId()
   const descriptionId = useId()
   const dialogRef = useRef(null)
@@ -46,7 +46,7 @@ const ConfirmationDialog = ({ open, title, description, confirmLabel = 'Confirm'
   }}>
     <section className='confirmationDialog' role='dialog' aria-modal='true' aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1} ref={dialogRef}>
       <button className='confirmationDialog__close' type='button' aria-label='Close dialog' onClick={onClose}><X aria-hidden='true' /></button>
-      <span className='confirmationDialog__icon'><AlertTriangle aria-hidden='true' /></span>
+      <span className='confirmationDialog__icon'><Icon aria-hidden='true' /></span>
       <h2 id={titleId}>{title}</h2>
       <p id={descriptionId}>{description}</p>
       {children && <div className='confirmationDialog__body'>{children}</div>}

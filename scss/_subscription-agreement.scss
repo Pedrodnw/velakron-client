@@ -1,0 +1,69 @@
+.confirmationDialog:has(.subscriptionAgreementReview) {
+  width: min(100%, 680px);
+  .confirmationDialog__actions { flex-wrap: wrap; }
+  .confirmationDialog__icon { color: var(--vk-primary); background: rgba(20, 90, 240, .08); }
+}
+
+.subscriptionAgreementReview {
+  text-align: left;
+  p { margin: 12px 0; font-size: 14px; line-height: 1.65; }
+  a { color: var(--vk-primary); text-decoration: underline; }
+  small { color: var(--app-text-muted); overflow-wrap: anywhere; }
+  &__order {
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid var(--app-border);
+    border-radius: 10px;
+    div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin: 8px 0; }
+    dt { color: var(--app-text-muted); font-size: 13px; }
+    dd { margin: 0; font-size: 14px; font-weight: 600; }
+  }
+  &__terms {
+    padding: 12px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    summary { cursor: pointer; font-weight: 600; }
+    section { margin-top: 20px; }
+    h3 { font-size: 16px; }
+  }
+  &__accept {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 14px;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.6;
+    input { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 3px; }
+  }
+}
+
+.subscriptionAgreementHistory {
+  margin-top: 24px;
+  article { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 0; border-top: 1px solid var(--app-border); }
+  p { margin: 8px 0; overflow-wrap: anywhere; }
+}
+
+.acceptedSubscriptionAgreement {
+  max-width: 920px;
+  h3 { margin: 28px 0 12px; }
+  p { margin: 12px 0; line-height: 1.75; }
+  dd { overflow-wrap: anywhere; }
+  &__hash { font-size: 12px; overflow-wrap: anywhere; }
+}
+
+@media (max-width: 600px) {
+  .confirmationDialog:has(.subscriptionAgreementReview) { padding: 22px 16px; }
+  .confirmationDialog:has(.subscriptionAgreementReview) .confirmationDialog__actions .vk-button { width: 100%; }
+}
+
+@media print {
+  body:has(.acceptedSubscriptionAgreement) {
+    .appSidebar, .appTopbar, .appPageHeader, .appMobileNav, .appSupportBanner { display: none !important; }
+    .appLayout, .appLayout__workspace, .appMain, .appContent, .acceptedSubscriptionAgreement { display: block; width: 100%; max-width: none; margin: 0; padding: 0; border: 0; box-shadow: none; background: white; color: black; }
+    .acceptedSubscriptionAgreement section { break-inside: avoid; }
+  }
+}

@@ -6,6 +6,7 @@ const articles = require('../content/insights/articles.json')
 const media = require('../content/marketing/mediaDimensions.json')
 const routes = ['/', '/how-it-works', '/for-oems', '/for-suppliers', '/early-access', '/about', '/insights', '/quality', '/security', '/faq', '/contact', '/privacy', '/terms', '/acceptable-use', '/request-demo', '/visibility-assessment', '/confidentiality-terms']
 const published = articles.filter(article => article.status === 'published')
+routes.push('/subscription-agreement')
 const slugs = new Set()
 for (const article of published) {
   assert.match(article.slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/)

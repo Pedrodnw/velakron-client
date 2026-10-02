@@ -1,0 +1,86 @@
+{
+  "version": "velakron-subscription-2026-10-02",
+  "effective_on": "2026-10-02",
+  "title": "Velakron Subscription Agreement",
+  "acceptance_statement": "I have read and agree to the Velakron Subscription Agreement and the order details shown above. I am authorized to bind my organization. For an annual subscription, I authorize annual renewal charges unless canceled before renewal.",
+  "sections": [
+    {
+      "title": "1. Parties, orders, and acceptance",
+      "paragraphs": [
+        "This agreement is between the organization identified in your billing workspace (Customer) and the Velakron service provider identified on your order or invoice (Velakron). The individual accepting confirms authority to bind Customer. This is a business subscription for authorized organizational use.",
+        "Your selected plan or written offer, its price, currency, seat limits, duration, and any stated credits form the order. Review these details before accepting. A separately signed agreement controls a conflicting provision; a written custom offer controls conflicting commercial terms. Public marketing statements do not amend an order.",
+        "Checking the acceptance box and choosing Agree and continue to checkout records electronic acceptance of this version and the displayed order. Acceptance alone does not collect payment or activate a paid subscription; activation depends on confirmation of the required payment."
+      ]
+    },
+    {
+      "title": "2. Service and authorized use",
+      "paragraphs": [
+        "During the paid term, Customer may use the selected Velakron plan through authorized users, subject to the order's seat limits and applicable access controls. Supplier collaboration seats are unlimited under the current catalog. Customer must keep account and billing information accurate, protect credentials, and remove access when no longer authorized.",
+        "Velakron provides production visibility and collaboration software. Customer and its suppliers remain responsible for engineering, manufacturing, inspection, safety, quality, delivery, regulatory compliance, and acceptance decisions. Product outputs and recorded approvals do not transfer these responsibilities to Velakron.",
+        "Customer must not bypass access controls, access another organization's information without authorization, introduce malicious content, or use the service unlawfully. The Platform Confidentiality Terms and Acceptable Use policy apply in addition to this agreement."
+      ]
+    },
+    {
+      "title": "3. Annual charges and automatic renewal",
+      "paragraphs": [
+        "Annual subscriptions are prepaid in US dollars for a twelve-month term at the amount shown in the order and payment checkout. Review any taxes or other charges displayed before payment. Customer authorizes the payment processor to charge the chosen payment method for the initial annual term and each annual renewal unless cancellation is scheduled before renewal.",
+        "The subscription renews for successive annual terms at the agreed annual price unless a different price is agreed in writing or through a new accepted order. Published catalog changes do not by themselves amend your agreed order. Keep a valid payment method on file.",
+        "If payment fails, Velakron may apply the configured fourteen-day payment grace period and then restrict the workspace to read-only access. Contact info@velakron.com to resolve a billing issue. The grace period does not waive amounts due."
+      ]
+    },
+    {
+      "title": "4. Plan changes, cancellation, and refunds",
+      "paragraphs": [
+        "An upgrade takes effect immediately with the applicable prorated charge. A downgrade is scheduled for the next renewal, when the lower plan's limits apply. Review the displayed price and timing before confirming a plan change.",
+        "An authorized OEM administrator can schedule cancellation in the Billing page using Cancel at renewal. Cancellation stops the next annual renewal and takes effect at the end of the current paid term; access continues through that term, subject to this agreement. If you cannot access Billing, contact info@velakron.com before renewal.",
+        "Cancellation does not automatically create a prorated refund or credit for the unused part of an annual term. Any refund entitlement is governed by the written offer, a separately agreed refund, or applicable law. Nothing in this agreement limits a refund or other remedy that applicable law requires."
+      ]
+    },
+    {
+      "title": "5. Early Access and ninety-day pilots",
+      "paragraphs": [
+        "An Early Access or pilot order lasts ninety days and requires the one-time fee displayed in the offer. Under the current standard offer, the fee is one quarter of the selected plan's annual price with a further twenty-five percent discount: 18.75% of the annual price. For example, a $15,000 Team annual plan has a $2,812.50 pilot fee. Custom offers may state a different fee.",
+        "The pilot fee is non-refundable except where applicable law requires otherwise or a written agreement says otherwise. If Customer converts the eligible pilot to an annual plan, the full pilot fee is credited toward the new prepaid annual term. The annual term begins on conversion.",
+        "A pilot does not automatically convert to a paid annual subscription. Conversion requires a separate annual checkout and acceptance of its order details. Any pilot credit must be shown in the conversion offer or checkout before payment; contact info@velakron.com if it is missing. Early Access features may change and roadmap discussions do not promise delivery of a particular feature."
+      ]
+    },
+    {
+      "title": "6. Customer materials and confidentiality",
+      "paragraphs": [
+        "Customer retains ownership of its materials. Customer gives Velakron permission to host, process, transmit, and display those materials only as needed to provide and support the service and authorized collaboration. Customer must have the rights and authority to share the materials.",
+        "The separately accepted Platform Confidentiality Terms protect non-public information, including drawings, models, pricing, messages, inspection records, and derivative materials. Optional OEM-supplier NDAs remain separate agreements and do not replace those duties.",
+        "Do not upload classified information, ITAR or other export-controlled technical data, CUI, or other data requiring special handling unless Velakron has expressly authorized that use in writing under a separate agreement. Subscription payment or an industry designation does not grant that authorization."
+      ]
+    },
+    {
+      "title": "7. Availability, support, and service limitations",
+      "paragraphs": [
+        "Velakron will use reasonable efforts to operate and support the service. Maintenance, provider failures, and events outside reasonable control may interrupt availability. No specific uptime, response time, certification, or service-level commitment is made unless included in a separate written agreement.",
+        "Customer should retain independent copies of important source materials and use its own review procedures. Velakron does not guarantee that the software will be uninterrupted or error-free, or that using it will achieve a particular manufacturing or business result. Any mandatory statutory rights remain unaffected.",
+        "Support scope and any onboarding or guided-pilot commitments are those stated in the applicable offer. Contact info@velakron.com for service and billing support."
+      ]
+    },
+    {
+      "title": "8. Suspension, termination, and retained records",
+      "paragraphs": [
+        "Velakron may restrict access where reasonably necessary to respond to unauthorized use, a security threat, or nonpayment, and will provide notice and an opportunity to resolve the issue where reasonably practicable. Subscription cancellation does not extinguish confidentiality duties or amounts already due.",
+        "Before the paid term ends, Customer should download materials it is authorized to retain through available product functions or contact support to coordinate retrieval. Continued interactive access after the term is not guaranteed. Retention and deletion remain subject to applicable confidentiality duties, legal requirements, and agreed data-handling arrangements.",
+        "Velakron may retain invoices, agreement acceptance evidence, and other records required to administer the relationship, resolve disputes, or comply with applicable obligations."
+      ]
+    },
+    {
+      "title": "9. Notices and changes",
+      "paragraphs": [
+        "Billing and service notices may be sent electronically to Customer's designated contact or displayed in its billing workspace. Customer must keep that contact current. Send contractual or billing questions to info@velakron.com.",
+        "Velakron will identify each agreement version and its effective date. Updating the public agreement page does not retroactively change the version Customer accepted. Material changes to an existing order require a new acceptance or a separately agreed amendment."
+      ]
+    },
+    {
+      "title": "10. Electronic record and copies",
+      "paragraphs": [
+        "Velakron records the agreement version, a copy and content hash of the accepted text, the selected order, the accepting user and organization, the acceptance time, and request information as evidence of acceptance. Each checkout acceptance remains associated with its payment checkout reference.",
+        "The full agreement is available to read, print, or save before acceptance. Accepted copies remain available to authorized organization billing users through Billing. Reading this public page does not itself record acceptance or start a subscription."
+      ]
+    }
+  ]
+}
