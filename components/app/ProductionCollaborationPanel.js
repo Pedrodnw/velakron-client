@@ -55,13 +55,14 @@ const NoteList = ({ notes, userId, canArchive, pending, onRevise, onArchive }) =
   })}</div>
 }
 
-const FileUploader = ({ kind, organizationType, record, itarCapability, pending, upload, feedback, onUpload }) => {
+export const FileUploader = ({ kind, organizationType, record, itarCapability, pending, upload, feedback, onUpload, requirement = null }) => {
   const [file, setFile] = useState(null)
   const [visibility, setVisibility] = useState(organizationType === 'velakron' ? 'velakron_internal' : 'shared')
   const [category, setCategory] = useState(kind === 'photo' ? 'photo' : 'document')
   const [regulatedDataAcknowledged, setRegulatedDataAcknowledged] = useState(false)
   const [itarUploadAuthorized, setItarUploadAuthorized] = useState(false)
   const [syntheticDataAcknowledged, setSyntheticDataAcknowledged] = useState(false)
+  const fieldPrefix = requirement ? `requirement-${requirement.id || requirement._id}` : `production-${kind}`
   const itarControlled = record.export_control === 'itar'
   const itarPreview = itarControlled && itarCapability?.preview && !itarCapability?.enabled
   const itarUnavailable = itarControlled && !itarCapability?.enabled && !itarCapability?.preview
@@ -76,11 +77,11 @@ const FileUploader = ({ kind, organizationType, record, itarCapability, pending,
     setFile(selected)
     if (selected && modelMimeForFilename(selected.name)) setCategory('drawing_reference')
   }
-  return <form className='fileUploader' onSubmit={async event => { event.preventDefault(); const form = event.currentTarget; if (file && ready && await onUpload({ file, category, visibility, regulated_data_acknowledged: !itarControlled, synthetic_data_acknowledged: itarPreview, itar_upload_authorized: itarControlled && !itarPreview })) { setFile(null); setRegulatedDataAcknowledged(false); setItarUploadAuthorized(false); setSyntheticDataAcknowledged(false); form.reset() } }}>
-    <label className='fileUploader__drop' htmlFor={`production-${kind}-upload`}><Upload aria-hidden='true' /><span><strong>{kind === 'photo' ? 'Add production photos' : 'Add a document or 3D model'}</strong><small>{kind === 'photo' ? 'JPEG, PNG, or WebP up to 25 MB' : 'PDF, images, text, STEP, or STL up to 25 MB'}</small></span><input id={`production-${kind}-upload`} type='file' accept={kind === 'photo' ? 'image/jpeg,image/png,image/webp' : 'application/pdf,image/jpeg,image/png,image/webp,text/plain,.stp,.step,.stl,model/step,model/stl'} onChange={selectFile} /></label>
+  return <form className='fileUploader' onSubmit={async event => { event.preventDefault(); const form = event.currentTarget; if (file && ready && !pending && await onUpload({ file, category: requirement ? (requirement.type === 'inspection' ? 'quality_record' : 'document') : category, visibility: requirement ? 'shared' : visibility, regulated_data_acknowledged: !itarControlled, synthetic_data_acknowledged: itarPreview, itar_upload_authorized: itarControlled && !itarPreview })) { setFile(null); setRegulatedDataAcknowledged(false); setItarUploadAuthorized(false); setSyntheticDataAcknowledged(false); form.reset() } }}>
+    <label className='fileUploader__drop' htmlFor={`${fieldPrefix}-upload`}><Upload aria-hidden='true' /><span><strong>{requirement ? 'Choose requirement document' : kind === 'photo' ? 'Add production photos' : 'Add a document or 3D model'}</strong><small>{requirement ? 'PDF, JPEG, PNG, WebP, or text up to 25 MB' : kind === 'photo' ? 'JPEG, PNG, or WebP up to 25 MB' : 'PDF, images, text, STEP, or STL up to 25 MB'}</small></span><input id={`${fieldPrefix}-upload`} type='file' disabled={pending} accept={requirement ? 'application/pdf,image/jpeg,image/png,image/webp,text/plain' : kind === 'photo' ? 'image/jpeg,image/png,image/webp' : 'application/pdf,image/jpeg,image/png,image/webp,text/plain,.stp,.step,.stl,model/step,model/stl'} onChange={selectFile} /></label>
     <div className='fileUploader__controls'>
-      {kind !== 'photo' && <label className='selectField' htmlFor='production-file-category'><span>Document type</span><select id='production-file-category' value={category} onChange={event => setCategory(event.target.value)}><option value='document'>Document</option><option value='quality_record'>Quality record</option><option value='drawing_reference'>Drawing reference / 3D model</option></select></label>}
-      <label className='selectField' htmlFor={`production-${kind}-visibility`}><span>Who can see it</span><select id={`production-${kind}-visibility`} value={visibility} onChange={event => setVisibility(event.target.value)}>{choices.map(item => <option value={item} key={item}>{visibilityLabel(item)}</option>)}</select></label>
+      {!requirement && kind !== 'photo' && <label className='selectField' htmlFor={`${fieldPrefix}-category`}><span>Document type</span><select id={`${fieldPrefix}-category`} value={category} onChange={event => setCategory(event.target.value)}><option value='document'>Document</option><option value='quality_record'>Quality record</option><option value='drawing_reference'>Drawing reference / 3D model</option></select></label>}
+      {!requirement && <label className='selectField' htmlFor={`${fieldPrefix}-visibility`}><span>Who can see it</span><select id={`${fieldPrefix}-visibility`} value={visibility} onChange={event => setVisibility(event.target.value)}>{choices.map(item => <option value={item} key={item}>{visibilityLabel(item)}</option>)}</select></label>}
       <Button type='submit' disabled={!file || !ready || pending}>{pending ? <LoaderCircle className='spin' aria-hidden='true' /> : <Upload aria-hidden='true' />} Upload</Button>
     </div>
     {file && <p className='fileUploader__selection'>{file.name} · {(file.size / 1024).toFixed(1)} KB</p>}
